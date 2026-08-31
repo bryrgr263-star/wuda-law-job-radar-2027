@@ -48,15 +48,6 @@ export type Job = {
   updated_at: string;
 };
 
-export type ApplicationProgress = {
-  job_id: string;
-  status: "未投递" | "准备中" | "已投递" | "已结束";
-  favorite: boolean;
-  notes: string;
-  applied_at: string | null;
-  updated_at: string;
-};
-
 export type CrawlSource = {
   id: string;
   name: string;

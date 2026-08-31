@@ -1,11 +1,10 @@
 # 武大法硕求职雷达 · 2027
 
-专为一名“武汉大学法律硕士（非法学）2027届、本科非法学”求职者建立的全国招聘投递网站。
+面向“武汉大学法律硕士（非法学）2027届、本科非法学”的全国公开招聘信息网站。
 
 ## 已实现
 
-- 公开岗位库：任何人都能阅读，投递按钮只跳转招聘单位官方页面。
-- 单求职者账号：已预留授权邮箱登录、收藏、投递状态、投递时间和私人备注功能，待实际求职者确定后启用。
+- 完全公开：任何设备无需登录或注册即可阅读，投递按钮只跳转招聘单位官方页面。
 - 全国范围筛选：覆盖央企、中科院体系企业、地方国企、烟草、金融、事业单位、科研院所、律所与大型科技企业。
 - 专业限制判断：区分“明确接受法律硕士（非法学）”“可能接受”“要求本科法学”“要求本硕均法学”和“专业限制待核验”。
 - 建筑硬排除：建筑施工、工程建设、施工企业、房地产开发建设及相关岗位不会入库。
@@ -41,14 +40,11 @@ pnpm dev
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL=Supabase 项目 URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=Supabase anon key
-SUPABASE_SERVICE_ROLE_KEY=Supabase service role key
-OWNER_EMAIL=唯一求职者的登录邮箱
-CRON_SECRET=至少 32 位随机字符串
-NEXT_PUBLIC_SITE_URL=https://你的地址.vercel.app
+NEXT_PUBLIC_SUPABASE_ANON_KEY=Supabase publishable key
+SUPABASE_SERVICE_ROLE_KEY=Supabase secret key
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` 和 `CRON_SECRET` 只能配置为服务端环境变量，不得写入浏览器代码或公开仓库。
+`SUPABASE_SERVICE_ROLE_KEY` 只能配置为服务端环境变量，不得写入浏览器代码或公开仓库。
 
 ### 3. 启用六小时巡检（推荐）
 
@@ -67,7 +63,6 @@ GitHub Actions 是唯一启用的巡检执行器。这样无需配置额外密�
 
 - `jobs`：公开岗位信息和唯一岗位 ID。
 - `sources`：招聘来源和单位分类。
-- `applications`：唯一求职者的私有投递进度。
 - `sync_runs`：每次巡检的结果和错误记录。
 
 ## 更新规则

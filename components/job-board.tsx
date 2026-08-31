@@ -2,10 +2,9 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { MATCH_STARS, TARGET_DIRECTIONS, UNIT_TYPES } from "@/lib/constants";
-import type { ApplicationProgress, Job } from "@/lib/types";
+import type { Job } from "@/lib/types";
 import {
   ArrowUpRight,
-  Bookmark,
   BriefcaseBusiness,
   Building2,
   CalendarClock,
@@ -15,9 +14,6 @@ import {
   Download,
   Filter,
   Gavel,
-  Heart,
-  LogIn,
-  LogOut,
   MapPin,
   Radio,
   RefreshCw,
@@ -30,17 +26,6 @@ import { useEffect, useMemo, useState } from "react";
 
 type Props = {
   initialJobs: Job[];
-  authenticated: boolean;
-  initialProgress: ApplicationProgress[];
-};
-
-const emptyProgress: ApplicationProgress = {
-  job_id: "",
-  status: "未投递",
-  favorite: false,
-  notes: "",
-  applied_at: null,
-  updated_at: new Date(0).toISOString()
 };
 
 function formatDate(value: string | null) {
@@ -58,19 +43,15 @@ function deadlineTone(deadline: string | null) {
   return "open";
 }
 
-export function JobBoard({ initialJobs, authenticated, initialProgress }: Props) {
+export function JobBoard({ initialJobs }: Props) {
   const [jobs, setJobs] = useState(initialJobs);
   const [query, setQuery] = useState("");
   const [unitType, setUnitType] = useState("全部单位");
   const [direction, setDirection] = useState("全部方向");
   const [minScore, setMinScore] = useState(1);
   const [onlyOpen, setOnlyOpen] = useState(true);
-  const [onlyFavorite, setOnlyFavorite] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
-  const [progress, setProgress] = useState<Record<string, ApplicationProgress>>(
-    Object.fromEntries(initialProgress.map((item) => [item.job_id, item]))
-  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -86,6 +67,7 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
       .channel("public-job-updates")
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, refresh)
       .subscribe();
+    void refresh();
     return () => { void supabase.removeChannel(channel); };
   }, []);
 
@@ -97,32 +79,20 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
       .filter((job) => direction === "全部方向" || job.direction.includes(direction))
       .filter((job) => job.match_score >= minScore)
       .filter((job) => !onlyOpen || !["已截止", "已关闭"].includes(job.recruitment_status))
-      .filter((job) => !onlyFavorite || progress[job.job_id]?.favorite)
       .sort((a, b) => b.match_score - a.match_score || (a.deadline ?? "9999").localeCompare(b.deadline ?? "9999"));
-  }, [jobs, query, unitType, direction, minScore, onlyOpen, onlyFavorite, progress]);
+  }, [jobs, query, unitType, direction, minScore, onlyOpen]);
 
   const stats = useMemo(() => ({
     total: jobs.length,
     fiveStar: jobs.filter((job) => job.match_score === 5).length,
     open: jobs.filter((job) => !["已截止", "已关闭"].includes(job.recruitment_status)).length,
-    applied: Object.values(progress).filter((item) => item.status === "已投递").length
-  }), [jobs, progress]);
+    units: new Set(jobs.map((job) => job.unit_name)).size
+  }), [jobs]);
 
   const latestSourceUpdate = useMemo(() => jobs.reduce<string | null>((latest, job) => {
     const candidate = job.source_updated_at ?? job.updated_at;
     return !latest || candidate > latest ? candidate : latest;
   }, null), [jobs]);
-
-  async function saveProgress(jobId: string, patch: Partial<ApplicationProgress>) {
-    const next = { ...emptyProgress, ...progress[jobId], job_id: jobId, ...patch, updated_at: new Date().toISOString() };
-    setProgress((current) => ({ ...current, [jobId]: next }));
-    const response = await fetch("/api/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(next)
-    });
-    if (!response.ok) console.error("Failed to save progress");
-  }
 
   function exportCsv() {
     const headers = ["岗位ID", "单位名称", "岗位名称", "岗位方向", "所在地", "匹配度", "截止时间", "状态", "公告链接"];
@@ -144,9 +114,6 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
           <nav>
             <a href="#jobs">岗位库</a>
             <a href="#rules">筛选规则</a>
-            {authenticated ? (
-              <form action="/api/auth/logout" method="post"><button className="nav-button"><LogOut size={15} /> 退出进度空间</button></form>
-            ) : <span className="nav-button nav-button-disabled"><LogIn size={15} /> 进度功能稍后启用</span>}
           </nav>
         </div>
       </header>
@@ -183,7 +150,7 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
         <div><span>{stats.total}</span><small>已收录岗位</small></div>
         <div><span>{stats.fiveStar}</span><small>五星高匹配</small></div>
         <div><span>{stats.open}</span><small>当前可投递</small></div>
-        <div><span>{authenticated ? stats.applied : "—"}</span><small>{authenticated ? "已投递" : "登录后查看进度"}</small></div>
+        <div><span>{stats.units}</span><small>收录单位</small></div>
       </section>
 
       <section className="board-section" id="jobs">
@@ -199,7 +166,6 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
           <label><span>最低匹配</span><div className="select-wrap"><select value={minScore} onChange={(event) => setMinScore(Number(event.target.value))}>{[5,4,3,2,1].map((score) => <option key={score} value={score}>{MATCH_STARS[score]}</option>)}</select><ChevronDown size={15} /></div></label>
           <div className="toggle-row">
             <button className={onlyOpen ? "toggle active" : "toggle"} onClick={() => setOnlyOpen((value) => !value)}><Check size={14} /> 仅看可投递</button>
-            {authenticated && <button className={onlyFavorite ? "toggle active" : "toggle"} onClick={() => setOnlyFavorite((value) => !value)}><Heart size={14} /> 我的收藏</button>}
           </div>
         </div>
 
@@ -210,7 +176,6 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
         ) : (
           <div className="job-list">
             {filtered.map((job) => {
-              const itemProgress = progress[job.job_id] ?? { ...emptyProgress, job_id: job.job_id };
               return (
                 <article className="job-card" key={job.job_id}>
                   <div className="job-card-main" onClick={() => setSelectedJob(job)}>
@@ -235,14 +200,6 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
                     <span className={`deadline ${deadlineTone(job.deadline)}`}>{job.recruitment_status}</span>
                     <a className="apply-button" href={job.application_url ?? job.announcement_url} target="_blank" rel="noreferrer">前往官方投递 <ArrowUpRight size={16} /></a>
                     <a className="detail-link" href={job.announcement_url} target="_blank" rel="noreferrer">查看招聘公告</a>
-                    {authenticated && (
-                      <div className="progress-controls">
-                        <button className={itemProgress.favorite ? "icon-button active" : "icon-button"} onClick={() => saveProgress(job.job_id, { favorite: !itemProgress.favorite })} title="收藏"><Bookmark size={17} /></button>
-                        <select value={itemProgress.status} onChange={(event) => saveProgress(job.job_id, { status: event.target.value as ApplicationProgress["status"], applied_at: event.target.value === "已投递" ? new Date().toISOString() : itemProgress.applied_at })}>
-                          <option>未投递</option><option>准备中</option><option>已投递</option><option>已结束</option>
-                        </select>
-                      </div>
-                    )}
                   </div>
                 </article>
               );
@@ -273,7 +230,6 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
               <div><dt>招聘批次</dt><dd>{selectedJob.batch || "未注明"}</dd></div><div><dt>薪资待遇</dt><dd>{selectedJob.salary || "未公开"}</dd></div>
               <div><dt>开始时间</dt><dd>{formatDate(selectedJob.start_date)}</dd></div><div><dt>截止时间</dt><dd>{formatDate(selectedJob.deadline)}</dd></div>
             </dl>
-            {authenticated && <label className="notes-field"><span>私人备注</span><textarea defaultValue={progress[selectedJob.job_id]?.notes ?? ""} placeholder="记录网申材料、笔试安排、联系人等" onBlur={(event) => saveProgress(selectedJob.job_id, { notes: event.target.value })} /></label>}
             <a className="primary-button full-width" href={selectedJob.application_url ?? selectedJob.announcement_url} target="_blank" rel="noreferrer">前往官方页面 <ArrowUpRight size={17} /></a>
           </section>
         </div>
