@@ -5,7 +5,7 @@ import { calculateMatch, detectDirection, detectNonLawRule, isExcluded } from "@
 import type { CrawlSource, Job, SourceStatus } from "@/lib/types";
 
 const TARGET_ROLE_TERMS = [...TARGET_DIRECTIONS, "法治", "法规", "风控", "稽核"];
-const GENERIC_TITLE_PATTERN = /(?:招贤纳士|人才招聘|招聘信息|招聘岗位|招聘公告|招聘首页|招聘系统|校园招聘首页|全部职位|职位列表|岗位列表|职位库|岗位库|资讯|请访问|查看岗位详情|投递简历|官方网站)/;
+const GENERIC_TITLE_PATTERN = /(?:招贤纳士|人才招聘|招聘信息|招聘岗位|招聘公告|招聘首页|招聘系统|校园招聘首页|全部职位|职位列表|岗位列表|职位库|岗位库|资讯|请访问|查看岗位详情|投递简历|官方网站|(?:校招|校园招聘).*(?:面向|毕业时间|全球应届毕业生))/;
 const JOB_CONTAINER_SELECTOR = "li, tr, article, section, [class*='job-item'], [class*='position-item'], [class*='content-item']";
 
 function cleanText(value: string) {
@@ -30,9 +30,10 @@ export function isDirectJobUrl(value: string | null | undefined) {
     const url = new URL(value);
     const path = url.pathname.toLowerCase();
     const queryKeys = [...url.searchParams.keys()].map((key) => key.toLowerCase());
+    if (/(?:^|\/)(?:index|list|recruiting)\.html?$/.test(path) || /\/(?:campus|recruit|jobs?)\/?$/.test(path)) return false;
     if (/\/(?:detail|post|position|positions|job|jobs|vacancy)(?:\/|$)/.test(path)) return true;
     if (/\/(?:news|content)\/\d+(?:\.html?)?$/.test(path) || /\/content\/id\/\d+/.test(path)) return true;
-    return queryKeys.some((key) => ["jobadid", "jobid", "positionid", "position_id", "jobmx"].includes(key));
+    return queryKeys.some((key) => ["jobadid", "jobid", "positionid", "position_id"].includes(key));
   } catch {
     return false;
   }
