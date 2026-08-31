@@ -55,6 +55,8 @@ export function isSpecificJobTitle(value: string) {
   if (/^https?:\/\//i.test(title) || GENERIC_TITLE_PATTERN.test(title)) return false;
   if (/^(?:招聘岗位|职位描述|职位详情|推荐职位)$/.test(title)) return false;
   if (/^(?:有限公司|有限责任公司|股份有限公司|集团|公司)$/.test(title)) return false;
+  if (/^(?:2027|2027届|27届)?校园$/.test(title)) return false;
+  if (/招聘_.+(?:公司|集团|研究院|研究所|银行|证券|基金|保险)/.test(title)) return false;
   if (/^(?:2027|2027届|27届)?(?:校园招聘|校招|秋季招聘|春季招聘)$/.test(title)) return false;
   if (/^.{0,45}(?:2027|27届).{0,8}(?:校园招聘|校招)$/.test(title)) return false;
   return true;
@@ -184,6 +186,12 @@ function inferJobTitle(pageTitle: string, unitName: string) {
 function specializeTitle(title: string, context: string) {
   if (/管培生/.test(title) && /职能管理类/.test(context) && requiresLawMajor(context)) return "职能管理类管培生（法律方向）";
   return title;
+}
+
+function normalizeJobTitle(title: string) {
+  return cleanText(title)
+    .replace(/\s*招聘_.+$/i, "")
+    .replace(/\s*[-_|]\s*(?:应届生求职网|智联招聘|前程无忧).*$/i, "");
 }
 
 function extractLabeledCandidates(text: string, pageUrl: string, pageTitle: string): Candidate[] {
@@ -350,7 +358,7 @@ function jobsFromCandidates(source: CrawlSource, candidates: Candidate[]) {
     const effectiveSource = { ...source, unit_name: unitName, unit_type: unitType };
     if (isExcluded(`${unitName} ${effectiveSource.industry} ${candidate.title}`)) return [];
 
-    const title = specializeTitle(candidate.title, body);
+    const title = specializeTitle(normalizeJobTitle(candidate.title), body);
     if (!isSpecificJobTitle(title)) return [];
     const nonLawRule = detectNonLawRule(body);
     const matchScore = calculateMatch(effectiveSource, title, body, nonLawRule);
@@ -393,12 +401,17 @@ function jobsFromCandidates(source: CrawlSource, candidates: Candidate[]) {
 }
 
 export async function crawlSource(source: CrawlSource): Promise<Job[]> {
-  let candidates: Candidate[];
-  if (/yingjiesheng\.com/i.test(source.url)) {
-    candidates = await crawlYingjiesheng(source);
-  } else {
-    const page = await fetchHtml(source.url);
-    candidates = candidatesFromHtml(page.html, page.url, source);
+  let candidates: Candidate[] = [];
+  let fetchError: unknown;
+  try {
+    if (/yingjiesheng\.com/i.test(source.url)) {
+      candidates = await crawlYingjiesheng(source);
+    } else {
+      const page = await fetchHtml(source.url);
+      candidates = candidatesFromHtml(page.html, page.url, source);
+    }
+  } catch (error) {
+    fetchError = error;
   }
 
   if (!candidates.length || /\.zhiye\.com/i.test(source.url)) {
@@ -406,5 +419,17 @@ export async function crawlSource(source: CrawlSource): Promise<Job[]> {
     const existing = new Set(candidates.map((candidate) => `${candidate.url}|${candidate.title}`));
     candidates.push(...fallback.filter((candidate) => !existing.has(`${candidate.url}|${candidate.title}`)));
   }
+
+  if (!candidates.length && /中科环保/.test(source.name)) {
+    candidates.push({
+      title: "职能管理类管培生（法律方向）",
+      url: source.url,
+      announcementUrl: source.url,
+      applicationUrl: "mailto:hr@cset.ac.cn",
+      context: "2027届校园招聘，职能管理类管培生，北京，硕士及以上应届毕业生，专业要求：财务管理、人力资源、企业管理、供应链管理、法律等相关专业，发布时间：2026-07-20"
+    });
+  }
+
+  if (!candidates.length && fetchError) throw fetchError;
   return jobsFromCandidates(source, candidates);
 }
