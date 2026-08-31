@@ -4,7 +4,9 @@ import { TARGET_DIRECTIONS } from "@/lib/constants";
 import { calculateMatch, detectDirection, detectNonLawRule, isExcluded } from "@/lib/scoring";
 import type { CrawlSource, Job, SourceStatus } from "@/lib/types";
 
-const RECRUITMENT_TERMS = ["校园招聘", "应届生", "2027届", "2027校园", "招聘岗位", "招聘公告", "管培生"];
+const TARGET_ROLE_TERMS = [...TARGET_DIRECTIONS, "法治", "法规", "风控", "稽核"];
+const GENERIC_TITLE_PATTERN = /(?:招贤纳士|人才招聘|招聘信息|招聘岗位|招聘公告|招聘首页|招聘系统|校园招聘首页|全部职位|职位列表|岗位列表|职位库|岗位库|资讯|请访问|查看岗位详情|投递简历|官方网站)/;
+const JOB_CONTAINER_SELECTOR = "li, tr, article, section, [class*='job-item'], [class*='position-item'], [class*='content-item']";
 
 function cleanText(value: string) {
   return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
@@ -12,6 +14,32 @@ function cleanText(value: string) {
 
 function absoluteUrl(href: string, base: string) {
   try { return new URL(href, base).toString(); } catch { return null; }
+}
+
+export function isSpecificJobTitle(value: string) {
+  const title = cleanText(value).replace(/^[「『【\[]+|[」』】\]]+$/g, "");
+  if (title.length < 3 || title.length > 120) return false;
+  if (/^https?:\/\//i.test(title) || GENERIC_TITLE_PATTERN.test(title)) return false;
+  if (/(?:职位|岗位)池/.test(title)) return false;
+  return true;
+}
+
+export function isDirectJobUrl(value: string | null | undefined) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    const path = url.pathname.toLowerCase();
+    const queryKeys = [...url.searchParams.keys()].map((key) => key.toLowerCase());
+    if (/\/(?:detail|post|position|positions|job|jobs|vacancy)(?:\/|$)/.test(path)) return true;
+    if (/\/(?:news|content)\/\d+(?:\.html?)?$/.test(path) || /\/content\/id\/\d+/.test(path)) return true;
+    return queryKeys.some((key) => ["jobadid", "jobid", "positionid", "position_id", "jobmx"].includes(key));
+  } catch {
+    return false;
+  }
+}
+
+export function isPublishableJobLink(title: string, announcementUrl: string, applicationUrl: string | null) {
+  return isSpecificJobTitle(title) && (isDirectJobUrl(applicationUrl) || isDirectJobUrl(announcementUrl));
 }
 
 function deterministicId(source: CrawlSource, url: string, title: string) {
@@ -55,8 +83,16 @@ function is2027(text: string) {
   return /2027\s*(届|校园招聘|校招|年度)|招聘年度[：:]?\s*2027/.test(text);
 }
 
-function relevant(text: string) {
-  return TARGET_DIRECTIONS.some((term) => text.includes(term)) || RECRUITMENT_TERMS.some((term) => text.includes(term));
+function targetsRequestedRole(text: string) {
+  return TARGET_ROLE_TERMS.some((term) => text.includes(term));
+}
+
+function titleFromContainer($: cheerio.CheerioAPI, container: ReturnType<cheerio.CheerioAPI>, fallback: string) {
+  const titles = container
+    .find("h1,h2,h3,h4,h5,h6,[class*='job-title'],[class*='position-title']")
+    .map((_, element) => cleanText($(element).text()))
+    .get();
+  return titles.find(isSpecificJobTitle) ?? fallback;
 }
 
 export async function crawlSource(source: CrawlSource): Promise<Job[]> {
@@ -75,19 +111,41 @@ export async function crawlSource(source: CrawlSource): Promise<Job[]> {
 
   const pageText = cleanText($("body").text()).slice(0, 180_000);
   const pageTitle = cleanText($("h1").first().text() || $("title").text());
-  const candidates = new Map<string, { title: string; url: string; context: string }>();
+  const candidates = new Map<string, { title: string; url: string; context: string; announcementUrl: string }>();
 
   $("a[href]").each((_, element) => {
-    const title = cleanText($(element).text() || $(element).attr("title") || "");
+    const anchorTitle = cleanText($(element).text() || $(element).attr("title") || "");
     const url = absoluteUrl($(element).attr("href") ?? "", source.url);
-    if (!url || title.length < 2) return;
-    const context = cleanText($(element).parent().text()).slice(0, 1500);
-    const combined = `${title} ${context}`;
-    if (is2027(combined) && relevant(combined)) candidates.set(url, { title, url, context });
+    if (!url) return;
+
+    const container = $(element).closest(JOB_CONTAINER_SELECTOR).first();
+    const rawContainerText = cleanText(container.text());
+    const containerText = rawContainerText.slice(0, 14_000);
+    const containerTitle = titleFromContainer($, container, anchorTitle);
+    const combined = `${containerTitle} ${containerText}`;
+    const containerUrls = new Set(
+      container
+        .find("a[href]")
+        .map((_, link) => absoluteUrl($(link).attr("href") ?? "", source.url))
+        .get()
+        .filter((candidateUrl): candidateUrl is string => Boolean(candidateUrl))
+    );
+    const focusedContainer = rawContainerText.length <= 14_000 && containerUrls.size <= 4;
+    if (focusedContainer && isSpecificJobTitle(containerTitle) && is2027(combined) && targetsRequestedRole(combined) && isDirectJobUrl(url)) {
+      candidates.set(url, { title: containerTitle, url, context: containerText, announcementUrl: response.url });
+      return;
+    }
+
+    const context = cleanText($(element).parent().text()).slice(0, 2000);
+    const anchorCombined = `${anchorTitle} ${context}`;
+    if (isSpecificJobTitle(anchorTitle) && is2027(anchorCombined) && targetsRequestedRole(anchorCombined) && isDirectJobUrl(url)) {
+      candidates.set(url, { title: anchorTitle, url, context, announcementUrl: response.url });
+    }
   });
 
-  if (is2027(`${pageTitle} ${pageText.slice(0, 8000)}`) && relevant(`${pageTitle} ${pageText}`)) {
-    candidates.set(response.url, { title: pageTitle || `${source.unit_name}2027届校园招聘`, url: response.url, context: pageText.slice(0, 12_000) });
+  const pageContext = `${pageTitle} ${pageText.slice(0, 12_000)}`;
+  if (isDirectJobUrl(response.url) && isSpecificJobTitle(pageTitle) && is2027(pageContext) && targetsRequestedRole(pageContext)) {
+    candidates.set(response.url, { title: pageTitle, url: response.url, context: pageText.slice(0, 12_000), announcementUrl: response.url });
   }
 
   return [...candidates.values()].flatMap((candidate) => {
@@ -103,7 +161,7 @@ export async function crawlSource(source: CrawlSource): Promise<Job[]> {
     return [{
       id: deterministicId(source, candidate.url, candidate.title),
       job_id: deterministicId(source, candidate.url, candidate.title),
-      announcement_url: candidate.url,
+      announcement_url: candidate.announcementUrl,
       application_url: candidate.url,
       unit_name: source.unit_name,
       unit_type: source.unit_type,
@@ -122,7 +180,7 @@ export async function crawlSource(source: CrawlSource): Promise<Job[]> {
       start_date: detectStartDate(body),
       deadline,
       recruitment_status: status,
-      source_status: sourceStatus(candidate.url, source),
+      source_status: sourceStatus(source.url, source),
       source_name: source.name,
       source_updated_at: updatedAt,
       updated_at: updatedAt

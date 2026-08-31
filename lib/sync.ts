@@ -1,4 +1,4 @@
-import { crawlSource } from "@/lib/crawler";
+import { crawlSource, isPublishableJobLink } from "@/lib/crawler";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CrawlSource } from "@/lib/types";
 
@@ -8,6 +8,7 @@ export type SyncResult = {
   discovered: number;
   upserted: number;
   closed: number;
+  unpublished: number;
   failures: Array<{ source: string; error: string }>;
 };
 
@@ -35,6 +36,57 @@ async function crawlWithRetry(source: CrawlSource) {
   throw lastError;
 }
 
+async function unpublishInvalidJobs(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
+  const { data, error } = await admin
+    .from("jobs")
+    .select("job_id,title,announcement_url,application_url")
+    .eq("recruitment_year", 2027)
+    .eq("is_published", true)
+    .limit(2000);
+  if (error) throw new Error(`Failed to inspect published jobs: ${error.message}`);
+
+  const invalidIds = (data ?? [])
+    .filter((job) => !isPublishableJobLink(job.title, job.announcement_url, job.application_url))
+    .map((job) => job.job_id);
+  if (!invalidIds.length) return 0;
+
+  const { data: unpublishedRows, error: updateError } = await admin
+    .from("jobs")
+    .update({ is_published: false, recruitment_status: "已关闭" })
+    .in("job_id", invalidIds)
+    .select("job_id");
+  if (updateError) throw new Error(`Failed to unpublish generic recruitment entries: ${updateError.message}`);
+  return unpublishedRows?.length ?? 0;
+}
+
+async function reconcileSourceJobs(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  source: CrawlSource,
+  activeJobIds: string[]
+) {
+  const { data, error } = await admin
+    .from("jobs")
+    .select("job_id,announcement_url,source_name")
+    .eq("unit_name", source.unit_name)
+    .eq("recruitment_year", 2027)
+    .eq("is_published", true);
+  if (error) throw new Error(`Failed to reconcile ${source.name}: ${error.message}`);
+
+  const activeIds = new Set(activeJobIds);
+  const staleIds = (data ?? [])
+    .filter((job) => (job.announcement_url === source.url || job.source_name === source.name) && !activeIds.has(job.job_id))
+    .map((job) => job.job_id);
+  if (!staleIds.length) return 0;
+
+  const { data: staleRows, error: updateError } = await admin
+    .from("jobs")
+    .update({ is_published: false, recruitment_status: "已关闭" })
+    .in("job_id", staleIds)
+    .select("job_id");
+  if (updateError) throw new Error(`Failed to close stale jobs for ${source.name}: ${updateError.message}`);
+  return staleRows?.length ?? 0;
+}
+
 export async function runJobSync(): Promise<SyncResult> {
   const admin = createAdminClient();
   if (!admin) throw new Error("Supabase admin client is not configured");
@@ -50,6 +102,7 @@ export async function runJobSync(): Promise<SyncResult> {
   let discovered = 0;
   let upserted = 0;
   let closed = 0;
+  let unpublished = await unpublishInvalidJobs(admin);
   const failures: Array<{ source: string; error: string }> = [];
 
   const { data: expiredJobs, error: closeError } = await admin
@@ -98,6 +151,7 @@ export async function runJobSync(): Promise<SyncResult> {
         if (error) throw new Error(error.message);
         upserted += jobs.length;
       }
+      if (jobs.length) unpublished += await reconcileSourceJobs(admin, source, jobs.map((job) => job.job_id));
       await admin
         .from("sources")
         .update({ last_checked_at: new Date().toISOString(), last_error: null })
@@ -118,6 +172,7 @@ export async function runJobSync(): Promise<SyncResult> {
     discovered,
     upserted,
     closed,
+    unpublished,
     failures
   };
 
