@@ -31,14 +31,24 @@ export const UNIT_TYPES: UnitType[] = [
 ];
 
 export const EXCLUDED_TERMS = [
+  "中国建筑",
+  "中国铁建",
+  "中国中铁",
+  "中国交建",
   "建筑施工",
+  "建筑工程",
+  "房屋建筑",
   "工程建设",
+  "工程施工",
+  "施工总承包",
   "施工企业",
   "房地产开发",
+  "房地产开发建设",
   "工程技术管理",
   "工程造价",
   "现场管理",
-  "施工管理"
+  "施工管理",
+  "工程项目管理"
 ];
 
 export const MATCH_STARS: Record<number, string> = {

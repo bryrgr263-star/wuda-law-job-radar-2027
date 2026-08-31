@@ -7,8 +7,20 @@ export type SyncResult = {
   sources: number;
   discovered: number;
   upserted: number;
+  closed: number;
   failures: Array<{ source: string; error: string }>;
 };
+
+function todayInChina() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 async function crawlWithRetry(source: CrawlSource) {
   let lastError: unknown;
@@ -37,7 +49,18 @@ export async function runJobSync(): Promise<SyncResult> {
 
   let discovered = 0;
   let upserted = 0;
+  let closed = 0;
   const failures: Array<{ source: string; error: string }> = [];
+
+  const { data: expiredJobs, error: closeError } = await admin
+    .from("jobs")
+    .update({ recruitment_status: "已截止" })
+    .eq("recruitment_year", 2027)
+    .lt("deadline", todayInChina())
+    .not("recruitment_status", "in", "(已截止,已关闭)")
+    .select("job_id");
+  if (closeError) throw new Error(`Failed to close expired jobs: ${closeError.message}`);
+  closed = expiredJobs?.length ?? 0;
 
   for (const source of (sourceRows ?? []) as CrawlSource[]) {
     try {
@@ -94,6 +117,7 @@ export async function runJobSync(): Promise<SyncResult> {
     sources: sourceRows?.length ?? 0,
     discovered,
     upserted,
+    closed,
     failures
   };
 

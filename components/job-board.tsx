@@ -52,7 +52,7 @@ function formatDate(value: string | null) {
 
 function deadlineTone(deadline: string | null) {
   if (!deadline) return "neutral";
-  const days = Math.ceil((new Date(deadline).valueOf() - Date.now()) / 86_400_000);
+  const days = Math.ceil((new Date(`${deadline}T23:59:59+08:00`).valueOf() - Date.now()) / 86_400_000);
   if (days < 0) return "closed";
   if (days <= 7) return "urgent";
   return "open";
@@ -67,6 +67,7 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [onlyFavorite, setOnlyFavorite] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [progress, setProgress] = useState<Record<string, ApplicationProgress>>(
     Object.fromEntries(initialProgress.map((item) => [item.job_id, item]))
   );
@@ -76,7 +77,10 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
     if (!supabase) return;
     const refresh = async () => {
       const response = await fetch("/api/jobs", { cache: "no-store" });
-      if (response.ok) setJobs((await response.json()).jobs);
+      if (response.ok) {
+        setJobs((await response.json()).jobs);
+        setLastRefreshedAt(new Date());
+      }
     };
     const channel = supabase
       .channel("public-job-updates")
@@ -103,6 +107,11 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
     open: jobs.filter((job) => !["已截止", "已关闭"].includes(job.recruitment_status)).length,
     applied: Object.values(progress).filter((item) => item.status === "已投递").length
   }), [jobs, progress]);
+
+  const latestSourceUpdate = useMemo(() => jobs.reduce<string | null>((latest, job) => {
+    const candidate = job.source_updated_at ?? job.updated_at;
+    return !latest || candidate > latest ? candidate : latest;
+  }, null), [jobs]);
 
   async function saveProgress(jobId: string, patch: Partial<ApplicationProgress>) {
     const next = { ...emptyProgress, ...progress[jobId], job_id: jobId, ...patch, updated_at: new Date().toISOString() };
@@ -137,7 +146,7 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
             <a href="#rules">筛选规则</a>
             {authenticated ? (
               <form action="/api/auth/logout" method="post"><button className="nav-button"><LogOut size={15} /> 退出进度空间</button></form>
-            ) : <Link className="nav-button" href="/login"><LogIn size={15} /> 求职者登录</Link>}
+            ) : <span className="nav-button nav-button-disabled"><LogIn size={15} /> 进度功能稍后启用</span>}
           </nav>
         </div>
       </header>
@@ -180,7 +189,7 @@ export function JobBoard({ initialJobs, authenticated, initialProgress }: Props)
       <section className="board-section" id="jobs">
         <div className="section-heading">
           <div><p className="eyebrow">LIVE JOB DATABASE</p><h2>全国岗位信息库</h2></div>
-          <div className="sync-note"><RefreshCw size={15} /> 数据变更实时推送至页面</div>
+          <div className="sync-note"><RefreshCw size={15} /> {lastRefreshedAt ? `刚刚收到实时更新` : `最近数据更新：${formatDate(latestSourceUpdate)}`}</div>
         </div>
 
         <div className="filter-panel">

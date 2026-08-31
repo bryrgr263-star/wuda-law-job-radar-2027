@@ -52,7 +52,7 @@ function sourceStatus(url: string, source: CrawlSource): SourceStatus {
 }
 
 function is2027(text: string) {
-  return /2027\s*届|2027\s*校园招聘|招聘年度[：:]?\s*2027/.test(text);
+  return /2027\s*(届|校园招聘|校招|年度)|招聘年度[：:]?\s*2027/.test(text);
 }
 
 function relevant(text: string) {
