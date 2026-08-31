@@ -54,7 +54,9 @@ export function isSpecificJobTitle(value: string) {
   if (title.length < 2 || title.length > 120) return false;
   if (/^https?:\/\//i.test(title) || GENERIC_TITLE_PATTERN.test(title)) return false;
   if (/^(?:招聘岗位|职位描述|职位详情|推荐职位)$/.test(title)) return false;
+  if (/^(?:有限公司|有限责任公司|股份有限公司|集团|公司)$/.test(title)) return false;
   if (/^(?:2027|2027届|27届)?(?:校园招聘|校招|秋季招聘|春季招聘)$/.test(title)) return false;
+  if (/^.{0,45}(?:2027|27届).{0,8}(?:校园招聘|校招)$/.test(title)) return false;
   return true;
 }
 
@@ -154,7 +156,7 @@ function inferUnitName(title: string, text: string, source: CrawlSource) {
   const labeled = text.match(/(?:招聘单位|公司名称|企业名称|单位名称)[：:]\s*([^\n，。；;]{2,80})/);
   if (labeled) return cleanText(labeled[1]);
   const cleaned = cleanText(title).replace(/^\[[^\]]+\]\s*/, "");
-  const organization = cleaned.match(/^(.+?(?:有限责任公司|股份有限公司|有限公司|集团|银行|证券|基金|保险|律师事务所|研究院|研究所|大学|学院))/);
+  const organization = cleaned.match(/(?:^|_)([^_]{2,80}?(?:有限责任公司|股份有限公司|有限公司|银行|证券|基金|保险|律师事务所|研究院|研究所|大学|学院|集团))/);
   return organization?.[1] ?? source.unit_name;
 }
 
@@ -173,6 +175,7 @@ function inferJobTitle(pageTitle: string, unitName: string) {
   let title = cleanText(pageTitle)
     .replace(/\s*[-_|]\s*(?:应届生求职网|智联招聘|前程无忧).*$/i, "")
     .replace(/\s*招聘_.+?招聘\s*$/i, "")
+    .replace(/\s*招聘_.+$/i, "")
     .replace(/^\[[^\]]+\]\s*/, "");
   if (title.startsWith(unitName)) title = cleanText(title.slice(unitName.length));
   return title;

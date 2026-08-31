@@ -1,4 +1,5 @@
 import { crawlSource, isPublishableJobLink } from "@/lib/crawler";
+import { isExcluded } from "@/lib/scoring";
 import { SOURCE_CATALOG } from "@/lib/source-catalog";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CrawlSource } from "@/lib/types";
@@ -47,14 +48,14 @@ async function ensureSourceCatalog(admin: NonNullable<ReturnType<typeof createAd
 async function unpublishInvalidJobs(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
   const { data, error } = await admin
     .from("jobs")
-    .select("job_id,title,announcement_url,application_url")
+    .select("job_id,title,unit_name,announcement_url,application_url")
     .eq("recruitment_year", 2027)
     .eq("is_published", true)
     .limit(2000);
   if (error) throw new Error(`Failed to inspect published jobs: ${error.message}`);
 
   const invalidIds = (data ?? [])
-    .filter((job) => !isPublishableJobLink(job.title, job.announcement_url, job.application_url))
+    .filter((job) => !isPublishableJobLink(job.title, job.announcement_url, job.application_url) || isExcluded(`${job.unit_name} ${job.title}`))
     .map((job) => job.job_id);
   if (!invalidIds.length) return 0;
 
