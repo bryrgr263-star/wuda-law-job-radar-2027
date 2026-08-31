@@ -12,6 +12,10 @@ values
   ('OPPO校园招聘', 'https://careers.oppo.com/university/oppo/campus', 'oppo.com', 'OPPO', '大型科技企业', '大型科技企业', '消费电子与科技', true),
   ('安克创新校园招聘', 'https://career.anker.com.cn/universities/recruitment/', 'anker.com.cn', '安克创新科技股份有限公司', '大型科技企业', '大型科技企业', '消费电子与跨境科技', true),
   ('虹桥正瀚招聘', 'https://www.zhenghan.com/news/', 'zhenghan.com', '上海虹桥正瀚律师事务所', '律所', '精品律所', '法律服务', true)
+  ,('中科环保校园招聘', 'https://zhongkehuanbao.zhiye.com/campus/jobs', 'zhiye.com', '北京中科润宇环保科技股份有限公司（中科环保）', '中科院体系企业', '中国科学院体系（国科控股参股企业）', '环保与循环经济', true)
+  ,('应届生求职网法务职位专区', 'https://zhiwei.yingjiesheng.com/fawu/', 'yingjiesheng.com', '应届生求职网收录单位', '其他企业', '公开招聘聚合来源', '待核验', true)
+  ,('应届生求职网法律专业专区', 'https://www.yingjiesheng.com/major/falv/', 'yingjiesheng.com', '应届生求职网收录单位', '其他企业', '公开招聘聚合来源', '待核验', true)
+  ,('智联招聘中电科普天科技法务专员', 'https://www.zhaopin.com/jobdetail/CC000269110J40902377013.htm', 'zhaopin.com', '中电科普天科技股份有限公司', '央企', '中国电子科技集团所属单位', '通信与信息技术', true)
 on conflict (url) do update set
   name = excluded.name,
   unit_name = excluded.unit_name,

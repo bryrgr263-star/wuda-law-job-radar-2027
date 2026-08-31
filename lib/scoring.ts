@@ -6,7 +6,11 @@ export function isExcluded(text: string) {
 }
 
 export function detectDirection(text: string) {
-  return TARGET_DIRECTIONS.find((direction) => text.includes(direction)) ?? "综合管理";
+  const compact = text.replace(/\s+/g, "");
+  const fixedDirection = TARGET_DIRECTIONS.find((direction) => compact.includes(direction));
+  if (fixedDirection) return fixedDirection;
+  const role = compact.match(/(?:岗位名称|职位名称|招聘岗位|职位)[：:]?([^，。；;\n]{2,32})/);
+  return role?.[1]?.trim() || "其他（法律专业可报）";
 }
 
 export function detectNonLawRule(text: string): NonLawRule {
@@ -20,7 +24,7 @@ export function detectNonLawRule(text: string): NonLawRule {
 }
 
 export function calculateMatch(source: CrawlSource, title: string, body: string, rule: NonLawRule) {
-  if (isExcluded(`${source.unit_name} ${source.industry} ${title} ${body}`)) return 0;
+  if (isExcluded(`${source.unit_name} ${source.industry} ${title}`)) return 0;
   if (["不接受", "要求本科法学", "要求本硕均法学"].includes(rule)) return 1;
   let score = UNIT_TYPE_WEIGHT[source.unit_type] ?? 3;
   const direction = detectDirection(`${title} ${body}`);

@@ -1,4 +1,5 @@
 import { crawlSource, isPublishableJobLink } from "@/lib/crawler";
+import { SOURCE_CATALOG } from "@/lib/source-catalog";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CrawlSource } from "@/lib/types";
 
@@ -34,6 +35,13 @@ async function crawlWithRetry(source: CrawlSource) {
     }
   }
   throw lastError;
+}
+
+async function ensureSourceCatalog(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
+  const { error } = await admin
+    .from("sources")
+    .upsert(SOURCE_CATALOG, { onConflict: "url" });
+  if (error) throw new Error(`Failed to update source catalog: ${error.message}`);
 }
 
 async function unpublishInvalidJobs(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
@@ -92,6 +100,7 @@ export async function runJobSync(): Promise<SyncResult> {
   if (!admin) throw new Error("Supabase admin client is not configured");
 
   const startedAt = new Date().toISOString();
+  await ensureSourceCatalog(admin);
   const { data: sourceRows, error: sourceError } = await admin
     .from("sources")
     .select("*")

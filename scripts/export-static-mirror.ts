@@ -5,10 +5,18 @@ import type { Job } from "../lib/types";
 
 const OUTPUT_DIRECTORY = "public-site";
 
-async function loadJobs() {
+type SyncSummary = {
+  finished_at: string;
+  source_count: number;
+  discovered_count: number;
+  upserted_count: number;
+  failure_count: number;
+};
+
+async function loadData(): Promise<{ jobs: Job[]; sync: SyncSummary | null }> {
   const admin = createAdminClient();
   if (admin) {
-    const { data, error } = await admin
+    const { data: jobs, error } = await admin
       .from("jobs")
       .select("*")
       .eq("recruitment_year", 2027)
@@ -16,29 +24,39 @@ async function loadJobs() {
       .order("match_score", { ascending: false })
       .order("deadline", { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
-    return (data ?? []) as Job[];
+    const { data: runs, error: syncError } = await admin
+      .from("sync_runs")
+      .select("finished_at,source_count,discovered_count,upserted_count,failure_count")
+      .order("finished_at", { ascending: false })
+      .limit(1);
+    if (syncError) throw new Error(syncError.message);
+    return { jobs: (jobs ?? []) as Job[], sync: (runs?.[0] as SyncSummary | undefined) ?? null };
   }
 
-  if (process.env.MIRROR_ALLOW_DEMO === "1") return demoJobs;
+  if (process.env.MIRROR_ALLOW_DEMO === "1") return { jobs: demoJobs, sync: null };
 
   const response = await fetch("https://wuda-law-job-radar-2027.vercel.app/api/jobs");
   if (!response.ok) throw new Error(`Mirror source returned HTTP ${response.status}`);
-  return ((await response.json()) as { jobs: Job[] }).jobs;
+  return { jobs: ((await response.json()) as { jobs: Job[] }).jobs, sync: null };
 }
 
-function createHtml(jobs: Job[]) {
+function createHtml(jobs: Job[], sync: SyncSummary | null) {
   const serializedJobs = JSON.stringify(jobs).replaceAll("<", "\\u003c");
   const updatedAt = new Intl.DateTimeFormat("zh-CN", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Asia/Shanghai"
   }).format(new Date());
+  const syncStatus = sync
+    ? `最近巡检：${sync.source_count} 个来源，发现 ${sync.discovered_count} 条，写入 ${sync.upserted_count} 条，失败 ${sync.failure_count} 个来源`
+    : "最近巡检：本地预览模式";
 
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="refresh" content="900">
   <meta name="description" content="武汉大学法律硕士（非法学）2027届全国公开招聘岗位数据库">
   <title>武大法硕求职雷达 · 2027 国内访问镜像</title>
   <style>
@@ -56,13 +74,13 @@ function createHtml(jobs: Job[]) {
 </head>
 <body>
   <header><div class="header-inner"><div class="brand">武大法硕求职雷达</div><div class="mirror">免费公开镜像 · 无需登录</div></div></header>
-  <section class="hero"><div class="wrap"><p class="eyebrow">WUHAN UNIVERSITY · JURIS MASTER 2027</p><h1>全国招聘岗位信息库</h1><p>面向武汉大学法律硕士（非法学）2027届，聚合法务、合规、风控、内控、投资与综合管理岗位。建筑施工和房地产开发建设类完全排除，所有投递均跳转招聘单位官方页面。</p></div></section>
+  <section class="hero"><div class="wrap"><p class="eyebrow">WUHAN UNIVERSITY · JURIS MASTER 2027</p><h1>全国招聘岗位信息库</h1><p>面向武汉大学法律硕士（非法学）2027届。岗位名称不限，只要招聘要求明确包含法学或法律专业即可收录；建筑施工和房地产开发建设类完全排除。</p></div></section>
   <section class="stats wrap"><div><strong id="total">0</strong><span>已收录岗位</span></div><div><strong id="fiveStar">0</strong><span>五星高匹配</span></div><div><strong id="open">0</strong><span>当前可投递</span></div><div><strong id="units">0</strong><span>收录单位</span></div></section>
-  <main class="wrap"><div class="section-head"><div><p class="eyebrow">PUBLIC JOB DATABASE</p><h2>2027届岗位库</h2></div><div class="updated">镜像生成时间：${updatedAt}</div></div>
+  <main class="wrap"><div class="section-head"><div><p class="eyebrow">PUBLIC JOB DATABASE</p><h2>2027届岗位库</h2></div><div class="updated">镜像生成时间：${updatedAt}<br>${syncStatus}</div></div>
     <section class="filters"><input id="query" placeholder="搜索单位、岗位、城市或行业"><select id="unitType"><option value="">全部单位类型</option></select><select id="direction"><option value="">全部岗位方向</option></select><select id="score"><option value="1">最低匹配：★</option><option value="3" selected>最低匹配：★★★</option><option value="4">最低匹配：★★★★</option><option value="5">最低匹配：★★★★★</option></select><label class="toggle"><input id="onlyOpen" type="checkbox" checked> 仅看可投递岗位</label></section>
     <div class="results" id="results"></div><section class="jobs" id="jobs"></section>
   </main>
-  <footer>岗位信息以招聘单位官方公告为准 · 每 6 小时自动更新 · 本网站不接收或保存简历</footer>
+  <footer>岗位信息以招聘公告为准 · 每 6 小时集中巡检并批量更新 · 页面每 15 分钟自动刷新 · 本网站不接收或保存简历</footer>
   <script id="job-data" type="application/json">${serializedJobs}</script>
   <script>
     const jobs=JSON.parse(document.getElementById('job-data').textContent);const stars={1:'★',2:'★★',3:'★★★',4:'★★★★',5:'★★★★★'};const closed=new Set(['已截止','已关闭']);
@@ -71,8 +89,8 @@ function createHtml(jobs: Job[]) {
     document.getElementById('total').textContent=jobs.length;document.getElementById('fiveStar').textContent=jobs.filter(job=>job.match_score===5).length;document.getElementById('open').textContent=jobs.filter(job=>!closed.has(job.recruitment_status)).length;document.getElementById('units').textContent=new Set(jobs.map(job=>job.unit_name)).size;
     const date=value=>value?new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value)):'未注明';
     function tag(text,className=''){const span=document.createElement('span');span.textContent=text;span.className=className;return span}
-    function safeUrl(value){try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)?url.href:'#'}catch{return '#'}}
-    function render(){const query=elements.query.value.trim().toLowerCase();const minScore=Number(elements.score.value);const filtered=jobs.filter(job=>(!query||[job.unit_name,job.title,job.direction,job.location,job.industry].join(' ').toLowerCase().includes(query))&&(!elements.unitType.value||job.unit_type===elements.unitType.value)&&(!elements.direction.value||job.direction===elements.direction.value)&&job.match_score>=minScore&&(!elements.onlyOpen.checked||!closed.has(job.recruitment_status)));elements.results.textContent='找到 '+filtered.length+' 个符合条件的岗位';elements.jobs.replaceChildren();if(!filtered.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='当前筛选条件下暂无岗位，请调整筛选条件。';elements.jobs.append(empty);return}filtered.forEach(job=>{const article=document.createElement('article');article.className='job';const main=document.createElement('div');main.className='job-main';const topline=document.createElement('div');topline.className='topline';topline.append(tag(job.unit_type,'type'),tag(stars[job.match_score]||'','stars'));const title=document.createElement('h3');title.textContent=job.title;const unit=document.createElement('p');unit.className='unit';unit.textContent=job.unit_name;const meta=document.createElement('div');meta.className='meta';meta.append(tag(job.location||'全国/未注明'),tag(job.direction),tag('截止 '+date(job.deadline)));const tags=document.createElement('div');tags.className='tags';tags.append(tag(job.system_name),tag(job.education||'学历待核验'),tag(job.non_law_rule,job.non_law_rule==='专业限制待核验'?'warn':'good'));if(job.source_status==='来源待核验')tags.append(tag('来源待核验','warn'));main.append(topline,title,unit,meta,tags);const side=document.createElement('div');side.className='side';const status=tag(job.recruitment_status,'status'+(closed.has(job.recruitment_status)?' closed':''));const apply=document.createElement('a');apply.className='apply';apply.href=safeUrl(job.application_url||job.announcement_url);apply.target='_blank';apply.rel='noreferrer';apply.textContent='前往官方投递 ↗';const notice=document.createElement('a');notice.className='notice';notice.href=safeUrl(job.announcement_url);notice.target='_blank';notice.rel='noreferrer';notice.textContent='查看招聘公告';side.append(status,apply,notice);article.append(main,side);elements.jobs.append(article)})}
+    function safeUrl(value){try{const url=new URL(value);return ['http:','https:','mailto:'].includes(url.protocol)?url.href:'#'}catch{return '#'}}
+    function render(){const query=elements.query.value.trim().toLowerCase();const minScore=Number(elements.score.value);const filtered=jobs.filter(job=>(!query||[job.unit_name,job.title,job.direction,job.location,job.industry].join(' ').toLowerCase().includes(query))&&(!elements.unitType.value||job.unit_type===elements.unitType.value)&&(!elements.direction.value||job.direction===elements.direction.value)&&job.match_score>=minScore&&(!elements.onlyOpen.checked||!closed.has(job.recruitment_status)));elements.results.textContent='找到 '+filtered.length+' 个符合条件的岗位';elements.jobs.replaceChildren();if(!filtered.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='当前筛选条件下暂无岗位，请调整筛选条件。';elements.jobs.append(empty);return}filtered.forEach(job=>{const article=document.createElement('article');article.className='job';const main=document.createElement('div');main.className='job-main';const topline=document.createElement('div');topline.className='topline';topline.append(tag(job.unit_type,'type'),tag(stars[job.match_score]||'','stars'));const title=document.createElement('h3');title.textContent=job.title;const unit=document.createElement('p');unit.className='unit';unit.textContent=job.unit_name;const meta=document.createElement('div');meta.className='meta';meta.append(tag(job.location||'全国/未注明'),tag(job.direction),tag('截止 '+date(job.deadline)));const tags=document.createElement('div');tags.className='tags';tags.append(tag(job.system_name),tag(job.education||'学历待核验'),tag(job.non_law_rule,job.non_law_rule==='专业限制待核验'?'warn':'good'));if(job.source_status==='来源待核验')tags.append(tag('来源待核验','warn'));main.append(topline,title,unit,meta,tags);const side=document.createElement('div');side.className='side';const status=tag(job.recruitment_status,'status'+(closed.has(job.recruitment_status)?' closed':''));const apply=document.createElement('a');apply.className='apply';apply.href=safeUrl(job.application_url||job.announcement_url);apply.target='_blank';apply.rel='noreferrer';apply.textContent=(job.application_url||'').startsWith('mailto:')?'发送投递邮件 ↗':job.source_status==='官方来源'?'前往官方投递 ↗':'前往岗位页面 ↗';const notice=document.createElement('a');notice.className='notice';notice.href=safeUrl(job.announcement_url);notice.target='_blank';notice.rel='noreferrer';notice.textContent='查看招聘公告';side.append(status,apply,notice);article.append(main,side);elements.jobs.append(article)})}
     Object.values(elements).slice(0,5).forEach(element=>element.addEventListener(element.tagName==='INPUT'?'input':'change',render));render();
   </script>
 </body>
@@ -80,10 +98,10 @@ function createHtml(jobs: Job[]) {
 }
 
 async function main() {
-  const jobs = await loadJobs();
+  const { jobs, sync } = await loadData();
   await mkdir(OUTPUT_DIRECTORY, { recursive: true });
   await Promise.all([
-    writeFile(`${OUTPUT_DIRECTORY}/index.html`, createHtml(jobs), "utf8"),
+    writeFile(`${OUTPUT_DIRECTORY}/index.html`, createHtml(jobs, sync), "utf8"),
     writeFile(`${OUTPUT_DIRECTORY}/.nojekyll`, "", "utf8")
   ]);
   console.log(`Generated mirror with ${jobs.length} jobs`);

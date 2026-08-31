@@ -27,6 +27,7 @@ export const UNIT_TYPES: UnitType[] = [
   "科研院所",
   "律所",
   "大型科技企业",
+  "其他企业",
   "其他国资背景单位"
 ];
 
@@ -69,5 +70,6 @@ export const UNIT_TYPE_WEIGHT: Record<UnitType, number> = {
   地方国企: 4,
   律所: 4,
   大型科技企业: 4,
+  其他企业: 3,
   其他国资背景单位: 3
 };

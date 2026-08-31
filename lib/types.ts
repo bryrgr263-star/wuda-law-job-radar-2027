@@ -8,6 +8,7 @@ export type UnitType =
   | "科研院所"
   | "律所"
   | "大型科技企业"
+  | "其他企业"
   | "其他国资背景单位";
 
 export type NonLawRule =
