@@ -17,6 +17,11 @@ type Candidate = {
   unitName?: string;
 };
 
+type ReaderResult = {
+  candidates: Candidate[];
+  reached: boolean;
+};
+
 function cleanText(value: string) {
   return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -290,9 +295,9 @@ async function crawlYingjiesheng(source: CrawlSource) {
       try {
         const page = await fetchHtml(url);
         const candidates = candidatesFromHtml(page.html, page.url, source);
-        return candidates.length ? candidates : await crawlReaderUrl(url, source, listingTitle);
+        return candidates.length ? candidates : (await crawlReaderUrl(url, source, listingTitle)).candidates;
       } catch {
-        return crawlReaderUrl(url, source, listingTitle);
+        return (await crawlReaderUrl(url, source, listingTitle)).candidates;
       }
     }));
     results.push(...pages.flat());
@@ -306,41 +311,44 @@ async function crawlReaderUrl(url: string, source: CrawlSource, titleHint = sour
       headers: { "User-Agent": "WudaLawJobRadar/1.0" },
       signal: AbortSignal.timeout(35_000)
     });
-    if (!response.ok) return [];
+    if (!response.ok) return { candidates: [], reached: false } satisfies ReaderResult;
     const text = await response.text();
-    if (!is2027(text) || !requiresLawMajor(text)) return [];
+    if (!is2027(text) || !requiresLawMajor(text)) return { candidates: [], reached: true } satisfies ReaderResult;
     const applicationUrl = extractEmail(text);
 
     if (/中科环保/.test(source.name) && /管培生/.test(text) && /职能管理类/.test(text)) {
-      return [{
+      return { candidates: [{
         title: "职能管理类管培生（法律方向）",
         url,
         context: text.slice(0, 60_000),
         announcementUrl: url,
         applicationUrl
-      } satisfies Candidate];
+      } satisfies Candidate], reached: true } satisfies ReaderResult;
     }
 
     const labeled = extractLabeledCandidates(text, url, titleHint);
-    if (labeled.length) return labeled.map((candidate) => ({
-      ...candidate,
-      applicationUrl: applicationUrl ?? candidate.applicationUrl
-    }));
+    if (labeled.length) return {
+      candidates: labeled.map((candidate) => ({
+        ...candidate,
+        applicationUrl: applicationUrl ?? candidate.applicationUrl
+      })),
+      reached: true
+    } satisfies ReaderResult;
 
     const readerTitle = cleanText(text.match(/^Title:\s*(.+)$/mi)?.[1] ?? titleHint);
     const unitName = inferUnitName(readerTitle, text, source);
     const title = specializeTitle(inferJobTitle(readerTitle, unitName), text);
-    if (!isSpecificJobTitle(title)) return [];
-    return [{
+    if (!isSpecificJobTitle(title)) return { candidates: [], reached: true } satisfies ReaderResult;
+    return { candidates: [{
       title,
       url,
       context: text.slice(0, 60_000),
       announcementUrl: url,
       applicationUrl: applicationUrl ?? url,
       unitName
-    } satisfies Candidate];
+    } satisfies Candidate], reached: true } satisfies ReaderResult;
   } catch {
-    return [];
+    return { candidates: [], reached: false } satisfies ReaderResult;
   }
 }
 
@@ -416,8 +424,9 @@ export async function crawlSource(source: CrawlSource): Promise<Job[]> {
 
   if (!candidates.length || /\.zhiye\.com/i.test(source.url)) {
     const fallback = await crawlReaderFallback(source);
+    if (fallback.reached) fetchError = undefined;
     const existing = new Set(candidates.map((candidate) => `${candidate.url}|${candidate.title}`));
-    candidates.push(...fallback.filter((candidate) => !existing.has(`${candidate.url}|${candidate.title}`)));
+    candidates.push(...fallback.candidates.filter((candidate) => !existing.has(`${candidate.url}|${candidate.title}`)));
   }
 
   if (!candidates.length && /中科环保/.test(source.name)) {
