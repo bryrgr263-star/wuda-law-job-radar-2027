@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "sync:jobs": "tsx scripts/sync-jobs.ts"
+    "sync:jobs": "tsx scripts/sync-jobs.ts",
+    "export:mirror": "tsx scripts/export-static-mirror.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",

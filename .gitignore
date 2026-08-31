@@ -5,4 +5,6 @@ node_modules/
 .vercel/
 *.log
 coverage/
+public-site/
+*.tsbuildinfo
 work/previews/
