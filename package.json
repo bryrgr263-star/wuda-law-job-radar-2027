@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test:architecture": "tsx --test tests/architecture/ingestion-boundary.test.ts",
     "sync:jobs": "tsx scripts/sync-jobs.ts",
     "export:mirror": "tsx scripts/export-static-mirror.ts"
   },
