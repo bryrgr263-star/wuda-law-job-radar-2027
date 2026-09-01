@@ -71,3 +71,11 @@ Phase 1 transport accepts source-neutral requests and returns raw responses with
 A RawBlob is a content object identified by SHA-256 over exact response bytes. It has no Organization, SourceDefinition, Endpoint, request, or Snapshot ownership. The in-memory RawBlob repository is append-only, deduplicates identical hashes, and returns defensive byte copies.
 
 A Snapshot is an observation event for one RecruitmentEndpoint. Successful Snapshots reference a RawBlob and carry the same content hash and length. Failed Snapshots have no artificial RawBlob or content hash. Persisted request and response metadata exclude credentials, authentication material, cookies, tokens, passwords, and session identifiers.
+
+## Adapter extraction boundary
+
+An ExtractedRecord is a source-level observation extracted from one Snapshot. It preserves raw source text, source identity candidates, source-record location, and links back to the Snapshot. It is not an OpportunityContent, CanonicalOpportunity, RequirementFact, or EligibilityAssessment.
+
+ExtractedRecord may preserve source-private details only under namespaced `adapter_metadata.<adapter_key>`. Adapter metadata is for debugging and traceability. Normalization, canonicalization, deduplication, requirement parsing, eligibility, and lifecycle logic must not read or depend on it.
+
+The Phase 1 document fixture uses explicitly preprocessed UTF-8 text to exercise the common Adapter contract and document locator. It does not implement or claim production PDF parsing, OCR, or browser extraction capability.

@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:architecture": "tsx --test tests/architecture/ingestion-boundary.test.ts",
+    "test:adapters": "tsx --test tests/adapters/fixture-adapter.test.ts",
     "test:domain": "tsx --test tests/domain/domain-types.test.ts",
     "test:registry": "tsx --test tests/registry/source-registry.test.ts",
     "test:transport": "tsx --test tests/transport/transport-raw.test.ts",

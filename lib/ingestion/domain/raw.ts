@@ -1,14 +1,15 @@
 import type {
   ExtractedRecordId,
   IsoDateTime,
+  NamespacedAdapterMetadata,
   RawBlobId,
   RawContentSha256,
   RecruitmentEndpointId,
   SnapshotId,
   SourceDefinitionId
 } from "./primitives";
-import type { OpportunityContent } from "./opportunity";
 import type { HttpRequestMethod } from "./source";
+import type { OriginalText } from "./text";
 
 export type TransportScalar = string | number | boolean | null;
 export type TransportParameterValue = TransportScalar | readonly TransportScalar[];
@@ -104,11 +105,61 @@ export interface ExtractionDescriptor {
   readonly extracted_at: IsoDateTime;
 }
 
+export const IDENTITY_CANDIDATE_KINDS = [
+  "SOURCE_RECORD_ID",
+  "ANNOUNCEMENT_URL",
+  "APPLICATION_URL",
+  "RAW_FIELD_COMBINATION"
+] as const;
+
+export type IdentityCandidateKind =
+  (typeof IDENTITY_CANDIDATE_KINDS)[number];
+
+export interface SourceOccurrenceIdentityCandidate {
+  readonly kind: IdentityCandidateKind;
+  readonly value: string;
+  readonly confidence: "HIGH" | "MEDIUM" | "LOW";
+}
+
+export type SourceRecordLocator =
+  | {
+      readonly kind: "HTML";
+      readonly selector: string;
+      readonly path?: string;
+    }
+  | {
+      readonly kind: "JSON";
+      readonly json_path: string;
+    }
+  | {
+      readonly kind: "DOCUMENT";
+      readonly page_number?: number;
+      readonly section?: string;
+      readonly text_locator?: string;
+    }
+  | {
+      readonly kind: "OTHER";
+      readonly locator: string;
+    };
+
 export interface ExtractedRecord {
   readonly extracted_record_id: ExtractedRecordId;
   readonly snapshot_id: SnapshotId;
   readonly source_definition_id: SourceDefinitionId;
-  readonly source_record_key?: string;
+  readonly identity_candidates: readonly SourceOccurrenceIdentityCandidate[];
+  readonly raw_source_record_id?: string;
+  readonly raw_title?: OriginalText;
+  readonly raw_organization_name?: OriginalText;
+  readonly raw_location_text: readonly OriginalText[];
+  readonly raw_description?: OriginalText;
+  readonly raw_requirement_text?: OriginalText;
+  readonly announcement_url?: string;
+  readonly application_url?: string;
+  readonly publish_time?: OriginalText;
+  readonly deadline?: OriginalText;
+  readonly recruitment_year?: OriginalText;
+  readonly recruitment_batch?: OriginalText;
+  readonly source_record_locator: SourceRecordLocator;
+  readonly adapter_metadata: NamespacedAdapterMetadata;
   readonly extraction: ExtractionDescriptor;
-  readonly content: OpportunityContent;
 }

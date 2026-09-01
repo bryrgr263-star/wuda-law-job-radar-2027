@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "record_id": "json-risk-001",
+      "title": "风险管理岗（法律方向）",
+      "organization": "全国招聘信息 Fixture 发布者",
+      "locations": ["上海市"],
+      "description": "参与风险识别与制度建设。",
+      "requirement": "硕士专业：法律、法学",
+      "announcement_url": "fixture://announcement/json-risk-001",
+      "application_url": "fixture://apply/json-risk-001",
+      "publish_time": "2026-09-01",
+      "deadline": "2026-10-15",
+      "recruitment_year": "2027届",
+      "recruitment_batch": "校园招聘第一批"
+    }
+  ]
+}

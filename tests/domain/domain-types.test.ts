@@ -237,13 +237,30 @@ const extracted: ExtractedRecord = {
   extracted_record_id: ids.extracted,
   snapshot_id: ids.snapshot,
   source_definition_id: ids.source,
-  source_record_key: "record-1",
+  identity_candidates: [
+    { kind: "SOURCE_RECORD_ID", value: "record-1", confidence: "HIGH" }
+  ],
+  raw_source_record_id: "record-1",
+  raw_title: content.title.original,
+  raw_organization_name: content.organization.name.original,
+  raw_location_text: content.locations.map((location) => location.raw_text),
+  raw_requirement_text: content.requirement_text?.original,
+  announcement_url: "fixture://official/announcement/record-1",
+  application_url: content.application_locator,
+  recruitment_year: original("2027届"),
+  source_record_locator: {
+    kind: "HTML",
+    selector: "[data-fixture-record='record-1']",
+    path: "body > main > article:nth-of-type(1)"
+  },
+  adapter_metadata: {
+    fixture: { record_index: 0 }
+  },
   extraction: {
     extractor_name: "fixture-extractor",
     extractor_version: "1",
     extracted_at: observedAt
-  },
-  content
+  }
 };
 
 const occurrence: SourceOccurrence = {
@@ -468,7 +485,7 @@ test("Chinese UTF-8 originals survive width and punctuation normalization", asyn
   assert.equal(new TextDecoder("utf-8").decode(blob.bytes), fixture.requirement.original);
   assert.equal(snapshot.raw_blob_id, blob.raw_blob_id);
   assert.equal(snapshot.content_hash, blob.raw_content_sha256);
-  assert.equal(extracted.content.organization.name.original.text, fixture.organization_name.original);
+  assert.equal(extracted.raw_organization_name?.text, fixture.organization_name.original);
   assert.equal(occurrenceVersion.content.title.original.text, fixture.opportunity_title.original);
   assert.equal(occurrenceVersion.content.requirement_text?.original.text, fixture.requirement.original);
   assert.equal(fixture.opportunity_title.original, "法律事务岗（2027届）");

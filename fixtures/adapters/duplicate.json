@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "record_id": "duplicate-001",
+      "title": "法律合规岗",
+      "organization": "Fixture 单位",
+      "locations": ["全国"],
+      "requirement": "法律硕士（非法学）"
+    },
+    {
+      "record_id": "duplicate-001",
+      "title": "法律合规岗",
+      "organization": "Fixture 单位",
+      "locations": ["全国"],
+      "requirement": "法律硕士（非法学）"
+    }
+  ]
+}

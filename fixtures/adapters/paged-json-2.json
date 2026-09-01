@@ -1,0 +1,15 @@
+{
+  "records": [
+    {
+      "record_id": "json-audit-002",
+      "title": "审计监督岗",
+      "organization": "全国招聘信息 Fixture 发布者",
+      "locations": ["广东省深圳市", "湖北省武汉市"],
+      "requirement": "本科专业：法学；硕士专业：法律硕士（非法学）专业",
+      "announcement_url": "fixture://announcement/json-audit-002",
+      "application_url": "fixture://apply/json-audit-002",
+      "recruitment_year": "2027届",
+      "recruitment_batch": "校园招聘第二批"
+    }
+  ]
+}

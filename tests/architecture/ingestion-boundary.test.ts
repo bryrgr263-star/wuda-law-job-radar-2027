@@ -148,3 +148,22 @@ test("legacy production files do not import the Phase 1 core", async () => {
   }
   assert.deepEqual(violations, []);
 });
+
+test("core business layers do not depend on namespaced adapter metadata", async () => {
+  const forbiddenLayers = new Set([
+    "normalization",
+    "canonicalization",
+    "requirements",
+    "eligibility",
+    "lifecycle"
+  ]);
+  const violations: string[] = [];
+  for (const filePath of await collectTypeScriptFiles(ingestionRoot)) {
+    if (!forbiddenLayers.has(ingestionLayer(filePath))) continue;
+    const source = await readFile(filePath, "utf8");
+    if (/adapter_metadata/.test(source)) {
+      violations.push(path.relative(repositoryRoot, filePath));
+    }
+  }
+  assert.deepEqual(violations, []);
+});

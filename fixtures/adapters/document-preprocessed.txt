@@ -1,0 +1,18 @@
+FIXTURE_DOCUMENT_V1
+--- RECORD ---
+id: document-legal-001
+page: 3
+section: 二、招聘岗位
+title: 法律与法规管理岗
+organization: 某市事业单位
+location: 北京市
+location: 河北省石家庄市
+description: 承担法规审核、合同管理等工作。
+requirement: 法律硕士(非法学)、法学等相关专业
+announcement_url: fixture://announcement/document-legal-001
+application_url: fixture://apply/document-legal-001
+publish_time: 2026年9月2日
+deadline: 2026年10月20日17:00
+recruitment_year: 2027届
+recruitment_batch: 事业单位公开招聘
+--- END ---
