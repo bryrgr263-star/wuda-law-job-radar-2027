@@ -177,10 +177,22 @@ const endpoint: RecruitmentEndpoint = {
   recruitment_endpoint_id: ids.endpoint,
   source_definition_id: ids.source,
   name: traceable("2027届招聘公告"),
+  description: traceable("面向全国发布的中文招聘公告"),
+  coverage_regions: [
+    { raw_text: original("全国") },
+    { raw_text: original("北京市") }
+  ],
   locator: "fixture://official/recruitment/2027",
   content_kind: "HTML",
   adapter_key: "fixture-html",
   decoded_text_encoding: "UTF-8",
+  collection_config: {
+    timeout_ms: 10_000,
+    max_items: 100,
+    max_pages: 5,
+    follow_redirects: true,
+    retry_limit: 1
+  },
   enabled: true
 };
 
@@ -371,6 +383,8 @@ test("source dimensions are independent and complete", () => {
   assert.equal(organization.organization_id, ids.organization);
   assert.equal(source.publisher_organization_id, ids.organization);
   assert.equal(endpoint.source_definition_id, ids.source);
+  assert.equal(endpoint.description?.original.text, "面向全国发布的中文招聘公告");
+  assert.deepEqual(endpoint.coverage_regions.map((region) => region.raw_text.text), ["全国", "北京市"]);
   assert.equal(PUBLISHER_KINDS.length, 7);
   assert.deepEqual(AUTHORITY_LEVELS, ["OFFICIAL", "AUTHORIZED", "THIRD_PARTY", "UNKNOWN"]);
   assert.deepEqual(SOURCE_SCOPES, ["SINGLE_ORGANIZATION", "MULTI_ORGANIZATION", "REGIONAL", "NATIONAL"]);

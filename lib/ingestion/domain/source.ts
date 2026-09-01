@@ -3,7 +3,7 @@ import type {
   RecruitmentEndpointId,
   SourceDefinitionId
 } from "./primitives";
-import type { TraceableText, TextEncoding } from "./text";
+import type { OriginalText, TraceableText, TextEncoding } from "./text";
 
 export const PUBLISHER_KINDS = [
   "EMPLOYER_OFFICIAL",
@@ -43,6 +43,28 @@ export type AuthorityLevel = (typeof AUTHORITY_LEVELS)[number];
 export type SourceScope = (typeof SOURCE_SCOPES)[number];
 export type ContentKind = (typeof CONTENT_KINDS)[number];
 
+export const HTTP_REQUEST_METHODS = ["GET", "POST", "HEAD"] as const;
+
+export type HttpRequestMethod = (typeof HTTP_REQUEST_METHODS)[number];
+
+export interface EndpointCollectionConfig {
+  readonly timeout_ms?: number;
+  readonly max_items?: number;
+  readonly max_pages?: number;
+  readonly follow_redirects?: boolean;
+  readonly retry_limit?: number;
+}
+
+export interface StructuredRegionReference {
+  readonly scheme: string;
+  readonly code: string;
+}
+
+export interface CoverageRegion {
+  readonly raw_text: OriginalText;
+  readonly structured_reference?: StructuredRegionReference;
+}
+
 export interface Organization {
   readonly organization_id: OrganizationId;
   readonly name: TraceableText;
@@ -52,7 +74,7 @@ export interface Organization {
 
 export interface SourceDefinition {
   readonly source_definition_id: SourceDefinitionId;
-  readonly publisher_organization_id?: OrganizationId;
+  readonly publisher_organization_id: OrganizationId;
   readonly name: TraceableText;
   readonly publisher_kind: PublisherKind;
   readonly authority_level: AuthorityLevel;
@@ -64,9 +86,13 @@ export interface RecruitmentEndpoint {
   readonly recruitment_endpoint_id: RecruitmentEndpointId;
   readonly source_definition_id: SourceDefinitionId;
   readonly name: TraceableText;
+  readonly description?: TraceableText;
+  readonly coverage_regions: readonly CoverageRegion[];
   readonly locator: string;
+  readonly request_method?: HttpRequestMethod;
   readonly content_kind: ContentKind;
   readonly adapter_key: string;
   readonly decoded_text_encoding: TextEncoding;
+  readonly collection_config: EndpointCollectionConfig;
   readonly enabled: boolean;
 }

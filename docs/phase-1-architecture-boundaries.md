@@ -57,3 +57,9 @@ Projection into the current website belongs to a later phase.
 ## Test boundary
 
 Formal tests live under `tests/`. Tests must use fixtures and must deny network access by default. Source-specific research remains under `experiments/` and cannot be imported into production code.
+
+## Source Registry boundary
+
+The in-memory Source Registry records `Organization → SourceDefinition → RecruitmentEndpoint → adapter_key`. It validates identity, references, source-neutral endpoint configuration, and adapter-key compatibility. It does not store opportunities, execute adapters, access networks, evaluate eligibility, or contain source-specific collection parameters.
+
+Every SourceDefinition has one publisher Organization. An Organization may publish multiple SourceDefinitions, and each SourceDefinition may expose multiple RecruitmentEndpoints. Endpoint request settings are limited to generic HTTP methods and bounded collection controls. Fixture and file locators do not require an HTTP method.
