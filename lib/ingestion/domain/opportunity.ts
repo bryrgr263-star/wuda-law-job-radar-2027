@@ -45,16 +45,37 @@ export interface OpportunityContent {
   readonly requirement_text?: TraceableText;
   readonly locations: readonly OpportunityLocation[];
   readonly recruitment_year?: number;
+  readonly recruitment_batch?: TraceableText;
   readonly published_on?: IsoDate;
   readonly application_window?: ApplicationWindow;
+  readonly announcement_locator?: string;
   readonly application_locator?: string;
 }
+
+export type SourceOccurrenceIdentityBasis =
+  | {
+      readonly kind: "SOURCE_RECORD_ID";
+      readonly source_record_id: string;
+      readonly recruitment_cycle: string;
+    }
+  | {
+      readonly kind: "DETAIL_URL";
+      readonly normalized_detail_url: string;
+    }
+  | {
+      readonly kind: "COMPOSITE_FIELDS";
+      readonly normalized_organization: string;
+      readonly normalized_title: string;
+      readonly normalized_locations: readonly string[];
+      readonly recruitment_batch: string | null;
+    };
 
 export interface SourceOccurrence {
   readonly source_occurrence_id: SourceOccurrenceId;
   readonly source_definition_id: SourceDefinitionId;
   readonly recruitment_endpoint_id: RecruitmentEndpointId;
   readonly source_record_key?: string;
+  readonly identity_basis: SourceOccurrenceIdentityBasis;
   readonly identity_hash: IdentityHash;
   readonly first_observed_at: IsoDateTime;
 }

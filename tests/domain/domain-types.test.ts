@@ -154,6 +154,8 @@ const content: OpportunityContent = {
     }
   ],
   recruitment_year: 2027,
+  recruitment_batch: traceable("2027届秋季校园招聘", "2027届秋季校园招聘"),
+  announcement_locator: "fixture://official/announcement/record-1",
   application_locator: "fixture://official/recruitment/2027/legal"
 };
 
@@ -268,6 +270,11 @@ const occurrence: SourceOccurrence = {
   source_definition_id: ids.source,
   recruitment_endpoint_id: ids.endpoint,
   source_record_key: "record-1",
+  identity_basis: {
+    kind: "SOURCE_RECORD_ID",
+    source_record_id: "record-1",
+    recruitment_cycle: "year:2027|batch:2027届秋季校园招聘"
+  },
   identity_hash: identityHash,
   first_observed_at: observedAt
 };
