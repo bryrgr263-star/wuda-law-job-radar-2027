@@ -165,7 +165,7 @@ function inferUnitName(title: string, text: string, source: CrawlSource) {
   if (labeled) return cleanText(labeled[1]);
   const cleaned = cleanText(title)
     .replace(/^\[[^\]]+\]\s*/, "")
-    .replace(/^(?:2027|2027届|27届)(?:校园招聘|校招)?[-_]?/, "");
+    .replace(/^(?:2027届|2027|27届)(?:校园招聘|校招)?[-_]?/, "");
   const organization = cleaned.match(/(?:^|_)([^_]{2,80}?(?:有限责任公司|股份有限公司|有限公司|银行|证券|基金|保险|律师事务所|研究院|研究所|大学|学院|集团))/);
   return organization?.[1] ?? source.unit_name;
 }
@@ -186,7 +186,8 @@ function inferJobTitle(pageTitle: string, unitName: string) {
     .replace(/\s*[-_|]\s*(?:应届生求职网|智联招聘|前程无忧).*$/i, "")
     .replace(/\s*招聘_.+?招聘\s*$/i, "")
     .replace(/\s*招聘_.+$/i, "")
-    .replace(/^\[[^\]]+\]\s*/, "");
+    .replace(/^\[[^\]]+\]\s*/, "")
+    .replace(/^(?:2027届|2027|27届)(?:校园招聘|校招)?[-_]?/, "");
   if (title.startsWith(unitName)) title = cleanText(title.slice(unitName.length));
   return title;
 }
