@@ -12,6 +12,7 @@
     "test:adapters": "tsx --test tests/adapters/fixture-adapter.test.ts",
     "test:canonicalization": "tsx --test tests/canonicalization/conservative-canonicalizer.test.ts",
     "test:domain": "tsx --test tests/domain/domain-types.test.ts",
+    "test:eligibility": "tsx --test tests/eligibility/eligibility-engine.test.ts",
     "test:normalization": "tsx --test tests/normalization/source-occurrence.test.ts",
     "test:registry": "tsx --test tests/registry/source-registry.test.ts",
     "test:requirements": "tsx --test tests/requirements/requirement-parser.test.ts",

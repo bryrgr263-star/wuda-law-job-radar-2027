@@ -1,6 +1,7 @@
 export * from "./adapters";
 export * from "./canonicalization";
 export * from "./domain";
+export * from "./eligibility";
 export * from "./normalization";
 export * from "./raw";
 export * from "./registry";
