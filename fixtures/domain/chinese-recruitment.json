@@ -1,0 +1,15 @@
+{
+  "organization_name": {
+    "original": "中国科学院某研究所",
+    "normalized": "中国科学院某研究所"
+  },
+  "opportunity_title": {
+    "original": "法律事务岗（2027届）",
+    "normalized": "法律事务岗(2027届)"
+  },
+  "requirement": {
+    "original": "硕士专业：法律硕士（非法学）专业；工作地点：武汉、北京。",
+    "normalized": "硕士专业:法律硕士(非法学)专业;工作地点:武汉、北京。"
+  },
+  "locations": ["武汉", "北京"]
+}
