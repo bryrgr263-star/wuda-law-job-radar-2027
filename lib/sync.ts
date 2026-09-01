@@ -80,12 +80,15 @@ async function reconcileSourceJobs(
   source: CrawlSource,
   activeJobIds: string[]
 ) {
-  const { data, error } = await admin
+  let query = admin
     .from("jobs")
     .select("job_id,announcement_url,source_name")
-    .eq("unit_name", source.unit_name)
     .eq("recruitment_year", 2027)
     .eq("is_published", true);
+  query = /收录单位/.test(source.unit_name)
+    ? query.eq("source_name", source.name)
+    : query.eq("unit_name", source.unit_name);
+  const { data, error } = await query;
   if (error) throw new Error(`Failed to reconcile ${source.name}: ${error.message}`);
 
   const activeIds = new Set(activeJobIds);

@@ -26,6 +26,16 @@ function cleanText(value: string) {
   return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function focusDirectJobText(text: string, pageUrl: string) {
+  if (!/zhaopin\.com\/(?:jobdetail|job)\//i.test(pageUrl)) return text;
+  const markers = ["工作地点 公司信息", "### 公司信息", "## 公司简介", "### 相似职位"];
+  const end = markers
+    .map((marker) => text.indexOf(marker))
+    .filter((index) => index > 0)
+    .sort((left, right) => left - right)[0];
+  return end ? text.slice(0, end) : text;
+}
+
 function structuredText(html: string) {
   const withBreaks = html.replace(/<(?:br|\/p|\/li|\/h[1-6]|\/tr|\/div)\b[^>]*>/gi, "\n");
   const $ = cheerio.load(withBreaks);
@@ -247,10 +257,7 @@ function candidatesFromHtml(html: string, pageUrl: string, source: CrawlSource) 
   let focusedPageText = /zhaopin\.com/i.test(pageUrl)
     ? pageText.slice(pageTextStart, pageTextStart + 12_000)
     : pageText;
-  if (/zhaopin\.com\/jobdetail/i.test(pageUrl)) {
-    const companySection = focusedPageText.indexOf("工作地点 公司信息");
-    if (companySection > 0) focusedPageText = focusedPageText.slice(0, companySection);
-  }
+  focusedPageText = focusDirectJobText(focusedPageText, pageUrl);
   const candidates = new Map<string, Candidate>();
 
   $("a[href]").each((_, element) => {
@@ -338,7 +345,7 @@ async function crawlReaderUrl(url: string, source: CrawlSource, titleHint = sour
       signal: AbortSignal.timeout(35_000)
     });
     if (!response.ok) return { candidates: [], reached: false } satisfies ReaderResult;
-    const text = await response.text();
+    const text = focusDirectJobText(await response.text(), url);
     if (!is2027(text) || !requiresLawMajor(text)) return { candidates: [], reached: true } satisfies ReaderResult;
     const applicationUrl = extractEmail(text);
 
