@@ -11,7 +11,13 @@ type SyncSummary = {
   discovered_count: number;
   upserted_count: number;
   failure_count: number;
-  details: Array<{ source: string; error: string }>;
+  details:
+    | Array<{ source: string; error: string }>
+    | {
+        failures: Array<{ source: string; error: string }>;
+        added: number;
+        updated: number;
+      };
 };
 
 async function loadData(): Promise<{ jobs: Job[]; sync: SyncSummary | null }> {
@@ -48,11 +54,17 @@ function createHtml(jobs: Job[], sync: SyncSummary | null) {
     timeStyle: "short",
     timeZone: "Asia/Shanghai"
   }).format(new Date());
+  const syncFailures = sync
+    ? Array.isArray(sync.details) ? sync.details : sync.details.failures
+    : [];
+  const added = sync && !Array.isArray(sync.details) ? sync.details.added : null;
+  const updated = sync && !Array.isArray(sync.details) ? sync.details.updated : null;
+  const changeStatus = added === null ? "" : `，新增 ${added} 条，更新 ${updated} 条`;
   const syncStatus = sync
-    ? `最近巡检：${sync.source_count} 个来源，发现 ${sync.discovered_count} 条，写入 ${sync.upserted_count} 条，失败 ${sync.failure_count} 个来源`
+    ? `最近巡检：${sync.source_count} 个来源，发现 ${sync.discovered_count} 条${changeStatus}，失败 ${sync.failure_count} 个来源`
     : "最近巡检：本地预览模式";
-  const failureStatus = sync?.details?.length
-    ? `失败来源：${sync.details.map((item) => item.source).join("、")}`
+  const failureStatus = syncFailures.length
+    ? `失败来源：${syncFailures.map((item) => item.source).join("、")}`
     : "失败来源：无";
 
   return `<!doctype html>

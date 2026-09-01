@@ -1,6 +1,6 @@
 import { crawlSource, isPublishableJobLink } from "@/lib/crawler";
 import { isExcluded } from "@/lib/scoring";
-import { SOURCE_CATALOG } from "@/lib/source-catalog";
+import { REPLACED_SOURCE_URLS, SOURCE_CATALOG } from "@/lib/source-catalog";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CrawlSource } from "@/lib/types";
 
@@ -9,6 +9,8 @@ export type SyncResult = {
   sources: number;
   discovered: number;
   upserted: number;
+  added: number;
+  updated: number;
   closed: number;
   unpublished: number;
   failures: Array<{ source: string; error: string }>;
@@ -43,6 +45,11 @@ async function ensureSourceCatalog(admin: NonNullable<ReturnType<typeof createAd
     .from("sources")
     .upsert(SOURCE_CATALOG, { onConflict: "url" });
   if (error) throw new Error(`Failed to update source catalog: ${error.message}`);
+  const { error: disableError } = await admin
+    .from("sources")
+    .update({ enabled: false, last_error: "已由可访问的备用来源和公开平台替代" })
+    .in("url", REPLACED_SOURCE_URLS);
+  if (disableError) throw new Error(`Failed to replace inaccessible sources: ${disableError.message}`);
 }
 
 async function unpublishInvalidJobs(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
@@ -111,6 +118,8 @@ export async function runJobSync(): Promise<SyncResult> {
 
   let discovered = 0;
   let upserted = 0;
+  let added = 0;
+  let updated = 0;
   let closed = 0;
   let unpublished = await unpublishInvalidJobs(admin);
   const failures: Array<{ source: string; error: string }> = [];
@@ -130,6 +139,14 @@ export async function runJobSync(): Promise<SyncResult> {
       const jobs = await crawlWithRetry(source);
       discovered += jobs.length;
       if (jobs.length) {
+        const { data: existingRows, error: existingError } = await admin
+          .from("jobs")
+          .select("job_id")
+          .in("job_id", jobs.map((job) => job.job_id));
+        if (existingError) throw new Error(existingError.message);
+        const existingIds = new Set((existingRows ?? []).map((row) => row.job_id));
+        added += jobs.filter((job) => !existingIds.has(job.job_id)).length;
+        updated += jobs.filter((job) => existingIds.has(job.job_id)).length;
         const payload = jobs.map((job) => ({
           job_id: job.job_id,
           announcement_url: job.announcement_url,
@@ -181,6 +198,8 @@ export async function runJobSync(): Promise<SyncResult> {
     sources: sourceRows?.length ?? 0,
     discovered,
     upserted,
+    added,
+    updated,
     closed,
     unpublished,
     failures
@@ -193,7 +212,11 @@ export async function runJobSync(): Promise<SyncResult> {
     discovered_count: result.discovered,
     upserted_count: result.upserted,
     failure_count: result.failures.length,
-    details: result.failures
+    details: {
+      failures: result.failures,
+      added: result.added,
+      updated: result.updated
+    }
   });
 
   return result;

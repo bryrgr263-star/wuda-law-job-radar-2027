@@ -62,6 +62,7 @@ export function isSpecificJobTitle(value: string) {
   if (/^(?:有限公司|有限责任公司|股份有限公司|集团|公司)$/.test(title)) return false;
   if (/^(?:2027|2027届|27届)?校园$/.test(title)) return false;
   if (/招聘_.+(?:公司|集团|研究院|研究所|银行|证券|基金|保险)/.test(title)) return false;
+  if (/(?:\/[^/]+){3,}/.test(title)) return false;
   if (/^(?:2027|2027届|27届)?(?:校园招聘|校招|秋季招聘|春季招聘)$/.test(title)) return false;
   if (/^.{0,45}(?:2027|27届).{0,8}(?:校园招聘|校招)$/.test(title)) return false;
   return true;
@@ -162,7 +163,9 @@ function inferUnitName(title: string, text: string, source: CrawlSource) {
   if (!isAggregatorSource(source)) return source.unit_name;
   const labeled = text.match(/(?:招聘单位|公司名称|企业名称|单位名称)[：:]\s*([^\n，。；;]{2,80})/);
   if (labeled) return cleanText(labeled[1]);
-  const cleaned = cleanText(title).replace(/^\[[^\]]+\]\s*/, "");
+  const cleaned = cleanText(title)
+    .replace(/^\[[^\]]+\]\s*/, "")
+    .replace(/^(?:2027|2027届|27届)(?:校园招聘|校招)?[-_]?/, "");
   const organization = cleaned.match(/(?:^|_)([^_]{2,80}?(?:有限责任公司|股份有限公司|有限公司|银行|证券|基金|保险|律师事务所|研究院|研究所|大学|学院|集团))/);
   return organization?.[1] ?? source.unit_name;
 }
@@ -237,6 +240,10 @@ function candidatesFromHtml(html: string, pageUrl: string, source: CrawlSource) 
   const headingTitle = cleanText($("h1").first().text());
   const documentTitle = cleanText($("title").text());
   const pageTitle = isSpecificJobTitle(headingTitle) ? headingTitle : documentTitle;
+  const pageTextStart = /zhaopin\.com/i.test(pageUrl) ? Math.max(0, pageText.indexOf(pageTitle)) : 0;
+  const focusedPageText = /zhaopin\.com/i.test(pageUrl)
+    ? pageText.slice(pageTextStart, pageTextStart + 12_000)
+    : pageText;
   const candidates = new Map<string, Candidate>();
 
   $("a[href]").each((_, element) => {
@@ -257,17 +264,17 @@ function candidatesFromHtml(html: string, pageUrl: string, source: CrawlSource) 
     }
   });
 
-  const pageContext = `${pageTitle} ${pageText}`;
+  const pageContext = `${pageTitle} ${focusedPageText}`;
   if (isDirectJobUrl(pageUrl) && is2027(pageContext) && requiresLawMajor(pageContext)) {
-    const unitName = inferUnitName(pageTitle, pageText, source);
-    const inferredTitle = specializeTitle(inferJobTitle(pageTitle, unitName), pageText);
+    const unitName = inferUnitName(documentTitle || pageTitle, focusedPageText, source);
+    const inferredTitle = specializeTitle(inferJobTitle(pageTitle, unitName), focusedPageText);
     const labeled = extractLabeledCandidates(structuredText(html), pageUrl, pageTitle);
     if (labeled.length) labeled.forEach((candidate) => candidates.set(`${candidate.url}#${candidate.title}`, candidate));
     else if (isSpecificJobTitle(inferredTitle)) {
       candidates.set(pageUrl, {
         title: inferredTitle,
         url: pageUrl,
-        context: pageText.slice(0, 30_000),
+        context: focusedPageText,
         announcementUrl: pageUrl,
         applicationUrl: extractApplicationUrl($, pageUrl, source),
         unitName
@@ -277,14 +284,17 @@ function candidatesFromHtml(html: string, pageUrl: string, source: CrawlSource) 
   return [...candidates.values()];
 }
 
-async function crawlYingjiesheng(source: CrawlSource) {
+async function crawlAggregatorListing(source: CrawlSource) {
   const listing = await fetchHtml(source.url);
   const $ = cheerio.load(listing.html);
   const links = new Map<string, string>();
+  const requiresYearInTitle = /yingjiesheng\.com/i.test(source.url);
   $("a[href]").each((_, element) => {
     const title = cleanText($(element).text());
     const url = absoluteUrl($(element).attr("href") ?? "", listing.url);
-    if (url && /2027|27届/.test(title) && isDirectJobUrl(url)) links.set(url.replace(/^http:/, "https:"), title);
+    if (url && (!requiresYearInTitle || /2027|27届/.test(title)) && isDirectJobUrl(url)) {
+      links.set(url.replace(/^http:/, "https:"), title);
+    }
   });
 
   const results: Candidate[] = [];
@@ -412,8 +422,11 @@ export async function crawlSource(source: CrawlSource): Promise<Job[]> {
   let candidates: Candidate[] = [];
   let fetchError: unknown;
   try {
-    if (/yingjiesheng\.com/i.test(source.url)) {
-      candidates = await crawlYingjiesheng(source);
+    const sourceHost = new URL(source.url).hostname;
+    const isAggregatorListing = /yingjiesheng\.com$/i.test(sourceHost)
+      || (/zhaopin\.com$/i.test(sourceHost) && !isDirectJobUrl(source.url));
+    if (isAggregatorListing) {
+      candidates = await crawlAggregatorListing(source);
     } else {
       const page = await fetchHtml(source.url);
       candidates = candidatesFromHtml(page.html, page.url, source);
