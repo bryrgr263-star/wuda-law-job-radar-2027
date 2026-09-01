@@ -196,28 +196,41 @@ const endpoint: RecruitmentEndpoint = {
   enabled: true
 };
 
+const rawChineseBytes = new TextEncoder().encode(
+  "硕士专业：法律硕士（非法学）专业；工作地点：武汉、北京。"
+);
+
 const blob: RawBlob = {
   raw_blob_id: ids.blob,
-  recruitment_endpoint_id: ids.endpoint,
-  captured_at: observedAt,
-  media_type: "text/html; charset=utf-8",
-  byte_length: 256,
+  bytes: rawChineseBytes,
+  mime_type: "text/html; charset=utf-8",
+  byte_length: rawChineseBytes.byteLength,
   raw_content_sha256: rawHash,
-  immutable: true,
-  storage_locator: "fixture://raw/blob-1",
-  original_text: content.requirement_text?.original
+  created_at: observedAt
 };
 
 const snapshot: Snapshot = {
   snapshot_id: ids.snapshot,
   recruitment_endpoint_id: ids.endpoint,
-  captured_at: observedAt,
-  response_status: 200,
-  content: {
-    kind: "CAPTURED",
-    raw_blob_id: ids.blob,
-    original_text: content.requirement_text?.original
-  }
+  request_metadata: {
+    locator: endpoint.locator,
+    method: null,
+    requested_at: observedAt,
+    headers: {},
+    parameters: {}
+  },
+  response_metadata: {
+    http_status: null,
+    headers: { "content-type": "text/html; charset=utf-8" },
+    mime_type: "text/html; charset=utf-8",
+    content_length: rawChineseBytes.byteLength,
+    transport_error: null
+  },
+  transport_status: "SUCCESS",
+  raw_blob_id: ids.blob,
+  content_hash: rawHash,
+  content_length: rawChineseBytes.byteLength,
+  observed_at: observedAt
 };
 
 const extracted: ExtractedRecord = {
@@ -452,12 +465,9 @@ test("Chinese UTF-8 originals survive width and punctuation normalization", asyn
     requirement: { original: string; normalized: string };
     locations: string[];
   };
-  assert.equal(blob.original_text?.encoding, "UTF-8");
-  assert.equal(blob.original_text?.text, fixture.requirement.original);
-  assert.equal(
-    snapshot.content.kind === "CAPTURED" ? snapshot.content.original_text?.text : undefined,
-    fixture.requirement.original
-  );
+  assert.equal(new TextDecoder("utf-8").decode(blob.bytes), fixture.requirement.original);
+  assert.equal(snapshot.raw_blob_id, blob.raw_blob_id);
+  assert.equal(snapshot.content_hash, blob.raw_content_sha256);
   assert.equal(extracted.content.organization.name.original.text, fixture.organization_name.original);
   assert.equal(occurrenceVersion.content.title.original.text, fixture.opportunity_title.original);
   assert.equal(occurrenceVersion.content.requirement_text?.original.text, fixture.requirement.original);

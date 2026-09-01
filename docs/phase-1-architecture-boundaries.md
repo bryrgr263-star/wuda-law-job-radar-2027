@@ -63,3 +63,11 @@ Formal tests live under `tests/`. Tests must use fixtures and must deny network 
 The in-memory Source Registry records `Organization → SourceDefinition → RecruitmentEndpoint → adapter_key`. It validates identity, references, source-neutral endpoint configuration, and adapter-key compatibility. It does not store opportunities, execute adapters, access networks, evaluate eligibility, or contain source-specific collection parameters.
 
 Every SourceDefinition has one publisher Organization. An Organization may publish multiple SourceDefinitions, and each SourceDefinition may expose multiple RecruitmentEndpoints. Endpoint request settings are limited to generic HTTP methods and bounded collection controls. Fixture and file locators do not require an HTTP method.
+
+## Transport and Raw boundary
+
+Phase 1 transport accepts source-neutral requests and returns raw responses without recruitment parsing. `FixtureTransport` is the only implementation and accepts only `fixture://` locators. It performs no network operations.
+
+A RawBlob is a content object identified by SHA-256 over exact response bytes. It has no Organization, SourceDefinition, Endpoint, request, or Snapshot ownership. The in-memory RawBlob repository is append-only, deduplicates identical hashes, and returns defensive byte copies.
+
+A Snapshot is an observation event for one RecruitmentEndpoint. Successful Snapshots reference a RawBlob and carry the same content hash and length. Failed Snapshots have no artificial RawBlob or content hash. Persisted request and response metadata exclude credentials, authentication material, cookies, tokens, passwords, and session identifiers.
