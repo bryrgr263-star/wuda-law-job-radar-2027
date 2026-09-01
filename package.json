@@ -14,6 +14,7 @@
     "test:domain": "tsx --test tests/domain/domain-types.test.ts",
     "test:normalization": "tsx --test tests/normalization/source-occurrence.test.ts",
     "test:registry": "tsx --test tests/registry/source-registry.test.ts",
+    "test:requirements": "tsx --test tests/requirements/requirement-parser.test.ts",
     "test:transport": "tsx --test tests/transport/transport-raw.test.ts",
     "sync:jobs": "tsx scripts/sync-jobs.ts",
     "export:mirror": "tsx scripts/export-static-mirror.ts"
