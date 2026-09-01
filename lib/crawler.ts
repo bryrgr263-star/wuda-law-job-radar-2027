@@ -389,6 +389,17 @@ function crawlReaderFallback(source: CrawlSource) {
   return crawlReaderUrl(source.url, source);
 }
 
+function deduplicateCandidates(candidates: Candidate[]) {
+  const deduplicated = new Map<string, Candidate>();
+  candidates.forEach((candidate) => {
+    const isSingleZhaopinJob = /zhaopin\.com\/(?:jobdetail|job)\//i.test(candidate.url);
+    const key = isSingleZhaopinJob ? candidate.url : `${candidate.url}#${candidate.title}`;
+    const existing = deduplicated.get(key);
+    if (!existing || candidate.title.length < existing.title.length) deduplicated.set(key, candidate);
+  });
+  return [...deduplicated.values()];
+}
+
 function jobsFromCandidates(source: CrawlSource, candidates: Candidate[]) {
   return candidates.flatMap((candidate) => {
     const body = `${candidate.title} ${candidate.context}`;
@@ -476,5 +487,5 @@ export async function crawlSource(source: CrawlSource): Promise<Job[]> {
   }
 
   if (!candidates.length && fetchError) throw fetchError;
-  return jobsFromCandidates(source, candidates);
+  return jobsFromCandidates(source, deduplicateCandidates(candidates));
 }
