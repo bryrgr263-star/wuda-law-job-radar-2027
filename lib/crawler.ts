@@ -163,6 +163,8 @@ function inferUnitName(title: string, text: string, source: CrawlSource) {
   if (!isAggregatorSource(source)) return source.unit_name;
   const labeled = text.match(/(?:招聘单位|公司名称|企业名称|单位名称)[：:]\s*([^\n，。；;]{2,80})/);
   if (labeled) return cleanText(labeled[1]);
+  const zhaopinTitle = title.match(/招聘_([^_\n]{2,80}?)招聘(?:\s*[-_|]|$)/);
+  if (zhaopinTitle) return cleanText(zhaopinTitle[1]);
   const cleaned = cleanText(title)
     .replace(/^\[[^\]]+\]\s*/, "")
     .replace(/^(?:2027届|2027|27届)(?:校园招聘|校招)?[-_]?/, "");
@@ -242,9 +244,13 @@ function candidatesFromHtml(html: string, pageUrl: string, source: CrawlSource) 
   const documentTitle = cleanText($("title").text());
   const pageTitle = isSpecificJobTitle(headingTitle) ? headingTitle : documentTitle;
   const pageTextStart = /zhaopin\.com/i.test(pageUrl) ? Math.max(0, pageText.indexOf(pageTitle)) : 0;
-  const focusedPageText = /zhaopin\.com/i.test(pageUrl)
+  let focusedPageText = /zhaopin\.com/i.test(pageUrl)
     ? pageText.slice(pageTextStart, pageTextStart + 12_000)
     : pageText;
+  if (/zhaopin\.com\/jobdetail/i.test(pageUrl)) {
+    const companySection = focusedPageText.indexOf("工作地点 公司信息");
+    if (companySection > 0) focusedPageText = focusedPageText.slice(0, companySection);
+  }
   const candidates = new Map<string, Candidate>();
 
   $("a[href]").each((_, element) => {
@@ -287,15 +293,24 @@ function candidatesFromHtml(html: string, pageUrl: string, source: CrawlSource) 
 
 async function crawlAggregatorListing(source: CrawlSource) {
   const listing = await fetchHtml(source.url);
-  const $ = cheerio.load(listing.html);
+  const listings = [listing];
+  if (/zhaopin\.com/i.test(source.url)) {
+    const secondPageUrl = new URL(source.url);
+    secondPageUrl.searchParams.set("p", "2");
+    const secondPage = await fetchHtml(secondPageUrl.toString()).catch(() => null);
+    if (secondPage) listings.push(secondPage);
+  }
   const links = new Map<string, string>();
   const requiresYearInTitle = /yingjiesheng\.com/i.test(source.url);
-  $("a[href]").each((_, element) => {
-    const title = cleanText($(element).text());
-    const url = absoluteUrl($(element).attr("href") ?? "", listing.url);
-    if (url && (!requiresYearInTitle || /2027|27届/.test(title)) && isDirectJobUrl(url)) {
-      links.set(url.replace(/^http:/, "https:"), title);
-    }
+  listings.forEach((listingPage) => {
+    const $ = cheerio.load(listingPage.html);
+    $("a[href]").each((_, element) => {
+      const title = cleanText($(element).text());
+      const url = absoluteUrl($(element).attr("href") ?? "", listingPage.url);
+      if (url && (!requiresYearInTitle || /2027|27届/.test(title)) && isDirectJobUrl(url)) {
+        links.set(url.replace(/^http:/, "https:"), title);
+      }
+    });
   });
 
   const results: Candidate[] = [];

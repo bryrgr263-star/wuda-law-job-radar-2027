@@ -31,6 +31,86 @@ export const SOURCE_CATALOG: SourceCatalogEntry[] = [
     enabled: true
   },
   {
+    name: "智联招聘2027法务公开职位搜索",
+    url: "https://sou.zhaopin.com/?kw=2027%20%E6%B3%95%E5%8A%A1&kt=3",
+    official_domain: "zhaopin.com",
+    unit_name: "智联招聘收录单位",
+    unit_type: "其他企业",
+    system_name: "公开招聘聚合来源",
+    industry: "待核验",
+    enabled: true
+  },
+  {
+    name: "智联招聘27届法务公开职位搜索",
+    url: "https://sou.zhaopin.com/?kw=27%E5%B1%8A%20%E6%B3%95%E5%8A%A1&kt=3",
+    official_domain: "zhaopin.com",
+    unit_name: "智联招聘收录单位",
+    unit_type: "其他企业",
+    system_name: "公开招聘聚合来源",
+    industry: "待核验",
+    enabled: true
+  },
+  {
+    name: "智联招聘2027合规公开职位搜索",
+    url: "https://sou.zhaopin.com/?kw=2027%20%E5%90%88%E8%A7%84&kt=3",
+    official_domain: "zhaopin.com",
+    unit_name: "智联招聘收录单位",
+    unit_type: "其他企业",
+    system_name: "公开招聘聚合来源",
+    industry: "待核验",
+    enabled: true
+  },
+  {
+    name: "智联招聘27届合规公开职位搜索",
+    url: "https://sou.zhaopin.com/?kw=27%E5%B1%8A%20%E5%90%88%E8%A7%84&kt=3",
+    official_domain: "zhaopin.com",
+    unit_name: "智联招聘收录单位",
+    unit_type: "其他企业",
+    system_name: "公开招聘聚合来源",
+    industry: "待核验",
+    enabled: true
+  },
+  {
+    name: "智联招聘27届法律管理公开职位搜索",
+    url: "https://sou.zhaopin.com/?kw=27%E5%B1%8A%20%E6%B3%95%E5%BE%8B%E7%AE%A1%E7%90%86&kt=3",
+    official_domain: "zhaopin.com",
+    unit_name: "智联招聘收录单位",
+    unit_type: "其他企业",
+    system_name: "公开招聘聚合来源",
+    industry: "待核验",
+    enabled: true
+  },
+  {
+    name: "智联招聘27届审计公开职位搜索",
+    url: "https://sou.zhaopin.com/?kw=27%E5%B1%8A%20%E5%AE%A1%E8%AE%A1&kt=3",
+    official_domain: "zhaopin.com",
+    unit_name: "智联招聘收录单位",
+    unit_type: "其他企业",
+    system_name: "公开招聘聚合来源",
+    industry: "待核验",
+    enabled: true
+  },
+  {
+    name: "智联招聘27届内控公开职位搜索",
+    url: "https://sou.zhaopin.com/?kw=27%E5%B1%8A%20%E5%86%85%E6%8E%A7&kt=3",
+    official_domain: "zhaopin.com",
+    unit_name: "智联招聘收录单位",
+    unit_type: "其他企业",
+    system_name: "公开招聘聚合来源",
+    industry: "待核验",
+    enabled: true
+  },
+  {
+    name: "智联招聘27届综合管理公开职位搜索",
+    url: "https://sou.zhaopin.com/?kw=27%E5%B1%8A%20%E7%BB%BC%E5%90%88%E7%AE%A1%E7%90%86&kt=3",
+    official_domain: "zhaopin.com",
+    unit_name: "智联招聘收录单位",
+    unit_type: "其他企业",
+    system_name: "公开招聘聚合来源",
+    industry: "待核验",
+    enabled: true
+  },
+  {
     name: "中国科学院软件研究所人才招聘（HTTP备用入口）",
     url: "http://www.is.cas.cn/rcdw/rczp/",
     official_domain: "is.cas.cn",
