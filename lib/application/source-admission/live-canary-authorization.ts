@@ -5,6 +5,7 @@ import type {
   LiveCanaryManualAuthorization,
   SourceAdmission
 } from "./types";
+import { evaluateSourceAutomationPermission } from "./source-admission-register";
 
 export function evaluateLiveCanaryAuthorization(
   admission: SourceAdmission,
@@ -17,8 +18,14 @@ export function evaluateLiveCanaryAuthorization(
   if (!hasRequiredBinding(execution, authorization)) {
     return denied(admission, ["AUTHORIZATION_BINDING_INVALID"]);
   }
+  if (admission.admission_level === "C" || admission.admission_level === "D") {
+    return denied(admission, ["ADMISSION_LEVEL_DENIED"]);
+  }
   if (admission.admission_decision !== "APPROVED") {
     return denied(admission, ["ADMISSION_NOT_APPROVED"]);
+  }
+  if (!evaluateSourceAutomationPermission(admission).allowed) {
+    return denied(admission, ["ADMISSION_LEVEL_DENIED"]);
   }
   if (
     execution.source_admission_id !== admission.source_admission_id

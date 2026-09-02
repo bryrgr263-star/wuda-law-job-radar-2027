@@ -3,7 +3,8 @@ import {
   SOURCE_PROHIBITED_ACTIONS,
   type SourceAdmission,
   type SourceAdmissionEvidenceId,
-  type SourceAdmissionId
+  type SourceAdmissionId,
+  type SourceAutomationPermission
 } from "./types";
 
 const phaseTwoApprovedSourceTypes = new Set([
@@ -34,6 +35,20 @@ export class InMemorySourceAdmissionRegister {
     return clone(stored);
   }
 
+  revise(admission: SourceAdmission): SourceAdmission {
+    const current = this.#admissions.get(admission.source_admission_id);
+    if (!current) {
+      throw new SourceAdmissionError(
+        `Source Admission does not exist: ${admission.source_admission_id}`
+      );
+    }
+    validateSourceAdmission(admission);
+    validateAdmissionRevision(current, admission);
+    const stored = clone(admission);
+    this.#admissions.set(stored.source_admission_id, stored);
+    return clone(stored);
+  }
+
   get(sourceAdmissionId: SourceAdmissionId): SourceAdmission {
     const admission = this.#admissions.get(sourceAdmissionId);
     if (!admission) {
@@ -58,10 +73,34 @@ export function validateSourceAdmission(admission: SourceAdmission) {
   validateEndpointContract(admission);
   validateEvidence(admission);
   validateReviews(admission);
+  validateAdmissionTier(admission);
+}
 
-  if (admission.admission_decision === "APPROVED") {
-    validateApprovedAdmission(admission);
+export function evaluateSourceAutomationPermission(
+  admission: SourceAdmission
+): SourceAutomationPermission {
+  if (admission.admission_decision !== "APPROVED") {
+    return deniedAutomation(admission);
   }
+  if (admission.admission_level === "A") {
+    return {
+      allowed: true,
+      admission_level: "A",
+      mode: "CONTROLLED_COLLECTION"
+    };
+  }
+  if (
+    admission.admission_level === "B"
+    && admission.automation_basis === "HUMAN_REVIEWED_CANARY"
+  ) {
+    return {
+      allowed: true,
+      admission_level: "B",
+      mode: "ONE_ENDPOINT_ONE_RUN",
+      requires_manual_authorization: true
+    };
+  }
+  return deniedAutomation(admission);
 }
 
 function validateEndpointContract(admission: SourceAdmission) {
@@ -81,7 +120,99 @@ function validateEndpointContract(admission: SourceAdmission) {
   }
 }
 
-function validateApprovedAdmission(admission: SourceAdmission) {
+function validateAdmissionTier(admission: SourceAdmission) {
+  if (
+    admission.source_type === "THIRD_PARTY_PLATFORM"
+    && (admission.admission_level !== "D" || admission.admission_decision !== "REJECTED")
+  ) {
+    throw new SourceAdmissionError("Third-party platforms must remain Level D and REJECTED");
+  }
+  if (admission.admission_level === "A") {
+    if (admission.admission_decision !== "APPROVED") {
+      throw new SourceAdmissionError("Level A sources must be APPROVED");
+    }
+    if (
+      admission.automation_basis !== "EXPLICIT_OFFICIAL_POLICY"
+      && admission.automation_basis !== "ROBOTS_ALLOW"
+      && admission.automation_basis !== "OFFICIAL_API"
+    ) {
+      throw new SourceAdmissionError("Level A requires an explicit automation basis");
+    }
+    if (admission.robots.status !== "ALLOWED" || admission.terms.status !== "ALLOWED") {
+      throw new SourceAdmissionError("Level A requires allowed robots and terms evidence");
+    }
+    validateApprovedOfficialAdmission(admission);
+    return;
+  }
+
+  if (admission.admission_level === "B") {
+    validateOfficialPublicAccess(admission);
+    if (hasProhibitedAccessEvidence(admission)) {
+      throw new SourceAdmissionError("Level B cannot contain prohibited access evidence");
+    }
+    if (admission.robots.status !== "UNKNOWN" && admission.terms.status !== "UNKNOWN") {
+      throw new SourceAdmissionError("Level B requires unresolved robots or terms evidence");
+    }
+    if (
+      admission.automation_basis !== "ROBOTS_ALLOW"
+      && admission.automation_basis !== "INSUFFICIENT_EVIDENCE"
+      && admission.automation_basis !== "HUMAN_REVIEWED_CANARY"
+    ) {
+      throw new SourceAdmissionError("Level B has an incompatible automation basis");
+    }
+    if (
+      admission.admission_decision !== "REVIEW"
+      && admission.admission_decision !== "APPROVED"
+    ) {
+      throw new SourceAdmissionError("Level B must remain REVIEW or APPROVED");
+    }
+    if (admission.admission_decision === "APPROVED") {
+      if (admission.automation_basis !== "HUMAN_REVIEWED_CANARY") {
+        throw new SourceAdmissionError(
+          "Approved Level B sources require HUMAN_REVIEWED_CANARY"
+        );
+      }
+      validateApprovedOfficialAdmission(admission);
+    } else if (admission.automation_basis === "HUMAN_REVIEWED_CANARY") {
+      throw new SourceAdmissionError(
+        "HUMAN_REVIEWED_CANARY requires an APPROVED admission decision"
+      );
+    }
+    return;
+  }
+
+  if (admission.admission_level === "C") {
+    if (admission.admission_decision !== "REVIEW") {
+      throw new SourceAdmissionError("Level C sources must remain REVIEW");
+    }
+    if (
+      admission.automation_basis !== "INSUFFICIENT_EVIDENCE"
+      && admission.automation_basis !== "CONFLICTING_EVIDENCE"
+    ) {
+      throw new SourceAdmissionError("Level C requires insufficient or conflicting evidence");
+    }
+    return;
+  }
+
+  if (admission.admission_decision !== "REJECTED") {
+    throw new SourceAdmissionError("Level D sources must be REJECTED");
+  }
+  if (admission.automation_basis !== "NO_AUTOMATION_ALLOWED") {
+    throw new SourceAdmissionError("Level D requires NO_AUTOMATION_ALLOWED");
+  }
+  if (!hasHardAccessBlocker(admission)) {
+    throw new SourceAdmissionError("Level D requires explicit prohibited-access evidence");
+  }
+}
+
+function validateApprovedOfficialAdmission(admission: SourceAdmission) {
+  validateOfficialPublicAccess(admission);
+  if (!admission.review_records.some((review) => review.decision === "APPROVED")) {
+    throw new SourceAdmissionError("P2 approved sources require an APPROVED review record");
+  }
+}
+
+function validateOfficialPublicAccess(admission: SourceAdmission) {
   if (!phaseTwoApprovedSourceTypes.has(admission.source_type)) {
     throw new SourceAdmissionError(
       `P2 cannot approve source type: ${admission.source_type}`
@@ -89,9 +220,6 @@ function validateApprovedAdmission(admission: SourceAdmission) {
   }
   if (admission.source_authority !== "OFFICIAL" && admission.source_authority !== "AUTHORIZED") {
     throw new SourceAdmissionError("P2 approved sources must be OFFICIAL or AUTHORIZED");
-  }
-  if (admission.robots.status !== "ALLOWED" || admission.terms.status !== "ALLOWED") {
-    throw new SourceAdmissionError("P2 approved sources require allowed robots and terms reviews");
   }
   if (admission.login_requirement !== "NONE" || admission.captcha !== "NONE_OBSERVED") {
     throw new SourceAdmissionError("P2 approved sources cannot require login or CAPTCHA handling");
@@ -104,9 +232,6 @@ function validateApprovedAdmission(admission: SourceAdmission) {
       `P2 approved sources must retain prohibited actions: ${missingProhibitions.join(", ")}`
     );
   }
-  if (!admission.review_records.some((review) => review.decision === "APPROVED")) {
-    throw new SourceAdmissionError("P2 approved sources require an APPROVED review record");
-  }
 }
 
 function validateEvidence(admission: SourceAdmission) {
@@ -118,12 +243,93 @@ function validateEvidence(admission: SourceAdmission) {
       );
     }
     ids.add(evidence.source_admission_evidence_id);
+    if (evidence.source_admission_id !== admission.source_admission_id) {
+      throw new SourceAdmissionError("Admission evidence must reference its source admission");
+    }
+    if (evidence.endpoint !== admission.endpoint) {
+      throw new SourceAdmissionError("Admission evidence must reference the admitted endpoint");
+    }
+    validateEndpoint(evidence.source_url);
     requireText(evidence.locator, "Admission evidence locator");
+    requireText(evidence.captured_at, "Admission evidence observed time");
+    requireText(evidence.reviewer, "Admission evidence reviewer");
     requireText(evidence.summary.text, "Admission evidence summary");
   }
   if (!ids.has(admission.robots.evidence_id) || !ids.has(admission.terms.evidence_id)) {
     throw new SourceAdmissionError("Robots and terms reviews must reference admission evidence");
   }
+  const evidenceById = new Map(admission.evidence.map((evidence) => {
+    return [evidence.source_admission_evidence_id, evidence] as const;
+  }));
+  const robotsEvidence = evidenceById.get(admission.robots.evidence_id);
+  const termsEvidence = evidenceById.get(admission.terms.evidence_id);
+  if (robotsEvidence?.kind !== "ROBOTS" || robotsEvidence.decision !== admission.robots.status) {
+    throw new SourceAdmissionError("Robots review must match its ROBOTS evidence decision");
+  }
+  if (termsEvidence?.kind !== "TERMS" || termsEvidence.decision !== admission.terms.status) {
+    throw new SourceAdmissionError("Terms review must match its TERMS evidence decision");
+  }
+}
+
+function validateAdmissionRevision(current: SourceAdmission, next: SourceAdmission) {
+  const immutableBindings = [
+    [current.source_admission_id, next.source_admission_id],
+    [current.endpoint, next.endpoint],
+    [current.recruitment_endpoint_id, next.recruitment_endpoint_id],
+    [current.endpoint_purpose, next.endpoint_purpose],
+    [current.allowed_http_method, next.allowed_http_method],
+    [current.content_kind, next.content_kind]
+  ];
+  if (immutableBindings.some(([before, after]) => before !== after)) {
+    throw new SourceAdmissionError(
+      "Admission revisions cannot change source or P1 Endpoint bindings"
+    );
+  }
+  const governanceChanged = current.admission_level !== next.admission_level
+    || current.admission_decision !== next.admission_decision
+    || current.automation_basis !== next.automation_basis;
+  if (!governanceChanged) return;
+
+  const evidenceIds = new Set(current.evidence.map((evidence) => {
+    return evidence.source_admission_evidence_id;
+  }));
+  const reviewIds = new Set(current.review_records.map((review) => {
+    return review.source_admission_review_id;
+  }));
+  const hasNewEvidence = next.evidence.some((evidence) => {
+    return !evidenceIds.has(evidence.source_admission_evidence_id);
+  });
+  const hasNewReview = next.review_records.some((review) => {
+    return !reviewIds.has(review.source_admission_review_id);
+  });
+  if (!hasNewEvidence || !hasNewReview) {
+    throw new SourceAdmissionError(
+      "Admission level, decision, or automation basis changes require new evidence and review"
+    );
+  }
+}
+
+function hasProhibitedAccessEvidence(admission: SourceAdmission) {
+  return isProhibited(admission.robots.status) || isProhibited(admission.terms.status);
+}
+
+function hasHardAccessBlocker(admission: SourceAdmission) {
+  return hasProhibitedAccessEvidence(admission)
+    || admission.login_requirement === "REQUIRED"
+    || admission.captcha === "PRESENT"
+    || admission.source_type === "THIRD_PARTY_PLATFORM";
+}
+
+function isProhibited(status: SourceAdmission["robots"]["status"]) {
+  return status === "DISALLOWED" || status === "PROHIBITED";
+}
+
+function deniedAutomation(admission: SourceAdmission): SourceAutomationPermission {
+  return {
+    allowed: false,
+    admission_level: admission.admission_level,
+    mode: "DENIED"
+  };
 }
 
 function validateReviews(admission: SourceAdmission) {

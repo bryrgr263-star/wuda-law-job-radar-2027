@@ -38,6 +38,22 @@ export const SOURCE_ADMISSION_STATUSES = [
 
 export type SourceAdmissionStatus = (typeof SOURCE_ADMISSION_STATUSES)[number];
 
+export const SOURCE_ADMISSION_LEVELS = ["A", "B", "C", "D"] as const;
+
+export type SourceAdmissionLevel = (typeof SOURCE_ADMISSION_LEVELS)[number];
+
+export const SOURCE_AUTOMATION_BASES = [
+  "EXPLICIT_OFFICIAL_POLICY",
+  "ROBOTS_ALLOW",
+  "OFFICIAL_API",
+  "HUMAN_REVIEWED_CANARY",
+  "NO_AUTOMATION_ALLOWED",
+  "INSUFFICIENT_EVIDENCE",
+  "CONFLICTING_EVIDENCE"
+] as const;
+
+export type SourceAutomationBasis = (typeof SOURCE_AUTOMATION_BASES)[number];
+
 export const SOURCE_ADMISSION_ENDPOINT_PURPOSES = [
   "JOB_LIST",
   "JOB_DETAIL",
@@ -74,7 +90,11 @@ export type SourceStructure = (typeof SOURCE_STRUCTURES)[number];
 export type SourceStability = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 export type SourceUpdateFrequency = "CONTINUOUS" | "DAILY" | "WEEKLY" | "IRREGULAR" | "UNKNOWN";
 export type SourceAdmissionPriority = "HIGH" | "MEDIUM" | "LOW";
-export type AccessReviewStatus = "ALLOWED" | "DISALLOWED" | "UNKNOWN";
+export type AccessReviewStatus =
+  | "ALLOWED"
+  | "DISALLOWED"
+  | "PROHIBITED"
+  | "UNKNOWN";
 export type LoginRequirement = "NONE" | "OPTIONAL" | "REQUIRED" | "UNKNOWN";
 export type CaptchaPresence = "NONE_OBSERVED" | "PRESENT" | "UNKNOWN";
 
@@ -103,9 +123,14 @@ export type SourceAdmissionEvidenceKind =
 
 export interface SourceAdmissionEvidence {
   readonly source_admission_evidence_id: SourceAdmissionEvidenceId;
+  readonly source_admission_id: SourceAdmissionId;
+  readonly endpoint: string;
+  readonly source_url: string;
   readonly kind: SourceAdmissionEvidenceKind;
   readonly locator: string;
   readonly captured_at: string;
+  readonly reviewer: string;
+  readonly decision: AccessReviewStatus;
   readonly summary: OriginalText;
 }
 
@@ -125,6 +150,8 @@ export interface SourceAccessReview {
 
 export interface SourceAdmission {
   readonly source_admission_id: SourceAdmissionId;
+  readonly admission_level: SourceAdmissionLevel;
+  readonly automation_basis: SourceAutomationBasis;
   readonly source_name: TraceableText;
   readonly source_type: SourceAdmissionSourceType;
   readonly official_owner: TraceableText;
@@ -147,6 +174,24 @@ export interface SourceAdmission {
   readonly review_records: readonly SourceAdmissionReviewRecord[];
   readonly admission_decision: SourceAdmissionStatus;
 }
+
+export type SourceAutomationPermission =
+  | {
+      readonly allowed: true;
+      readonly admission_level: "A";
+      readonly mode: "CONTROLLED_COLLECTION";
+    }
+  | {
+      readonly allowed: true;
+      readonly admission_level: "B";
+      readonly mode: "ONE_ENDPOINT_ONE_RUN";
+      readonly requires_manual_authorization: true;
+    }
+  | {
+      readonly allowed: false;
+      readonly admission_level: SourceAdmissionLevel;
+      readonly mode: "DENIED";
+    };
 
 export const LIVE_CANARY_SCOPES = ["ONE_ENDPOINT_ONE_RUN"] as const;
 
@@ -180,6 +225,7 @@ export interface LiveCanaryExecutionRequest {
 export const LIVE_CANARY_DENIAL_CODES = [
   "NO_MANUAL_AUTHORIZATION",
   "ADMISSION_NOT_APPROVED",
+  "ADMISSION_LEVEL_DENIED",
   "AUTHORIZATION_SOURCE_MISMATCH",
   "AUTHORIZATION_ENDPOINT_MISMATCH",
   "AUTHORIZATION_ENDPOINT_REFERENCE_MISMATCH",

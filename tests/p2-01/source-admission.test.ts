@@ -38,22 +38,39 @@ function admission(
   decision: SourceAdmission["admission_decision"] = "APPROVED",
   overrides: Partial<SourceAdmission> = {}
 ): SourceAdmission {
+  const sourceAdmissionId = overrides.source_admission_id
+    ?? branded<SourceAdmissionId>("admission-official-html");
+  const endpoint = overrides.endpoint ?? "https://example.invalid/careers";
+  const robots = overrides.robots ?? {
+    status: "ALLOWED" as const,
+    evidence_id: branded<SourceAdmissionEvidenceId>("admission-evidence-robots")
+  };
+  const terms = overrides.terms ?? {
+    status: "ALLOWED" as const,
+    evidence_id: branded<SourceAdmissionEvidenceId>("admission-evidence-terms")
+  };
   const robotsEvidenceId = branded<SourceAdmissionEvidenceId>("admission-evidence-robots");
   const termsEvidenceId = branded<SourceAdmissionEvidenceId>("admission-evidence-terms");
   const reviewEvidenceId = branded<SourceAdmissionEvidenceId>("admission-evidence-review");
   return {
-    source_admission_id: branded<SourceAdmissionId>("admission-official-html"),
+    source_admission_id: sourceAdmissionId,
+    admission_level: decision === "APPROVED" ? "A" : decision === "REJECTED" ? "D" : "C",
+    automation_basis: decision === "APPROVED"
+      ? "EXPLICIT_OFFICIAL_POLICY"
+      : decision === "REJECTED"
+        ? "NO_AUTOMATION_ALLOWED"
+        : "INSUFFICIENT_EVIDENCE",
     source_name: traceable("某研究所官方人才招聘"),
     source_type: "OFFICIAL_CAREER_SITE",
     official_owner: traceable("中国科学院某研究所"),
-    endpoint: "https://example.invalid/careers",
+    endpoint,
     recruitment_endpoint_id: branded("endpoint-official-html"),
     endpoint_purpose: "JOB_LIST",
     allowed_http_method: "GET",
     content_kind: "HTML",
     source_authority: "OFFICIAL",
-    robots: { status: "ALLOWED", evidence_id: robotsEvidenceId },
-    terms: { status: "ALLOWED", evidence_id: termsEvidenceId },
+    robots,
+    terms,
     login_requirement: "NONE",
     captcha: "NONE_OBSERVED",
     structure: "STATIC_HTML",
@@ -64,23 +81,38 @@ function admission(
     evidence: [
       {
         source_admission_evidence_id: robotsEvidenceId,
+        source_admission_id: sourceAdmissionId,
+        endpoint,
+        source_url: "https://example.invalid/",
         kind: "ROBOTS",
         locator: "https://example.invalid/robots.txt",
         captured_at: "2026-09-03T09:00:00+08:00",
+        reviewer: "source-governance-reviewer",
+        decision: robots.status,
         summary: original("允许公开招聘页面的低频读取。")
       },
       {
         source_admission_evidence_id: termsEvidenceId,
+        source_admission_id: sourceAdmissionId,
+        endpoint,
+        source_url: "https://example.invalid/",
         kind: "TERMS",
         locator: "https://example.invalid/terms",
         captured_at: "2026-09-03T09:00:00+08:00",
+        reviewer: "source-governance-reviewer",
+        decision: terms.status,
         summary: original("未要求登录，未声明禁止公开页面访问。")
       },
       {
         source_admission_evidence_id: reviewEvidenceId,
+        source_admission_id: sourceAdmissionId,
+        endpoint,
+        source_url: "https://example.invalid/",
         kind: "MANUAL_REVIEW",
         locator: "manual://source-admission/admission-official-html",
         captured_at: "2026-09-03T09:05:00+08:00",
+        reviewer: "source-governance-reviewer",
+        decision: decision === "REJECTED" ? "PROHIBITED" : "ALLOWED",
         summary: original("人工审查确认仅允许一个公开 Endpoint 的低频 Canary。")
       }
     ],
@@ -156,6 +188,8 @@ test("Source Admission Register preserves Chinese review evidence and all requir
   const registered = register.register(admission());
 
   assert.equal(registered.source_name.original.text, "某研究所官方人才招聘");
+  assert.equal(registered.admission_level, "A");
+  assert.equal(registered.automation_basis, "EXPLICIT_OFFICIAL_POLICY");
   assert.equal(registered.official_owner.original.text, "中国科学院某研究所");
   assert.equal(registered.recruitment_endpoint_id, "endpoint-official-html");
   assert.equal(registered.endpoint_purpose, "JOB_LIST");
@@ -244,11 +278,11 @@ test("Live Canary allows only an exact approved source, endpoint, run, and evide
   }
 });
 
-test("Live Canary denies rejected or review admissions", () => {
+test("Live Canary denies C and D admission levels", () => {
   for (const source of [admission("REJECTED"), admission("REVIEW")]) {
     const decision = evaluateLiveCanaryAuthorization(source, execution(source), authorization(source));
     assert.equal(decision.allowed, false);
-    if (!decision.allowed) assert.deepEqual(decision.reason_codes, ["ADMISSION_NOT_APPROVED"]);
+    if (!decision.allowed) assert.deepEqual(decision.reason_codes, ["ADMISSION_LEVEL_DENIED"]);
   }
 });
 
