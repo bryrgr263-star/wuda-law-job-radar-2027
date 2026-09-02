@@ -18,7 +18,8 @@ import {
 } from "../../lib/application";
 import {
   UTF8_TEXT_ENCODING,
-  type RecruitmentEndpoint
+  type RecruitmentEndpoint,
+  type RecruitmentEndpointId
 } from "../../lib/ingestion";
 
 function branded<Value extends string>(value: string) {
@@ -120,9 +121,10 @@ function execution(
   return {
     source_admission_id: source.source_admission_id,
     endpoint: source.endpoint,
+    recruitment_endpoint_id: source.recruitment_endpoint_id,
     recruitment_endpoint: recruitmentEndpoint(source),
     endpoint_purpose: source.endpoint_purpose,
-    requested_http_method: "GET",
+    allowed_http_method: "GET",
     collection_run_id: branded<LiveCanaryCollectionRunId>("canary-run-once"),
     ...overrides
   };
@@ -133,12 +135,15 @@ function authorization(
   overrides: Partial<LiveCanaryManualAuthorization> = {}
 ): LiveCanaryManualAuthorization {
   return {
-    live_canary_authorization_id: branded("canary-authorization-once"),
+    authorization_id: branded("canary-authorization-once"),
     source_admission_id: source.source_admission_id,
     endpoint: source.endpoint,
+    recruitment_endpoint_id: source.recruitment_endpoint_id,
+    endpoint_purpose: source.endpoint_purpose,
+    allowed_http_method: source.allowed_http_method,
     collection_run_id: branded<LiveCanaryCollectionRunId>("canary-run-once"),
-    authorized_by: "reviewer",
-    authorized_at: "2026-09-03T10:00:00+08:00",
+    reviewer: "reviewer",
+    issued_at: "2026-09-03T10:00:00+08:00",
     evidence_id: source.evidence[2].source_admission_evidence_id,
     scope: "ONE_ENDPOINT_ONE_RUN",
     manual_confirmation: true,
@@ -230,6 +235,13 @@ test("Live Canary allows only an exact approved source, endpoint, run, and evide
 
   const allowed = evaluateLiveCanaryAuthorization(approved, request, authorization(approved));
   assert.equal(allowed.allowed, true);
+  if (allowed.allowed) {
+    assert.equal(allowed.authorization.recruitment_endpoint_id, approved.recruitment_endpoint_id);
+    assert.equal(allowed.authorization.endpoint_purpose, "JOB_LIST");
+    assert.equal(allowed.authorization.allowed_http_method, "GET");
+    assert.equal(allowed.authorization.reviewer, "reviewer");
+    assert.equal(allowed.authorization.issued_at, "2026-09-03T10:00:00+08:00");
+  }
 });
 
 test("Live Canary denies rejected or review admissions", () => {
@@ -261,7 +273,7 @@ test("Live Canary denies endpoint purpose, HTTP method, and P1 Endpoint referenc
   const wrongReference = recruitmentEndpoint(approved);
   const cases: Array<[LiveCanaryExecutionRequest, string]> = [
     [execution(approved, { endpoint_purpose: "JOB_DETAIL" }), "AUTHORIZATION_ENDPOINT_PURPOSE_MISMATCH"],
-    [execution(approved, { requested_http_method: "HEAD" }), "AUTHORIZATION_HTTP_METHOD_MISMATCH"],
+    [execution(approved, { allowed_http_method: "HEAD" }), "AUTHORIZATION_HTTP_METHOD_MISMATCH"],
     [execution(approved, {
       recruitment_endpoint: {
         ...wrongReference,
@@ -286,12 +298,33 @@ test("Live Canary denies endpoint purpose, HTTP method, and P1 Endpoint referenc
   }
 });
 
+test("Live Canary directly rejects mismatched fields stored by Authorization", () => {
+  const approved = admission();
+  const request = execution(approved);
+  const cases: Array<[LiveCanaryManualAuthorization, string]> = [
+    [authorization(approved, {
+      recruitment_endpoint_id: branded<RecruitmentEndpointId>("another-endpoint")
+    }), "AUTHORIZATION_ENDPOINT_REFERENCE_MISMATCH"],
+    [authorization(approved, {
+      endpoint_purpose: "JOB_DETAIL"
+    }), "AUTHORIZATION_ENDPOINT_PURPOSE_MISMATCH"],
+    [authorization(approved, {
+      allowed_http_method: "HEAD" as LiveCanaryManualAuthorization["allowed_http_method"]
+    }), "AUTHORIZATION_HTTP_METHOD_MISMATCH"]
+  ];
+  for (const [candidate, expected] of cases) {
+    const decision = evaluateLiveCanaryAuthorization(approved, request, candidate);
+    assert.equal(decision.allowed, false);
+    if (!decision.allowed) assert.deepEqual(decision.reason_codes, [expected]);
+  }
+});
+
 test("Live Canary requires a non-empty signed binding", () => {
   const approved = admission();
   const decision = evaluateLiveCanaryAuthorization(
     approved,
     execution(approved),
-    authorization(approved, { authorized_at: "" })
+    authorization(approved, { issued_at: "" })
   );
   assert.equal(decision.allowed, false);
   if (!decision.allowed) assert.deepEqual(decision.reason_codes, ["AUTHORIZATION_BINDING_INVALID"]);

@@ -153,12 +153,15 @@ export const LIVE_CANARY_SCOPES = ["ONE_ENDPOINT_ONE_RUN"] as const;
 export type LiveCanaryScope = (typeof LIVE_CANARY_SCOPES)[number];
 
 export interface LiveCanaryManualAuthorization {
-  readonly live_canary_authorization_id: LiveCanaryAuthorizationId;
+  readonly authorization_id: LiveCanaryAuthorizationId;
   readonly source_admission_id: SourceAdmissionId;
   readonly endpoint: string;
+  readonly recruitment_endpoint_id: RecruitmentEndpointId;
+  readonly endpoint_purpose: SourceAdmissionEndpointPurpose;
+  readonly allowed_http_method: SourceAdmissionAllowedHttpMethod;
   readonly collection_run_id: LiveCanaryCollectionRunId;
-  readonly authorized_by: string;
-  readonly authorized_at: string;
+  readonly reviewer: string;
+  readonly issued_at: string;
   readonly evidence_id: SourceAdmissionEvidenceId;
   readonly scope: LiveCanaryScope;
   readonly manual_confirmation: true;
@@ -167,9 +170,10 @@ export interface LiveCanaryManualAuthorization {
 export interface LiveCanaryExecutionRequest {
   readonly source_admission_id: SourceAdmissionId;
   readonly endpoint: string;
+  readonly recruitment_endpoint_id: RecruitmentEndpointId;
   readonly recruitment_endpoint: RecruitmentEndpoint;
   readonly endpoint_purpose: SourceAdmissionEndpointPurpose;
-  readonly requested_http_method: HttpRequestMethod;
+  readonly allowed_http_method: HttpRequestMethod;
   readonly collection_run_id: LiveCanaryCollectionRunId;
 }
 
