@@ -1,0 +1,9 @@
+{
+  "fixture_status": "TEST_FIXTURE_FROM_REAL_P2_04_CANARY",
+  "offline_only": true,
+  "source_canary_run_id": "p2-04-run:e31df3a6-d762-4d02-9e3e-df2fdacc4334",
+  "source_raw_artifact": "outputs/p2-04/p2-04-run-e31df3a6-d762-4d02-9e3e-df2fdacc4334/raw.html",
+  "source_endpoint": "https://www.beijing.gov.cn/gongkai/rsxx/sydwzp/",
+  "raw_sha256": "6dd2ca1ee38b37e678b4508c95dc0b05903333602e399b1facead5950c69cc58",
+  "content_note": "Byte-for-byte copy of the P2-04 Canary Raw HTML. No recruitment facts were edited."
+}
