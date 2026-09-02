@@ -1,0 +1,10 @@
+{
+  "fixture_status": "TEST_FIXTURE_FROM_REAL_P2_04D_CANARY",
+  "offline_only": true,
+  "source_canary_run_id": "p2-04d-run:3648affe-5bd5-471c-b557-085bfed0a3be",
+  "source_url": "https://www.beijing.gov.cn/gongkai/rsxx/sydwzp/202606/t20260625_4714884.html",
+  "captured_at": "2026-09-02T13:49:21.756Z",
+  "raw_sha256": "8a44dad79da041e1aefb7d9aed442df40f5de844eefe5d1708cb52996f511d8a",
+  "raw_byte_length": 40310,
+  "notice": "Byte-faithful local test fixture copied from the one approved P2-04D Raw Capture. It must be used offline only and does not authorize any request."
+}
