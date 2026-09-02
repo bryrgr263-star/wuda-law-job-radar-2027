@@ -15,6 +15,7 @@
     "test:eligibility": "tsx --test tests/eligibility/eligibility-engine.test.ts",
     "test:lifecycle": "tsx --test tests/lifecycle/source-run-missing-guard.test.ts",
     "test:normalization": "tsx --test tests/normalization/source-occurrence.test.ts",
+    "test:persistence": "tsx --test tests/persistence/shadow-migration.test.ts tests/persistence/shadow-repository.test.ts",
     "test:registry": "tsx --test tests/registry/source-registry.test.ts",
     "test:requirements": "tsx --test tests/requirements/requirement-parser.test.ts",
     "test:transport": "tsx --test tests/transport/transport-raw.test.ts",
