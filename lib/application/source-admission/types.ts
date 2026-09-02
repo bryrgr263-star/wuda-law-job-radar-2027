@@ -14,6 +14,14 @@ export type SourceAdmissionReviewId = string & {
   readonly [sourceAdmissionBrand]: "SourceAdmissionReviewId";
 };
 
+export type LiveCanaryAuthorizationId = string & {
+  readonly [sourceAdmissionBrand]: "LiveCanaryAuthorizationId";
+};
+
+export type LiveCanaryCollectionRunId = string & {
+  readonly [sourceAdmissionBrand]: "LiveCanaryCollectionRunId";
+};
+
 export const SOURCE_ADMISSION_STATUSES = [
   "APPROVED",
   "REJECTED",
@@ -123,7 +131,10 @@ export const LIVE_CANARY_SCOPES = ["ONE_ENDPOINT_ONE_RUN"] as const;
 export type LiveCanaryScope = (typeof LIVE_CANARY_SCOPES)[number];
 
 export interface LiveCanaryManualAuthorization {
+  readonly live_canary_authorization_id: LiveCanaryAuthorizationId;
   readonly source_admission_id: SourceAdmissionId;
+  readonly endpoint: string;
+  readonly collection_run_id: LiveCanaryCollectionRunId;
   readonly authorized_by: string;
   readonly authorized_at: string;
   readonly evidence_id: SourceAdmissionEvidenceId;
@@ -131,12 +142,22 @@ export interface LiveCanaryManualAuthorization {
   readonly manual_confirmation: true;
 }
 
+export interface LiveCanaryExecutionRequest {
+  readonly source_admission_id: SourceAdmissionId;
+  readonly endpoint: string;
+  readonly collection_run_id: LiveCanaryCollectionRunId;
+}
+
 export const LIVE_CANARY_DENIAL_CODES = [
   "NO_MANUAL_AUTHORIZATION",
   "ADMISSION_NOT_APPROVED",
-  "AUTHORIZATION_TARGET_MISMATCH",
+  "AUTHORIZATION_SOURCE_MISMATCH",
+  "AUTHORIZATION_ENDPOINT_MISMATCH",
+  "AUTHORIZATION_RUN_MISMATCH",
   "AUTHORIZATION_EVIDENCE_MISSING",
-  "LIVE_CANARY_SCOPE_INVALID"
+  "LIVE_CANARY_SCOPE_INVALID",
+  "AUTHORIZATION_BINDING_INVALID",
+  "AUTHORIZATION_ALREADY_USED"
 ] as const;
 
 export type LiveCanaryDenialCode = (typeof LIVE_CANARY_DENIAL_CODES)[number];

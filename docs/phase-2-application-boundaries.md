@@ -22,7 +22,7 @@ Third-party recruitment platforms may be recorded only as `REJECTED`; they canno
 
 ## Network default deny
 
-P2-01 contains no network implementation. A Live Canary is denied unless a specific approved admission has a matching, human-authored, single-endpoint/single-run authorization with referenced admission evidence. The contract grants no execution capability; P2-04 will be the first stage permitted to supply a network-capable runner.
+P2-01 contains no network implementation. A Live Canary is denied unless a specific approved admission has a matching, human-authored, single-endpoint/single-run authorization with referenced admission evidence. The authorization must bind the admission ID, the exact admitted endpoint locator, one collection-run ID, signing time, signer, and evidence ID. Evaluation rejects any source, endpoint, run, evidence, scope, or approval mismatch. The in-memory authorization gate consumes an authorization ID after its first successful evaluation, so it cannot authorize a second execution. The contract grants no execution capability; P2-04 will be the first stage permitted to supply a network-capable runner.
 
 Formal tests continue to install the shared Network Guard. Any accidental `fetch`, HTTP, HTTPS, TCP, or TLS operation fails.
 

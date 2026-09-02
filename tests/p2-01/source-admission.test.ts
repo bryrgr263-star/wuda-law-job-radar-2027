@@ -5,12 +5,16 @@ import test from "node:test";
 
 import {
   evaluateLiveCanaryAuthorization,
+  InMemoryLiveCanaryAuthorizationGate,
   InMemorySourceAdmissionRegister,
   SOURCE_PROHIBITED_ACTIONS,
   SourceAdmissionError,
   type SourceAdmission,
   type SourceAdmissionEvidenceId,
-  type SourceAdmissionId
+  type SourceAdmissionId,
+  type LiveCanaryCollectionRunId,
+  type LiveCanaryExecutionRequest,
+  type LiveCanaryManualAuthorization
 } from "../../lib/application";
 import { UTF8_TEXT_ENCODING } from "../../lib/ingestion";
 
@@ -86,6 +90,36 @@ function admission(
   };
 }
 
+function execution(
+  source: SourceAdmission,
+  overrides: Partial<LiveCanaryExecutionRequest> = {}
+): LiveCanaryExecutionRequest {
+  return {
+    source_admission_id: source.source_admission_id,
+    endpoint: source.endpoint,
+    collection_run_id: branded<LiveCanaryCollectionRunId>("canary-run-once"),
+    ...overrides
+  };
+}
+
+function authorization(
+  source: SourceAdmission,
+  overrides: Partial<LiveCanaryManualAuthorization> = {}
+): LiveCanaryManualAuthorization {
+  return {
+    live_canary_authorization_id: branded("canary-authorization-once"),
+    source_admission_id: source.source_admission_id,
+    endpoint: source.endpoint,
+    collection_run_id: branded<LiveCanaryCollectionRunId>("canary-run-once"),
+    authorized_by: "reviewer",
+    authorized_at: "2026-09-03T10:00:00+08:00",
+    evidence_id: source.evidence[2].source_admission_evidence_id,
+    scope: "ONE_ENDPOINT_ONE_RUN",
+    manual_confirmation: true,
+    ...overrides
+  };
+}
+
 test("Source Admission Register preserves Chinese review evidence and all required fields", () => {
   const register = new InMemorySourceAdmissionRegister();
   const registered = register.register(admission());
@@ -148,38 +182,64 @@ test("P2 rejects approval for third-party, credentialed, CAPTCHA, or unreviewed 
   })), SourceAdmissionError);
 });
 
-test("Live Canary is denied by default and requires matching manual authorization", () => {
+test("Live Canary allows only an exact approved source, endpoint, run, and evidence binding", () => {
   const approved = admission();
-  const deniedWithoutAuthorization = evaluateLiveCanaryAuthorization(approved, null);
+  const request = execution(approved);
+  const deniedWithoutAuthorization = evaluateLiveCanaryAuthorization(approved, request, null);
   assert.deepEqual(deniedWithoutAuthorization, {
     allowed: false,
     source_admission_id: approved.source_admission_id,
     reason_codes: ["NO_MANUAL_AUTHORIZATION"]
   });
 
-  const review = admission("REVIEW");
-  const deniedReview = evaluateLiveCanaryAuthorization(review, {
-    source_admission_id: review.source_admission_id,
-    authorized_by: "reviewer",
-    authorized_at: "2026-09-03T10:00:00+08:00",
-    evidence_id: review.evidence[2].source_admission_evidence_id,
-    scope: "ONE_ENDPOINT_ONE_RUN",
-    manual_confirmation: true
-  });
-  assert.equal(deniedReview.allowed, false);
-  if (!deniedReview.allowed) {
-    assert.deepEqual(deniedReview.reason_codes, ["ADMISSION_NOT_APPROVED"]);
-  }
-
-  const allowed = evaluateLiveCanaryAuthorization(approved, {
-    source_admission_id: approved.source_admission_id,
-    authorized_by: "reviewer",
-    authorized_at: "2026-09-03T10:00:00+08:00",
-    evidence_id: approved.evidence[2].source_admission_evidence_id,
-    scope: "ONE_ENDPOINT_ONE_RUN",
-    manual_confirmation: true
-  });
+  const allowed = evaluateLiveCanaryAuthorization(approved, request, authorization(approved));
   assert.equal(allowed.allowed, true);
+});
+
+test("Live Canary denies rejected or review admissions", () => {
+  for (const source of [admission("REJECTED"), admission("REVIEW")]) {
+    const decision = evaluateLiveCanaryAuthorization(source, execution(source), authorization(source));
+    assert.equal(decision.allowed, false);
+    if (!decision.allowed) assert.deepEqual(decision.reason_codes, ["ADMISSION_NOT_APPROVED"]);
+  }
+});
+
+test("Live Canary denies source, endpoint, run, and evidence binding mismatches", () => {
+  const approved = admission();
+  const auth = authorization(approved);
+  const cases: Array<[string, LiveCanaryExecutionRequest, LiveCanaryManualAuthorization, string]> = [
+    ["wrong source", execution(approved, { source_admission_id: branded<SourceAdmissionId>("another-source") }), auth, "AUTHORIZATION_SOURCE_MISMATCH"],
+    ["wrong endpoint", execution(approved, { endpoint: "https://example.invalid/other" }), auth, "AUTHORIZATION_ENDPOINT_MISMATCH"],
+    ["wrong run", execution(approved, { collection_run_id: branded<LiveCanaryCollectionRunId>("another-run") }), auth, "AUTHORIZATION_RUN_MISMATCH"],
+    ["missing evidence", execution(approved), authorization(approved, { evidence_id: branded<SourceAdmissionEvidenceId>("missing-evidence") }), "AUTHORIZATION_EVIDENCE_MISSING"]
+  ];
+  for (const [, request, candidate, expected] of cases) {
+    const decision = evaluateLiveCanaryAuthorization(approved, request, candidate);
+    assert.equal(decision.allowed, false);
+    if (!decision.allowed) assert.deepEqual(decision.reason_codes, [expected]);
+  }
+});
+
+test("Live Canary requires a non-empty signed binding", () => {
+  const approved = admission();
+  const decision = evaluateLiveCanaryAuthorization(
+    approved,
+    execution(approved),
+    authorization(approved, { authorized_at: "" })
+  );
+  assert.equal(decision.allowed, false);
+  if (!decision.allowed) assert.deepEqual(decision.reason_codes, ["AUTHORIZATION_BINDING_INVALID"]);
+});
+
+test("a Live Canary authorization is single-use", () => {
+  const approved = admission();
+  const request = execution(approved);
+  const gate = new InMemoryLiveCanaryAuthorizationGate();
+  const first = gate.authorize(approved, request, authorization(approved));
+  const second = gate.authorize(approved, request, authorization(approved));
+  assert.equal(first.allowed, true);
+  assert.equal(second.allowed, false);
+  if (!second.allowed) assert.deepEqual(second.reason_codes, ["AUTHORIZATION_ALREADY_USED"]);
 });
 
 test("P2-01 source admission tests remain offline", async () => {
