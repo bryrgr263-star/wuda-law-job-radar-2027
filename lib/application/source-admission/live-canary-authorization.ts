@@ -32,6 +32,24 @@ export function evaluateLiveCanaryAuthorization(
   ) {
     return denied(admission, ["AUTHORIZATION_ENDPOINT_MISMATCH"]);
   }
+  if (
+    execution.recruitment_endpoint.recruitment_endpoint_id
+      !== admission.recruitment_endpoint_id
+    || execution.recruitment_endpoint.locator !== admission.endpoint
+    || execution.recruitment_endpoint.content_kind !== admission.content_kind
+  ) {
+    return denied(admission, ["AUTHORIZATION_ENDPOINT_REFERENCE_MISMATCH"]);
+  }
+  if (execution.endpoint_purpose !== admission.endpoint_purpose) {
+    return denied(admission, ["AUTHORIZATION_ENDPOINT_PURPOSE_MISMATCH"]);
+  }
+  if (
+    execution.requested_http_method !== admission.allowed_http_method
+    || execution.recruitment_endpoint.request_method
+      !== execution.requested_http_method
+  ) {
+    return denied(admission, ["AUTHORIZATION_HTTP_METHOD_MISMATCH"]);
+  }
   if (authorization.collection_run_id !== execution.collection_run_id) {
     return denied(admission, ["AUTHORIZATION_RUN_MISMATCH"]);
   }
@@ -57,6 +75,7 @@ function hasRequiredBinding(
   return [
     execution.source_admission_id,
     execution.endpoint,
+    execution.recruitment_endpoint.recruitment_endpoint_id,
     execution.collection_run_id,
     authorization.live_canary_authorization_id,
     authorization.source_admission_id,

@@ -1,4 +1,5 @@
 import {
+  SOURCE_ADMISSION_ENDPOINT_PURPOSES,
   SOURCE_PROHIBITED_ACTIONS,
   type SourceAdmission,
   type SourceAdmissionEvidenceId,
@@ -54,11 +55,29 @@ export function validateSourceAdmission(admission: SourceAdmission) {
   requireText(admission.source_name.original.text, "Source name");
   requireText(admission.official_owner.original.text, "Official owner");
   validateEndpoint(admission.endpoint);
+  validateEndpointContract(admission);
   validateEvidence(admission);
   validateReviews(admission);
 
   if (admission.admission_decision === "APPROVED") {
     validateApprovedAdmission(admission);
+  }
+}
+
+function validateEndpointContract(admission: SourceAdmission) {
+  if (
+    typeof admission.recruitment_endpoint_id !== "string"
+    || admission.recruitment_endpoint_id.trim().length === 0
+  ) {
+    throw new SourceAdmissionError("P1 RecruitmentEndpoint reference cannot be empty");
+  }
+  if (!SOURCE_ADMISSION_ENDPOINT_PURPOSES.includes(admission.endpoint_purpose)) {
+    throw new SourceAdmissionError(`Unsupported endpoint purpose: ${admission.endpoint_purpose}`);
+  }
+  if (admission.allowed_http_method !== "GET") {
+    throw new SourceAdmissionError(
+      `P2-04 Source Admission only permits GET: ${admission.allowed_http_method}`
+    );
   }
 }
 

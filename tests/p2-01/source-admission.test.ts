@@ -16,7 +16,10 @@ import {
   type LiveCanaryExecutionRequest,
   type LiveCanaryManualAuthorization
 } from "../../lib/application";
-import { UTF8_TEXT_ENCODING } from "../../lib/ingestion";
+import {
+  UTF8_TEXT_ENCODING,
+  type RecruitmentEndpoint
+} from "../../lib/ingestion";
 
 function branded<Value extends string>(value: string) {
   return value as Value;
@@ -43,6 +46,9 @@ function admission(
     source_type: "OFFICIAL_CAREER_SITE",
     official_owner: traceable("中国科学院某研究所"),
     endpoint: "https://example.invalid/careers",
+    recruitment_endpoint_id: branded("endpoint-official-html"),
+    endpoint_purpose: "JOB_LIST",
+    allowed_http_method: "GET",
     content_kind: "HTML",
     source_authority: "OFFICIAL",
     robots: { status: "ALLOWED", evidence_id: robotsEvidenceId },
@@ -90,6 +96,23 @@ function admission(
   };
 }
 
+function recruitmentEndpoint(source: SourceAdmission): RecruitmentEndpoint {
+  return {
+    recruitment_endpoint_id: source.recruitment_endpoint_id,
+    source_definition_id: branded("source-official-html"),
+    name: traceable("官方招聘列表"),
+    description: traceable("公开招聘岗位列表入口"),
+    coverage_regions: [],
+    locator: source.endpoint,
+    request_method: "GET",
+    content_kind: source.content_kind,
+    adapter_key: "official-html-live-canary",
+    decoded_text_encoding: UTF8_TEXT_ENCODING,
+    collection_config: { timeout_ms: 10_000, max_pages: 1, retry_limit: 0 },
+    enabled: true
+  };
+}
+
 function execution(
   source: SourceAdmission,
   overrides: Partial<LiveCanaryExecutionRequest> = {}
@@ -97,6 +120,9 @@ function execution(
   return {
     source_admission_id: source.source_admission_id,
     endpoint: source.endpoint,
+    recruitment_endpoint: recruitmentEndpoint(source),
+    endpoint_purpose: source.endpoint_purpose,
+    requested_http_method: "GET",
     collection_run_id: branded<LiveCanaryCollectionRunId>("canary-run-once"),
     ...overrides
   };
@@ -126,6 +152,9 @@ test("Source Admission Register preserves Chinese review evidence and all requir
 
   assert.equal(registered.source_name.original.text, "某研究所官方人才招聘");
   assert.equal(registered.official_owner.original.text, "中国科学院某研究所");
+  assert.equal(registered.recruitment_endpoint_id, "endpoint-official-html");
+  assert.equal(registered.endpoint_purpose, "JOB_LIST");
+  assert.equal(registered.allowed_http_method, "GET");
   assert.equal(registered.robots.status, "ALLOWED");
   assert.equal(registered.terms.status, "ALLOWED");
   assert.equal(registered.review_records[0].decision, "APPROVED");
@@ -182,6 +211,13 @@ test("P2 rejects approval for third-party, credentialed, CAPTCHA, or unreviewed 
   })), SourceAdmissionError);
 });
 
+test("Source Admission requires an explicit P1 RecruitmentEndpoint reference", () => {
+  const register = new InMemorySourceAdmissionRegister();
+  assert.throws(() => register.register(admission("APPROVED", {
+    recruitment_endpoint_id: "" as SourceAdmission["recruitment_endpoint_id"]
+  })), SourceAdmissionError);
+});
+
 test("Live Canary allows only an exact approved source, endpoint, run, and evidence binding", () => {
   const approved = admission();
   const request = execution(approved);
@@ -215,6 +251,36 @@ test("Live Canary denies source, endpoint, run, and evidence binding mismatches"
   ];
   for (const [, request, candidate, expected] of cases) {
     const decision = evaluateLiveCanaryAuthorization(approved, request, candidate);
+    assert.equal(decision.allowed, false);
+    if (!decision.allowed) assert.deepEqual(decision.reason_codes, [expected]);
+  }
+});
+
+test("Live Canary denies endpoint purpose, HTTP method, and P1 Endpoint reference mismatches", () => {
+  const approved = admission();
+  const wrongReference = recruitmentEndpoint(approved);
+  const cases: Array<[LiveCanaryExecutionRequest, string]> = [
+    [execution(approved, { endpoint_purpose: "JOB_DETAIL" }), "AUTHORIZATION_ENDPOINT_PURPOSE_MISMATCH"],
+    [execution(approved, { requested_http_method: "HEAD" }), "AUTHORIZATION_HTTP_METHOD_MISMATCH"],
+    [execution(approved, {
+      recruitment_endpoint: {
+        ...wrongReference,
+        recruitment_endpoint_id: branded("another-endpoint")
+      }
+    }), "AUTHORIZATION_ENDPOINT_REFERENCE_MISMATCH"],
+    [execution(approved, {
+      recruitment_endpoint: {
+        ...wrongReference,
+        locator: "https://example.invalid/another"
+      }
+    }), "AUTHORIZATION_ENDPOINT_REFERENCE_MISMATCH"]
+  ];
+  for (const [request, expected] of cases) {
+    const decision = evaluateLiveCanaryAuthorization(
+      approved,
+      request,
+      authorization(approved)
+    );
     assert.equal(decision.allowed, false);
     if (!decision.allowed) assert.deepEqual(decision.reason_codes, [expected]);
   }

@@ -1,4 +1,12 @@
-import type { AuthorityLevel, ContentKind, OriginalText, TraceableText } from "../../ingestion";
+import type {
+  AuthorityLevel,
+  ContentKind,
+  HttpRequestMethod,
+  OriginalText,
+  RecruitmentEndpoint,
+  RecruitmentEndpointId,
+  TraceableText
+} from "../../ingestion";
 
 declare const sourceAdmissionBrand: unique symbol;
 
@@ -29,6 +37,17 @@ export const SOURCE_ADMISSION_STATUSES = [
 ] as const;
 
 export type SourceAdmissionStatus = (typeof SOURCE_ADMISSION_STATUSES)[number];
+
+export const SOURCE_ADMISSION_ENDPOINT_PURPOSES = [
+  "JOB_LIST",
+  "JOB_DETAIL",
+  "RECRUITMENT_NOTICE"
+] as const;
+
+export type SourceAdmissionEndpointPurpose =
+  (typeof SOURCE_ADMISSION_ENDPOINT_PURPOSES)[number];
+
+export type SourceAdmissionAllowedHttpMethod = "GET";
 
 export const SOURCE_ADMISSION_SOURCE_TYPES = [
   "OFFICIAL_CAREER_SITE",
@@ -110,6 +129,9 @@ export interface SourceAdmission {
   readonly source_type: SourceAdmissionSourceType;
   readonly official_owner: TraceableText;
   readonly endpoint: string;
+  readonly recruitment_endpoint_id: RecruitmentEndpointId;
+  readonly endpoint_purpose: SourceAdmissionEndpointPurpose;
+  readonly allowed_http_method: SourceAdmissionAllowedHttpMethod;
   readonly content_kind: ContentKind;
   readonly source_authority: AuthorityLevel;
   readonly robots: SourceAccessReview;
@@ -145,6 +167,9 @@ export interface LiveCanaryManualAuthorization {
 export interface LiveCanaryExecutionRequest {
   readonly source_admission_id: SourceAdmissionId;
   readonly endpoint: string;
+  readonly recruitment_endpoint: RecruitmentEndpoint;
+  readonly endpoint_purpose: SourceAdmissionEndpointPurpose;
+  readonly requested_http_method: HttpRequestMethod;
   readonly collection_run_id: LiveCanaryCollectionRunId;
 }
 
@@ -153,6 +178,9 @@ export const LIVE_CANARY_DENIAL_CODES = [
   "ADMISSION_NOT_APPROVED",
   "AUTHORIZATION_SOURCE_MISMATCH",
   "AUTHORIZATION_ENDPOINT_MISMATCH",
+  "AUTHORIZATION_ENDPOINT_REFERENCE_MISMATCH",
+  "AUTHORIZATION_ENDPOINT_PURPOSE_MISMATCH",
+  "AUTHORIZATION_HTTP_METHOD_MISMATCH",
   "AUTHORIZATION_RUN_MISMATCH",
   "AUTHORIZATION_EVIDENCE_MISSING",
   "LIVE_CANARY_SCOPE_INVALID",
