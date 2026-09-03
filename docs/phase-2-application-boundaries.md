@@ -22,6 +22,8 @@ Admission decisions remain `APPROVED`, `REJECTED`, or `REVIEW` and are separate 
 
 `B + REVIEW + INSUFFICIENT_EVIDENCE` may preserve `UNKNOWN` login and CAPTCHA observations while evidence collection is pending. This review state remains non-executable and does not normalize either value to an allowed condition. `B + APPROVED` still requires `login_requirement = NONE`, `captcha = NONE_OBSERVED`, `HUMAN_REVIEWED_CANARY`, and a separate one-endpoint/one-run manual authorization.
 
+An `OBSERVATION_CANARY` is the only exception to the otherwise non-executable review state. It authorizes one manually confirmed `GET` for one exact B-level `REVIEW + INSUFFICIENT_EVIDENCE` Endpoint and Collection Run solely for `OBSERVE_ACCESS_PROPERTIES`. It requires `max_items = 1`, `max_pages = 1`, `retry_limit = 0`, and `follow_redirects = false`; it is consumed before transport and cannot be replayed. It does not approve or mutate the Admission, cannot be supplied as an automation authorization, and cannot enter the Scheduler. Existing automation authorizations remain separately typed and continue to require an approved Admission.
+
 | Level | Meaning | Permission |
 | --- | --- | --- |
 | `A` | Explicit official automation evidence | `APPROVED` may express normal controlled collection eligibility |

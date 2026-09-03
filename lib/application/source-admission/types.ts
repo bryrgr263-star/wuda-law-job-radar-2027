@@ -199,12 +199,31 @@ export const LIVE_CANARY_SCOPES = ["ONE_ENDPOINT_ONE_RUN"] as const;
 export type LiveCanaryScope = (typeof LIVE_CANARY_SCOPES)[number];
 
 export interface LiveCanaryManualAuthorization {
+  readonly authorization_mode?: "AUTOMATION_CANARY";
   readonly authorization_id: LiveCanaryAuthorizationId;
   readonly source_admission_id: SourceAdmissionId;
   readonly endpoint: string;
   readonly recruitment_endpoint_id: RecruitmentEndpointId;
   readonly endpoint_purpose: SourceAdmissionEndpointPurpose;
   readonly allowed_http_method: SourceAdmissionAllowedHttpMethod;
+  readonly collection_run_id: LiveCanaryCollectionRunId;
+  readonly reviewer: string;
+  readonly issued_at: string;
+  readonly evidence_id: SourceAdmissionEvidenceId;
+  readonly scope: LiveCanaryScope;
+  readonly manual_confirmation: true;
+}
+
+export interface ObservationCanaryManualAuthorization {
+  readonly authorization_mode: "OBSERVATION_CANARY";
+  readonly authorization_purpose: "OBSERVE_ACCESS_PROPERTIES";
+  readonly authorization_id: LiveCanaryAuthorizationId;
+  readonly source_admission_id: SourceAdmissionId;
+  readonly endpoint: string;
+  readonly recruitment_endpoint_id: RecruitmentEndpointId;
+  readonly endpoint_purpose: SourceAdmissionEndpointPurpose;
+  readonly allowed_http_method: SourceAdmissionAllowedHttpMethod;
+  readonly content_kind: ContentKind;
   readonly collection_run_id: LiveCanaryCollectionRunId;
   readonly reviewer: string;
   readonly issued_at: string;
@@ -234,6 +253,10 @@ export const LIVE_CANARY_DENIAL_CODES = [
   "AUTHORIZATION_HTTP_METHOD_MISMATCH",
   "AUTHORIZATION_RUN_MISMATCH",
   "AUTHORIZATION_EVIDENCE_MISSING",
+  "AUTHORIZATION_MODE_MISMATCH",
+  "OBSERVATION_CANARY_ADMISSION_INVALID",
+  "OBSERVATION_CANARY_PURPOSE_INVALID",
+  "OBSERVATION_CANARY_REQUEST_BUDGET_INVALID",
   "LIVE_CANARY_SCOPE_INVALID",
   "AUTHORIZATION_BINDING_INVALID",
   "AUTHORIZATION_ALREADY_USED"
@@ -246,6 +269,18 @@ export type LiveCanaryAuthorizationDecision =
       readonly allowed: true;
       readonly source_admission_id: SourceAdmissionId;
       readonly authorization: LiveCanaryManualAuthorization;
+    }
+  | {
+      readonly allowed: false;
+      readonly source_admission_id: SourceAdmissionId;
+      readonly reason_codes: readonly LiveCanaryDenialCode[];
+    };
+
+export type ObservationCanaryAuthorizationDecision =
+  | {
+      readonly allowed: true;
+      readonly source_admission_id: SourceAdmissionId;
+      readonly authorization: ObservationCanaryManualAuthorization;
     }
   | {
       readonly allowed: false;
