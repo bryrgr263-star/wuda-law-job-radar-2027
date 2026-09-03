@@ -146,7 +146,11 @@ function validateAdmissionTier(admission: SourceAdmission) {
   }
 
   if (admission.admission_level === "B") {
-    validateOfficialPublicAccess(admission);
+    validateOfficialPublicAccess(
+      admission,
+      admission.admission_decision === "REVIEW"
+        && admission.automation_basis === "INSUFFICIENT_EVIDENCE"
+    );
     if (hasProhibitedAccessEvidence(admission)) {
       throw new SourceAdmissionError("Level B cannot contain prohibited access evidence");
     }
@@ -212,7 +216,10 @@ function validateApprovedOfficialAdmission(admission: SourceAdmission) {
   }
 }
 
-function validateOfficialPublicAccess(admission: SourceAdmission) {
+function validateOfficialPublicAccess(
+  admission: SourceAdmission,
+  allowUnknownAccessSignals = false
+) {
   if (!phaseTwoApprovedSourceTypes.has(admission.source_type)) {
     throw new SourceAdmissionError(
       `P2 cannot approve source type: ${admission.source_type}`
@@ -221,7 +228,11 @@ function validateOfficialPublicAccess(admission: SourceAdmission) {
   if (admission.source_authority !== "OFFICIAL" && admission.source_authority !== "AUTHORIZED") {
     throw new SourceAdmissionError("P2 approved sources must be OFFICIAL or AUTHORIZED");
   }
-  if (admission.login_requirement !== "NONE" || admission.captcha !== "NONE_OBSERVED") {
+  const loginAccepted = admission.login_requirement === "NONE"
+    || (allowUnknownAccessSignals && admission.login_requirement === "UNKNOWN");
+  const captchaAccepted = admission.captcha === "NONE_OBSERVED"
+    || (allowUnknownAccessSignals && admission.captcha === "UNKNOWN");
+  if (!loginAccepted || !captchaAccepted) {
     throw new SourceAdmissionError("P2 approved sources cannot require login or CAPTCHA handling");
   }
   const missingProhibitions = SOURCE_PROHIBITED_ACTIONS.filter((action) => {

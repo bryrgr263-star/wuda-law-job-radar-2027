@@ -20,6 +20,8 @@ Supported endpoint purposes are `JOB_LIST`, `JOB_DETAIL`, `RECRUITMENT_NOTICE`, 
 
 Admission decisions remain `APPROVED`, `REJECTED`, or `REVIEW` and are separate from the A/B/C/D admission level. Access evidence remains explicit: `UNKNOWN` is neither `ALLOWED` nor `PROHIBITED`, and the legacy `DISALLOWED` value remains a prohibited result for compatibility.
 
+`B + REVIEW + INSUFFICIENT_EVIDENCE` may preserve `UNKNOWN` login and CAPTCHA observations while evidence collection is pending. This review state remains non-executable and does not normalize either value to an allowed condition. `B + APPROVED` still requires `login_requirement = NONE`, `captcha = NONE_OBSERVED`, `HUMAN_REVIEWED_CANARY`, and a separate one-endpoint/one-run manual authorization.
+
 | Level | Meaning | Permission |
 | --- | --- | --- |
 | `A` | Explicit official automation evidence | `APPROVED` may express normal controlled collection eligibility |

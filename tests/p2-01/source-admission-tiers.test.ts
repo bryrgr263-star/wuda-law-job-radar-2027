@@ -51,6 +51,8 @@ interface AdmissionFixtureOptions {
   readonly officialOwner?: string;
   readonly sourceUrl?: string;
   readonly endpoint?: string;
+  readonly loginRequirement?: SourceAdmission["login_requirement"];
+  readonly captcha?: SourceAdmission["captcha"];
 }
 
 function evidence(
@@ -101,8 +103,8 @@ function admission(options: AdmissionFixtureOptions): SourceAdmission {
     source_authority: "OFFICIAL",
     robots: { status: options.robots, evidence_id: robotsEvidenceId },
     terms: { status: options.terms, evidence_id: termsEvidenceId },
-    login_requirement: "NONE",
-    captcha: "NONE_OBSERVED",
+    login_requirement: options.loginRequirement ?? "NONE",
+    captcha: options.captcha ?? "NONE_OBSERVED",
     structure: "STATIC_HTML",
     stability: "HIGH",
     update_frequency: "IRREGULAR",
@@ -291,6 +293,81 @@ test("Beijing public institution recruitment remains Level B while terms are UNK
   );
   assert.equal(decision.allowed, false);
   if (!decision.allowed) assert.deepEqual(decision.reason_codes, ["ADMISSION_NOT_APPROVED"]);
+});
+
+test("B review with insufficient evidence preserves unknown login and CAPTCHA signals", () => {
+  const source = {
+    ...admission({
+      level: "B",
+      automationBasis: "INSUFFICIENT_EVIDENCE",
+      decision: "REVIEW",
+      robots: "UNKNOWN",
+      terms: "UNKNOWN",
+      loginRequirement: "UNKNOWN",
+      captcha: "UNKNOWN",
+      sourceAdmissionId: branded<SourceAdmissionId>("admission-attachment-review-unknown"),
+      endpoint: "https://example.invalid/careers/position-table.xlsx"
+    }),
+    endpoint_purpose: "RECRUITMENT_ATTACHMENT",
+    content_kind: "FILE",
+    structure: "DOCUMENT"
+  } as const satisfies SourceAdmission;
+  const registered = new InMemorySourceAdmissionRegister().register(source);
+
+  assert.equal(registered.login_requirement, "UNKNOWN");
+  assert.equal(registered.captcha, "UNKNOWN");
+  assert.deepEqual(evaluateSourceAutomationPermission(registered), {
+    allowed: false,
+    admission_level: "B",
+    mode: "DENIED"
+  });
+  const decision = evaluateLiveCanaryAuthorization(registered, execution(registered), null);
+  assert.equal(decision.allowed, false);
+  if (!decision.allowed) assert.deepEqual(decision.reason_codes, ["NO_MANUAL_AUTHORIZATION"]);
+});
+
+test("approved B rejects unknown login or CAPTCHA signals", () => {
+  const approved = {
+    level: "B",
+    automationBasis: "HUMAN_REVIEWED_CANARY",
+    decision: "APPROVED",
+    robots: "ALLOWED",
+    terms: "UNKNOWN"
+  } as const;
+  for (const accessSignals of [
+    { loginRequirement: "UNKNOWN", captcha: "NONE_OBSERVED" },
+    { loginRequirement: "NONE", captcha: "UNKNOWN" }
+  ] as const) {
+    assert.throws(
+      () => new InMemorySourceAdmissionRegister().register(admission({
+        ...approved,
+        ...accessSignals
+      })),
+      SourceAdmissionError
+    );
+  }
+});
+
+test("approved B still accepts confirmed public access signals", () => {
+  const source = admission({
+    level: "B",
+    automationBasis: "HUMAN_REVIEWED_CANARY",
+    decision: "APPROVED",
+    robots: "ALLOWED",
+    terms: "UNKNOWN",
+    loginRequirement: "NONE",
+    captcha: "NONE_OBSERVED"
+  });
+  const registered = new InMemorySourceAdmissionRegister().register(source);
+
+  assert.equal(registered.login_requirement, "NONE");
+  assert.equal(registered.captcha, "NONE_OBSERVED");
+  assert.deepEqual(evaluateSourceAutomationPermission(registered), {
+    allowed: true,
+    admission_level: "B",
+    mode: "ONE_ENDPOINT_ONE_RUN",
+    requires_manual_authorization: true
+  });
 });
 
 test("approved Level B uses one endpoint, one run, and consumes manual authorization", () => {
