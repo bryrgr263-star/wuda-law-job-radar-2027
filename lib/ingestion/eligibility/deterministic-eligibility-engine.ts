@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type {
+  AcademicProgramDirectoryReference,
   CandidateProfile,
   EducationCredential,
   EligibilityAssessment,
@@ -12,7 +13,6 @@ import type {
   NonEmptyReadonlyArray,
   ProfessionalQualification,
   RequirementEvidence,
-  RequirementEvidenceId,
   RequirementFact,
   RequirementFactId,
   RequirementValue
@@ -24,14 +24,15 @@ import {
 } from "./types";
 
 export const DETERMINISTIC_ELIGIBILITY_ENGINE_VERSION =
-  "deterministic-eligibility-engine/1.0.0";
+  "deterministic-eligibility-engine/2.0.0";
 
 type PredicateOutcome = "SATISFIED" | "NOT_SATISFIED" | "UNKNOWN";
+type ApplicabilityOutcome = "APPLIES" | "DOES_NOT_APPLY" | "UNKNOWN";
 
 interface EvaluatedFact {
   readonly fact: RequirementFact;
   readonly outcome: PredicateOutcome;
-  readonly has_evidence: boolean;
+  readonly applicability: ApplicabilityOutcome;
 }
 
 interface EvaluatedGroup {
@@ -50,17 +51,24 @@ export class DeterministicEligibilityEngine implements EligibilityEngine {
   evaluate(input: EligibilityEvaluationInput): EligibilityAssessment {
     validateInput(input);
 
-    const evidenceByFact = groupEvidenceByFact(input.requirement_evidence);
-    const evaluatedFacts = input.requirement_facts.map((fact): EvaluatedFact => ({
-      fact,
-      outcome: evaluateFact(fact, input.candidate_profile),
-      has_evidence: (evidenceByFact.get(fact.requirement_fact_id)?.length ?? 0) > 0
-    }));
-    const conflicts = findConflicts(input.requirement_facts);
+    const requirementSet = input.complete_requirement_set;
+    const evaluatedFacts = requirementSet.facts.map((fact): EvaluatedFact => {
+      const applicability = evaluateApplicability(fact, input.candidate_profile);
+      return {
+        fact,
+        applicability,
+        outcome: applicability === "DOES_NOT_APPLY"
+          ? "SATISFIED"
+          : applicability === "UNKNOWN"
+            ? "UNKNOWN"
+            : evaluateFact(fact, input.candidate_profile)
+      };
+    });
+    const conflicts = findConflicts(requirementSet.facts);
     const groups = evaluateGroups(evaluatedFacts);
     const result = selectResult(evaluatedFacts, groups, conflicts);
     const reasonCodes = selectReasonCodes(evaluatedFacts, groups, conflicts, result);
-    const evidenceIds = input.requirement_evidence
+    const evidenceIds = requirementSet.evidence
       .map((item) => item.requirement_evidence_id)
       .sort();
     const assessmentBase = {
@@ -68,11 +76,11 @@ export class DeterministicEligibilityEngine implements EligibilityEngine {
       candidate_profile_id: input.candidate_profile.candidate_profile_id,
       opportunity_version_id: input.opportunity_version.opportunity_version_id,
       reason_codes: asNonEmpty(reasonCodes),
-      requirement_fact_ids: input.requirement_facts
+      requirement_fact_ids: requirementSet.facts
         .map((fact) => fact.requirement_fact_id)
         .sort(),
       engine_version: DETERMINISTIC_ELIGIBILITY_ENGINE_VERSION,
-      parser_versions: [...new Set(input.requirement_facts
+      parser_versions: [...new Set(requirementSet.facts
         .map((fact) => fact.parser_version))].sort(),
       unresolved_conflicts: conflicts,
       assessed_at: input.assessed_at
@@ -94,7 +102,30 @@ export class DeterministicEligibilityEngine implements EligibilityEngine {
 }
 
 function validateInput(input: EligibilityEvaluationInput) {
-  for (const fact of input.requirement_facts) {
+  const requirementSet = input.complete_requirement_set;
+  if (requirementSet.completeness.status !== "COMPLETE"
+      || requirementSet.completeness.blockers.length !== 0) {
+    throw new EligibilityInputError(
+      "REQUIREMENT_SET_INCOMPLETE",
+      "Eligibility accepts only a blocker-free COMPLETE Requirement Set"
+    );
+  }
+  if (requirementSet.opportunity_version_id
+      !== input.opportunity_version.opportunity_version_id) {
+    throw new EligibilityInputError(
+      "REQUIREMENT_SET_OPPORTUNITY_MISMATCH",
+      "Requirement Set belongs to another OpportunityVersion"
+    );
+  }
+  if (requirementSet.requirement_set_id
+      !== requirementSet.completeness.requirement_set_id) {
+    throw new EligibilityInputError(
+      "REQUIREMENT_SET_CONTENT_MISMATCH",
+      "Requirement Set identity differs from its completeness record"
+    );
+  }
+
+  for (const fact of requirementSet.facts) {
     if (fact.opportunity_version_id
         !== input.opportunity_version.opportunity_version_id) {
       throw new EligibilityInputError(
@@ -104,10 +135,18 @@ function validateInput(input: EligibilityEvaluationInput) {
     }
   }
 
-  const factIds = new Set(input.requirement_facts.map((fact) => {
-    return fact.requirement_fact_id;
-  }));
-  for (const evidence of input.requirement_evidence) {
+  const actualFactIds = requirementSet.facts
+    .map((fact) => fact.requirement_fact_id)
+    .sort();
+  requireExactIds(
+    actualFactIds,
+    requirementSet.completeness.fact_ids,
+    "REQUIREMENT_SET_FACT_MISMATCH",
+    "Requirement Facts do not exactly match the complete set"
+  );
+  const factIds = new Set(actualFactIds);
+  const evidenceByFact = groupEvidenceByFact(requirementSet.evidence);
+  for (const evidence of requirementSet.evidence) {
     if (!factIds.has(evidence.requirement_fact_id)) {
       throw new EligibilityInputError(
         "EVIDENCE_FACT_MISSING",
@@ -115,6 +154,118 @@ function validateInput(input: EligibilityEvaluationInput) {
       );
     }
   }
+  for (const factId of actualFactIds) {
+    if ((evidenceByFact.get(factId)?.length ?? 0) === 0) {
+      throw new EligibilityInputError(
+        "REQUIREMENT_SET_EVIDENCE_MISMATCH",
+        `RequirementFact ${factId} has no evidence in the complete set`
+      );
+    }
+  }
+  requireExactIds(
+    requirementSet.evidence.map((item) => item.requirement_evidence_id).sort(),
+    requirementSet.completeness.evidence_ids,
+    "REQUIREMENT_SET_EVIDENCE_MISMATCH",
+    "Requirement Evidence does not exactly match the complete set"
+  );
+
+  const fragmentIds = new Set(requirementSet.evidence_fragments.map((fragment) => {
+    return fragment.requirement_evidence_fragment_id;
+  }));
+  for (const observation of requirementSet.observations) {
+    if (observation.opportunity_version_id
+        !== input.opportunity_version.opportunity_version_id
+        || observation.status !== "CONFIRMED_REQUIREMENT") {
+      throw new EligibilityInputError(
+        "REQUIREMENT_SET_OBSERVATION_MISMATCH",
+        "A complete set contains an unresolved or cross-opportunity Observation"
+      );
+    }
+    if (observation.clause_role === "MANDATORY"
+        && observation.requirement_fact_ids.length === 0) {
+      throw new EligibilityInputError(
+        "REQUIREMENT_SET_OBSERVATION_MISMATCH",
+        "A mandatory Observation in a complete set must produce a Fact"
+      );
+    }
+    if (observation.requirement_fact_ids.some((factId) => !factIds.has(factId))
+        || observation.evidence_fragment_ids.some((fragmentId) => {
+          return !fragmentIds.has(fragmentId);
+        })) {
+      throw new EligibilityInputError(
+        "REQUIREMENT_SET_OBSERVATION_MISMATCH",
+        "Observation references are outside the complete set"
+      );
+    }
+  }
+  requireExactIds(
+    requirementSet.observations
+      .map((observation) => observation.requirement_observation_id)
+      .sort(),
+    requirementSet.completeness.observation_ids,
+    "REQUIREMENT_SET_OBSERVATION_MISMATCH",
+    "Requirement Observations do not exactly match the complete set"
+  );
+
+  requireExactIds(
+    uniqueSorted(requirementSet.evidence_fragments.map((fragment) => {
+      return fragment.extracted_record_id;
+    })),
+    requirementSet.completeness.covered_extracted_record_ids,
+    "REQUIREMENT_SET_CONTENT_MISMATCH",
+    "Covered ExtractedRecord IDs do not match the evidence fragments"
+  );
+  requireExactIds(
+    uniqueSorted(requirementSet.evidence_fragments.map((fragment) => {
+      return fragment.snapshot_id;
+    })),
+    requirementSet.completeness.covered_snapshot_ids,
+    "REQUIREMENT_SET_CONTENT_MISMATCH",
+    "Covered Snapshot IDs do not match the evidence fragments"
+  );
+
+  const contentHash = requirementSetContentHash(requirementSet);
+  if (contentHash !== requirementSet.completeness.requirement_set_content_hash
+      || requirementSet.requirement_set_id !== `requirement-set:${contentHash}`) {
+    throw new EligibilityInputError(
+      "REQUIREMENT_SET_CONTENT_MISMATCH",
+      "Requirement Set content changed after completeness evaluation"
+    );
+  }
+}
+
+function requireExactIds(
+  actual: readonly string[],
+  expected: readonly string[],
+  code: ConstructorParameters<typeof EligibilityInputError>[0],
+  message: string
+) {
+  if (new Set(actual).size !== actual.length
+      || new Set(expected).size !== expected.length
+      || actual.length !== expected.length
+      || actual.some((value, index) => value !== [...expected].sort()[index])) {
+    throw new EligibilityInputError(code, message);
+  }
+}
+
+function requirementSetContentHash(
+  requirementSet: EligibilityEvaluationInput["complete_requirement_set"]
+) {
+  const completeness = requirementSet.completeness;
+  return sha256(stableSerialize({
+    opportunity_version_id: requirementSet.opportunity_version_id,
+    evidence_fragments: requirementSet.evidence_fragments,
+    observations: requirementSet.observations,
+    facts: requirementSet.facts,
+    evidence: requirementSet.evidence,
+    covered_extracted_record_ids: completeness.covered_extracted_record_ids,
+    covered_snapshot_ids: completeness.covered_snapshot_ids,
+    observation_ids: completeness.observation_ids,
+    fact_ids: completeness.fact_ids,
+    evidence_ids: completeness.evidence_ids,
+    gate_version: completeness.gate_version,
+    parser_version: requirementSet.parser_version
+  }));
 }
 
 function groupEvidenceByFact(evidence: readonly RequirementEvidence[]) {
@@ -125,6 +276,21 @@ function groupEvidenceByFact(evidence: readonly RequirementEvidence[]) {
     grouped.set(item.requirement_fact_id, current);
   }
   return grouped;
+}
+
+function evaluateApplicability(
+  fact: RequirementFact,
+  candidate: CandidateProfile
+): ApplicabilityOutcome {
+  if (!fact.applicability) return "APPLIES";
+  const actual = candidate.candidate_cohorts;
+  if (!actual || actual.length === 0) return "UNKNOWN";
+  const candidateCodes = new Set(actual);
+  const required = fact.applicability.candidate_cohorts;
+  const applies = fact.applicability.operator === "ALL_OF"
+    ? required.every((code) => candidateCodes.has(code))
+    : required.some((code) => candidateCodes.has(code));
+  return applies ? "APPLIES" : "DOES_NOT_APPLY";
 }
 
 function evaluateGroups(facts: readonly EvaluatedFact[]) {
@@ -139,12 +305,12 @@ function evaluateGroups(facts: readonly EvaluatedFact[]) {
   return [...grouped.values()].map((group): EvaluatedGroup => {
     const operator = group[0].fact.logic_group.operator;
     const outcomes = group.map((item) => item.outcome);
-    const outcome = operator === "OR"
-      ? evaluateOr(outcomes)
-      : evaluateAnd(outcomes);
     return {
-      outcome,
-      is_certain: group.every((item) => item.fact.certainty === "EXPLICIT")
+      outcome: operator === "OR" ? evaluateOr(outcomes) : evaluateAnd(outcomes),
+      is_certain: group.every((item) => {
+        return item.applicability === "DOES_NOT_APPLY"
+          || item.fact.certainty === "EXPLICIT";
+      })
     };
   });
 }
@@ -167,10 +333,7 @@ function selectResult(
   conflicts: readonly EligibilityConflict[]
 ): EligibilityResult {
   if (conflicts.length > 0 || facts.length === 0) return "NEEDS_REVIEW";
-  if (facts.some((fact) => !fact.has_evidence)) return "NEEDS_REVIEW";
-  if (groups.some((group) => group.outcome === "UNKNOWN")) {
-    return "NEEDS_REVIEW";
-  }
+  if (groups.some((group) => group.outcome === "UNKNOWN")) return "NEEDS_REVIEW";
   if (groups.some((group) => {
     return group.outcome === "NOT_SATISFIED" && group.is_certain;
   })) return "INELIGIBLE";
@@ -189,9 +352,7 @@ function selectReasonCodes(
 ): EligibilityReasonCode[] {
   const codes = new Set<EligibilityReasonCode>();
   if (conflicts.length > 0) codes.add("CONFLICTING_REQUIREMENTS");
-  if (facts.length === 0 || facts.some((fact) => !fact.has_evidence)) {
-    codes.add("INSUFFICIENT_EVIDENCE");
-  }
+  if (facts.length === 0) codes.add("INSUFFICIENT_EVIDENCE");
   if (groups.some((group) => !group.is_certain)) {
     codes.add("AMBIGUOUS_REQUIREMENT");
   }
@@ -229,6 +390,21 @@ function evaluatePositivePredicate(
   if (fact.dimension === "MAJOR") {
     return evaluateMajor(fact, candidate.education);
   }
+  if (fact.dimension === "ACADEMIC_DEGREE") {
+    return evaluateAcademicDegree(fact, candidate.education);
+  }
+  if (fact.dimension === "AGE") {
+    return evaluateAge(fact, candidate.date_of_birth);
+  }
+  if (fact.dimension === "CANDIDATE_COHORT") {
+    return compareStrings(fact, candidate.candidate_cohorts ?? []);
+  }
+  if (fact.dimension === "HOUSEHOLD_REGISTRATION") {
+    return compareStrings(fact, candidate.household_registration_codes ?? []);
+  }
+  if (fact.dimension === "STUDENT_ORIGIN") {
+    return compareStrings(fact, candidate.student_origin_codes ?? []);
+  }
   if (fact.dimension === "PROFESSIONAL_QUALIFICATION") {
     return evaluateQualification(fact, candidate.professional_qualifications);
   }
@@ -254,6 +430,12 @@ function evaluateEducationLevel(
   education: readonly EducationCredential[]
 ): PredicateOutcome {
   if (education.length === 0 || fact.value.kind !== "CODE") return "UNKNOWN";
+  if (fact.value.code === "GRADUATE") {
+    const matches = education.some((credential) => {
+      return credential.level === "MASTER" || credential.level === "DOCTOR";
+    });
+    return applyNegativeOperator(fact.operator, matches);
+  }
   const required = educationRank[fact.value.code as keyof typeof educationRank];
   if (required === undefined) return "UNKNOWN";
   const levels = education.map((credential) => educationRank[credential.level]);
@@ -271,6 +453,9 @@ function evaluateMajor(
 ): PredicateOutcome {
   const credentials = credentialsForScope(fact, education);
   if (credentials.length === 0) return "UNKNOWN";
+  if (fact.value.kind === "PROGRAM_REFERENCE") {
+    return evaluateProgramReference(fact, credentials, fact.value.reference);
+  }
   const expected = codesFromValue(fact.value);
   if (expected === null) return "UNKNOWN";
   const matchesCredential = (credential: EducationCredential) => {
@@ -286,6 +471,75 @@ function evaluateMajor(
   return applyNegativeOperator(fact.operator, matches);
 }
 
+function evaluateProgramReference(
+  fact: RequirementFact,
+  credentials: readonly EducationCredential[],
+  expected: AcademicProgramDirectoryReference
+): PredicateOutcome {
+  const references = credentials.flatMap((credential) => {
+    return credential.program_directory_references ?? [];
+  });
+  if (references.length === 0) return "UNKNOWN";
+  const matches = references.some((actual) => {
+    return actual.directory_namespace === expected.directory_namespace
+      && actual.directory_version === expected.directory_version
+      && actual.program_code === expected.program_code;
+  });
+  return applyNegativeOperator(fact.operator, matches);
+}
+
+function evaluateAcademicDegree(
+  fact: RequirementFact,
+  education: readonly EducationCredential[]
+): PredicateOutcome {
+  const credentials = credentialsForScope(fact, education);
+  if (credentials.length === 0) return "UNKNOWN";
+  const expected = codesFromValue(fact.value);
+  if (expected === null) return "UNKNOWN";
+  const known = credentials.filter((credential) => {
+    return credential.academic_degree_codes !== undefined;
+  });
+  if (known.length === 0) return "UNKNOWN";
+  const matches = known.some((credential) => {
+    const actual = new Set(credential.academic_degree_codes);
+    return fact.operator === "ALL_OF"
+      ? expected.every((code) => actual.has(code))
+      : expected.some((code) => actual.has(code));
+  });
+  return applyNegativeOperator(fact.operator, matches);
+}
+
+function evaluateAge(
+  fact: RequirementFact,
+  dateOfBirth: string | undefined
+): PredicateOutcome {
+  if (!dateOfBirth || fact.value.kind !== "AGE") return "UNKNOWN";
+  const birth = parseDate(dateOfBirth);
+  const reference = parseDate(fact.value.reference_date);
+  if (!birth || !reference) return "UNKNOWN";
+  let years = reference.year - birth.year;
+  if (reference.month < birth.month
+      || (reference.month === birth.month && reference.day < birth.day)) {
+    years -= 1;
+  }
+  const matches = fact.operator === "AT_LEAST"
+    ? years >= fact.value.years
+    : fact.operator === "AT_MOST"
+      ? years <= fact.value.years
+      : years === fact.value.years;
+  return applyNegativeOperator(fact.operator, matches);
+}
+
+function parseDate(value: string) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/u);
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3])
+  };
+}
+
 function credentialsForScope(
   fact: RequirementFact,
   education: readonly EducationCredential[]
@@ -295,6 +549,11 @@ function credentialsForScope(
   }
   if (fact.subject_scope === "MASTER") {
     return education.filter((credential) => credential.level === "MASTER");
+  }
+  if (fact.subject_scope === "GRADUATE") {
+    return education.filter((credential) => {
+      return credential.level === "MASTER" || credential.level === "DOCTOR";
+    });
   }
   if (fact.subject_scope === "DOCTOR") {
     return education.filter((credential) => credential.level === "DOCTOR");
@@ -383,7 +642,8 @@ function findConflicts(facts: readonly RequirementFact[]): EligibilityConflict[]
       dimension: fact.dimension,
       operator: fact.operator,
       value: fact.value,
-      subject_scope: fact.subject_scope
+      subject_scope: fact.subject_scope,
+      applicability: fact.applicability
     });
     const current = byPredicate.get(key) ?? [];
     current.push(fact);
@@ -403,18 +663,15 @@ function assessmentId(input: EligibilityEvaluationInput) {
   return `eligibility-assessment:${sha256(stableSerialize({
     opportunity_version_id: input.opportunity_version.opportunity_version_id,
     candidate_profile: input.candidate_profile,
-    requirement_facts: [...input.requirement_facts].sort(compareFact),
-    requirement_evidence: [...input.requirement_evidence].sort(compareEvidence),
+    requirement_set_id: input.complete_requirement_set.requirement_set_id,
+    requirement_set_content_hash:
+      input.complete_requirement_set.completeness.requirement_set_content_hash,
     engine_version: DETERMINISTIC_ELIGIBILITY_ENGINE_VERSION
   }))}` as EligibilityAssessmentId;
 }
 
-function compareFact(left: RequirementFact, right: RequirementFact) {
-  return left.requirement_fact_id.localeCompare(right.requirement_fact_id);
-}
-
-function compareEvidence(left: RequirementEvidence, right: RequirementEvidence) {
-  return left.requirement_evidence_id.localeCompare(right.requirement_evidence_id);
+function uniqueSorted<Value extends string>(values: readonly Value[]) {
+  return [...new Set(values)].sort();
 }
 
 function stableSerialize(value: unknown): string {

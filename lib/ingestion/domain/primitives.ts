@@ -17,6 +17,10 @@ export type OpportunityVersionId = BrandedString<"OpportunityVersionId">;
 export type LifecycleEventId = BrandedString<"LifecycleEventId">;
 export type RequirementFactId = BrandedString<"RequirementFactId">;
 export type RequirementEvidenceId = BrandedString<"RequirementEvidenceId">;
+export type RequirementSetId = BrandedString<"RequirementSetId">;
+export type RequirementObservationId = BrandedString<"RequirementObservationId">;
+export type RequirementEvidenceFragmentId =
+  BrandedString<"RequirementEvidenceFragmentId">;
 export type LogicGroupId = BrandedString<"LogicGroupId">;
 export type CandidateProfileId = BrandedString<"CandidateProfileId">;
 export type EligibilityAssessmentId = BrandedString<"EligibilityAssessmentId">;

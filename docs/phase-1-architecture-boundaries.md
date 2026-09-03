@@ -79,3 +79,23 @@ An ExtractedRecord is a source-level observation extracted from one Snapshot. It
 ExtractedRecord may preserve source-private details only under namespaced `adapter_metadata.<adapter_key>`. Adapter metadata is for debugging and traceability. Normalization, canonicalization, deduplication, requirement parsing, eligibility, and lifecycle logic must not read or depend on it.
 
 The Phase 1 document fixture uses explicitly preprocessed UTF-8 text to exercise the common Adapter contract and document locator. It does not implement or claim production PDF parsing, OCR, or browser extraction capability.
+
+## Requirement V2 boundary
+
+P1 Requirement V2 preserves this inward dependency direction:
+
+```text
+source-neutral ExtractedRecord/Snapshot references
+  -> RequirementEvidenceFragment
+  -> RequirementObservation
+  -> Requirement Fact/Evidence Set
+  -> RequirementCompleteness Gate
+  -> CompleteRequirementSet
+  -> Eligibility Engine
+```
+
+The Requirement parser consumes only standard Evidence Fragments. It cannot import or inspect Adapter metadata, source-specific types, live-canary code, network clients, collection services, or file-format implementations. HTML and spreadsheet locators are represented by source-neutral Domain contracts; they do not create a dependency on an HTML or spreadsheet Adapter.
+
+Eligibility accepts only a `CompleteRequirementSet`. It cannot accept independent Fact/Evidence subsets, execute the Requirement parser, or infer missing source clauses. A non-complete set creates no P1 assessment and remains `NOT_ASSESSED` at the application projection boundary.
+
+The CR#8 contracts do not execute P2-10, access a real source, create real Requirement or Eligibility data, or modify any frozen P2 boundary.

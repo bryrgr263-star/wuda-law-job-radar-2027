@@ -10,6 +10,7 @@ import {
   ConservativeCanonicalizer,
   DeterministicEligibilityEngine,
   DeterministicRequirementParser,
+  EligibilityInputError,
   FixtureAdapter,
   FixtureTransport,
   InMemoryRawBlobRepository,
@@ -31,6 +32,7 @@ import {
   type RawBlob,
   type RecruitmentEndpoint,
   type RecruitmentEndpointId,
+  type RequirementEvidenceFragmentId,
   type Snapshot,
   type SnapshotId,
   type SourceDefinition,
@@ -326,7 +328,7 @@ function track(
   return records.map((record) => tracker.process(endpoint, record));
 }
 
-test("one Fixture Source traverses Raw through Eligibility and Shadow Persistence", async () => {
+test("one Fixture Source remains NOT_ASSESSED when Requirement completeness blocks", async () => {
   const registry = createRegistry([fixtures.html]);
   const endpoint = registry.listCollectableEndpoints()[0];
   const collection = await collect(endpoint);
@@ -344,26 +346,63 @@ test("one Fixture Source traverses Raw through Eligibility and Shadow Persistenc
     version: tracked.version,
     source_definition: fixtures.html.source
   }], { organizations: [fixtures.html.organization] }).opportunities[0];
+  const requirementText = canonicalized.opportunity_version.content.requirement_text;
+  assert.ok(requirementText?.normalized);
+  const requirementLocator = collection.records[0].source_record_locator;
+  assert.equal(requirementLocator.kind, "HTML");
+  if (requirementLocator.kind !== "HTML") {
+    throw new Error("Expected the HTML Fixture locator");
+  }
+  const requirementFragment = {
+    requirement_evidence_fragment_id: branded<RequirementEvidenceFragmentId>(
+      "phase-1-html-requirement-fragment"
+    ),
+    extracted_record_id: collection.records[0].extracted_record_id,
+    snapshot_id: collection.records[0].snapshot_id,
+    locator: {
+      kind: "HTML" as const,
+      selector: requirementLocator.selector,
+      path: requirementLocator.path,
+      field_path: "raw_requirement_text"
+    },
+    observed_value_state: "TEXT" as const,
+    original_text: requirementText.original,
+    normalized_text: requirementText.normalized,
+    extractor_name: collection.records[0].extraction.extractor_name,
+    extractor_version: collection.records[0].extraction.extractor_version,
+    parser_version: "requirement-fragment-contract/1.0.0"
+  };
   const requirements = new DeterministicRequirementParser().parse({
     opportunity_version: canonicalized.opportunity_version,
-    source_occurrence_versions: [tracked.version],
-    extracted_records: [collection.records[0]]
+    evidence_fragments: [requirementFragment],
+    expected_sources: [{
+      extracted_record_id: requirementFragment.extracted_record_id,
+      snapshot_id: requirementFragment.snapshot_id
+    }]
   });
   assert.ok(requirements.facts.length > 0);
   assert.equal(requirements.facts.length, requirements.evidence.length);
   assert.equal(requirements.evidence[0].snapshot_id, collection.snapshots[0].snapshot_id);
   assert.match(requirements.evidence[0].evidence_text.text, /法律硕士/);
+  assert.equal(requirements.completeness.status, "REVIEW_REQUIRED");
+  assert.equal(requirements.complete_requirement_set, null);
 
   const profile = candidate();
-  const assessment = new DeterministicEligibilityEngine().evaluate({
-    opportunity_version: canonicalized.opportunity_version,
-    requirement_facts: requirements.facts,
-    requirement_evidence: requirements.evidence,
-    candidate_profile: profile,
-    assessed_at: observedAt
+  let assessmentCreated = false;
+  assert.throws(() => {
+    const assessment = new DeterministicEligibilityEngine().evaluate({
+      opportunity_version: canonicalized.opportunity_version,
+      // @ts-expect-error A review-required set cannot enter Eligibility.
+      complete_requirement_set: requirements.requirement_set,
+      candidate_profile: profile,
+      assessed_at: observedAt
+    });
+    assessmentCreated = assessment !== undefined;
+  }, (error) => {
+    return error instanceof EligibilityInputError
+      && error.code === "REQUIREMENT_SET_INCOMPLETE";
   });
-  assert.notEqual(assessment.result, "NEEDS_REVIEW");
-  assert.ok(assessment.evidence_ids.length > 0);
+  assert.equal(assessmentCreated, false);
 
   const database = createMigratedShadowDatabase();
   const persistence = new SqliteShadowPersistence(database);
@@ -379,12 +418,6 @@ test("one Fixture Source traverses Raw through Eligibility and Shadow Persistenc
     persistence.requirement_evidence.append(evidence);
   }
   persistence.candidate_profiles.append(profile);
-  persistence.eligibility_assessments.append(assessment);
-
-  assert.deepEqual(
-    persistence.eligibility_assessments.get(assessment.eligibility_assessment_id),
-    assessment
-  );
   assert.equal(
     persistence.requirement_evidence.get(requirements.evidence[0].requirement_evidence_id)
       ?.evidence_text.text,

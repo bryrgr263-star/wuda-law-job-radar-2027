@@ -1,16 +1,14 @@
 import type {
   CandidateProfile,
+  CompleteRequirementSet,
   EligibilityAssessment,
   IsoDateTime,
-  OpportunityVersion,
-  RequirementEvidence,
-  RequirementFact
+  OpportunityVersion
 } from "../domain";
 
 export interface EligibilityEvaluationInput {
   readonly opportunity_version: OpportunityVersion;
-  readonly requirement_facts: readonly RequirementFact[];
-  readonly requirement_evidence: readonly RequirementEvidence[];
+  readonly complete_requirement_set: CompleteRequirementSet;
   readonly candidate_profile: CandidateProfile;
   readonly assessed_at: IsoDateTime;
 }
@@ -21,7 +19,13 @@ export interface EligibilityEngine {
 
 export const ELIGIBILITY_INPUT_ERROR_CODES = [
   "FACT_OPPORTUNITY_MISMATCH",
-  "EVIDENCE_FACT_MISSING"
+  "EVIDENCE_FACT_MISSING",
+  "REQUIREMENT_SET_INCOMPLETE",
+  "REQUIREMENT_SET_OPPORTUNITY_MISMATCH",
+  "REQUIREMENT_SET_CONTENT_MISMATCH",
+  "REQUIREMENT_SET_FACT_MISMATCH",
+  "REQUIREMENT_SET_EVIDENCE_MISMATCH",
+  "REQUIREMENT_SET_OBSERVATION_MISMATCH"
 ] as const;
 
 export type EligibilityInputErrorCode =

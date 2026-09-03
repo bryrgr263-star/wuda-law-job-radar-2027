@@ -1,13 +1,18 @@
 import type {
   CandidateProfileId,
   EligibilityAssessmentId,
+  IsoDate,
   IsoDateTime,
   NonEmptyReadonlyArray,
   OpportunityVersionId,
   RequirementEvidenceId,
   RequirementFactId
 } from "./primitives";
-import type { AcademicProgramCode } from "./requirements";
+import type {
+  AcademicProgramCode,
+  AcademicProgramDirectoryReference,
+  CandidateCohortCode
+} from "./requirements";
 import type { TraceableText } from "./text";
 
 export type EducationLevel = "BACHELOR" | "MASTER" | "DOCTOR" | "OTHER";
@@ -23,6 +28,8 @@ export interface EducationCredential {
   readonly institution: TraceableText;
   readonly program_name: TraceableText;
   readonly normalized_program_codes: readonly AcademicProgramCode[];
+  readonly program_directory_references?: readonly AcademicProgramDirectoryReference[];
+  readonly academic_degree_codes?: readonly string[];
   readonly academic_background: AcademicBackground;
   readonly graduation_year?: number;
 }
@@ -37,6 +44,10 @@ export interface CandidateProfile {
   readonly candidate_profile_id: CandidateProfileId;
   readonly education: readonly EducationCredential[];
   readonly target_graduation_year?: number;
+  readonly date_of_birth?: IsoDate;
+  readonly candidate_cohorts?: readonly CandidateCohortCode[];
+  readonly household_registration_codes?: readonly string[];
+  readonly student_origin_codes?: readonly string[];
   readonly professional_qualifications: readonly ProfessionalQualification[];
   readonly work_experience_months?: number;
   readonly languages: readonly string[];

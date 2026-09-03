@@ -11,6 +11,7 @@ import type {
   CandidateProfileId,
   CanonicalOpportunity,
   CanonicalOpportunityId,
+  CompleteRequirementSet,
   EligibilityAssessment,
   EligibilityAssessmentId,
   ExtractedRecord,
@@ -31,9 +32,14 @@ import type {
   RecruitmentEndpoint,
   RecruitmentEndpointId,
   RequirementEvidence,
+  RequirementEvidenceFragment,
+  RequirementEvidenceFragmentId,
   RequirementEvidenceId,
   RequirementFact,
   RequirementFactId,
+  RequirementObservation,
+  RequirementObservationId,
+  RequirementSetId,
   SemanticHash,
   Snapshot,
   SnapshotId,
@@ -49,6 +55,8 @@ import {
   AUTHORITY_LEVELS,
   CONTENT_KINDS,
   PUBLISHER_KINDS,
+  REQUIREMENT_DIMENSIONS,
+  REQUIREMENT_SUBJECT_SCOPES,
   SOURCE_SCOPES,
   UTF8_TEXT_ENCODING
 } from "../../lib/ingestion";
@@ -439,6 +447,114 @@ test("requirements support AND and OR logic without turning alternatives into AN
   assert.equal(masterFact.logic_group.operator, "AND");
   assert.equal(intellectualPropertyFact.logic_group.operator, "OR");
   assert.notEqual(intellectualPropertyFact.logic_group.logic_group_id, ids.logicAnd);
+});
+
+test("Requirement V2 adds only the evidence-proven source-neutral dimensions", () => {
+  assert.deepEqual(REQUIREMENT_DIMENSIONS.slice(-5), [
+    "ACADEMIC_DEGREE",
+    "AGE",
+    "CANDIDATE_COHORT",
+    "HOUSEHOLD_REGISTRATION",
+    "STUDENT_ORIGIN"
+  ]);
+  assert.ok(REQUIREMENT_SUBJECT_SCOPES.includes("GRADUATE"));
+  assert.notEqual(
+    REQUIREMENT_SUBJECT_SCOPES.indexOf("GRADUATE"),
+    REQUIREMENT_SUBJECT_SCOPES.indexOf("MASTER")
+  );
+});
+
+test("one source-neutral Observation can cite HTML and spreadsheet snapshots", () => {
+  const htmlFragment: RequirementEvidenceFragment = {
+    requirement_evidence_fragment_id: branded<RequirementEvidenceFragmentId>(
+      "fragment-domain-html"
+    ),
+    extracted_record_id: ids.extracted,
+    snapshot_id: ids.snapshot,
+    locator: {
+      kind: "HTML",
+      selector: "article.requirements",
+      field_path: "requirement_text"
+    },
+    observed_value_state: "TEXT",
+    original_text: original("学历要求：硕士"),
+    normalized_text: normalized("学历要求:硕士"),
+    extractor_name: "source-neutral-html-extractor",
+    extractor_version: "1",
+    parser_version: "fragment-contract/1"
+  };
+  const spreadsheetFragment: RequirementEvidenceFragment = {
+    requirement_evidence_fragment_id: branded<RequirementEvidenceFragmentId>(
+      "fragment-domain-sheet"
+    ),
+    extracted_record_id: branded<ExtractedRecordId>("record-domain-sheet"),
+    snapshot_id: branded<SnapshotId>("snapshot-domain-sheet"),
+    locator: {
+      kind: "SPREADSHEET",
+      sheet: "Requirements",
+      cell_or_range: "F12:G12"
+    },
+    observed_value_state: "TEXT",
+    original_text: original("研究生专业：0301"),
+    normalized_text: normalized("研究生专业:0301"),
+    academic_program_directory: {
+      directory_namespace: "academic-program-catalog",
+      directory_version: "2022"
+    },
+    extractor_name: "source-neutral-spreadsheet-extractor",
+    extractor_version: "1",
+    parser_version: "fragment-contract/1"
+  };
+  const observation: RequirementObservation = {
+    requirement_observation_id: branded<RequirementObservationId>(
+      "observation-domain-multi-source"
+    ),
+    opportunity_version_id: ids.opportunityVersion,
+    status: "CONFIRMED_REQUIREMENT",
+    clause_role: "MANDATORY",
+    requirement_fact_ids: [ids.factMaster],
+    evidence_fragment_ids: [
+      htmlFragment.requirement_evidence_fragment_id,
+      spreadsheetFragment.requirement_evidence_fragment_id
+    ],
+    parser_version: "fixture-parser/2"
+  };
+  const requirementSetId = branded<RequirementSetId>("requirement-set-domain");
+  const requirementSet: CompleteRequirementSet = {
+    requirement_set_id: requirementSetId,
+    opportunity_version_id: ids.opportunityVersion,
+    evidence_fragments: [htmlFragment, spreadsheetFragment],
+    observations: [observation],
+    facts: [masterFact],
+    evidence: [evidence],
+    parser_version: "fixture-parser/2",
+    completeness: {
+      requirement_set_id: requirementSetId,
+      requirement_set_content_hash: "domain-content-hash",
+      status: "COMPLETE",
+      covered_extracted_record_ids: [
+        htmlFragment.extracted_record_id,
+        spreadsheetFragment.extracted_record_id
+      ],
+      covered_snapshot_ids: [
+        htmlFragment.snapshot_id,
+        spreadsheetFragment.snapshot_id
+      ],
+      observation_ids: [observation.requirement_observation_id],
+      fact_ids: [masterFact.requirement_fact_id],
+      evidence_ids: [evidence.requirement_evidence_id],
+      blockers: [],
+      gate_version: "fixture-gate/1"
+    }
+  };
+
+  assert.equal(requirementSet.evidence_fragments.length, 2);
+  assert.deepEqual(observation.evidence_fragment_ids, [
+    htmlFragment.requirement_evidence_fragment_id,
+    spreadsheetFragment.requirement_evidence_fragment_id
+  ]);
+  assert.equal(spreadsheetFragment.locator.kind, "SPREADSHEET");
+  assert.equal(spreadsheetFragment.locator.cell_or_range, "F12:G12");
 });
 
 test("evidence and eligibility retain fact and snapshot references", () => {

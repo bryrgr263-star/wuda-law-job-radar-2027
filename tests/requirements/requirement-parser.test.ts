@@ -6,343 +6,411 @@ import test from "node:test";
 import {
   DeterministicRequirementParser,
   UTF8_TEXT_ENCODING,
-  type ExtractedRecord,
   type ExtractedRecordId,
   type IsoDateTime,
   type OpportunityVersion,
   type OpportunityVersionId,
+  type RequirementEvidenceFragment,
+  type RequirementEvidenceFragmentId,
+  type RequirementParsingInput,
   type SemanticHash,
-  type SnapshotId,
-  type SourceOccurrenceId,
-  type SourceOccurrenceVersion,
-  type SourceOccurrenceVersionId,
-  type SourceRecordLocator
+  type SnapshotId
 } from "../../lib/ingestion";
 
 function branded<Value extends string>(value: string) {
   return value as Value;
 }
 
-const opportunityVersionId = branded<OpportunityVersionId>("opportunity-version-requirements");
-const sourceOccurrenceId = branded<SourceOccurrenceId>("source-occurrence-requirements");
-const sourceVersionId = branded<SourceOccurrenceVersionId>("source-version-requirements");
-const extractedRecordId = branded<ExtractedRecordId>("extracted-record-requirements");
-const snapshotId = branded<SnapshotId>("snapshot-requirements");
-const semanticHash = branded<SemanticHash>("semantic-requirements");
+const opportunityVersionId = branded<OpportunityVersionId>(
+  "opportunity-version-requirements-v2"
+);
 const observedAt = branded<IsoDateTime>("2026-09-01T08:00:00+08:00");
 
-function inputFor(
-  originalText: string,
-  normalizedText: string | null,
-  locator: SourceRecordLocator = {
-    kind: "HTML",
-    selector: "article.job",
-    path: "body > article.job"
+const opportunityVersion: OpportunityVersion = {
+  opportunity_version_id: opportunityVersionId,
+  canonical_opportunity_id: branded("canonical-requirements-v2"),
+  revision: 1,
+  semantic_hash: branded<SemanticHash>("semantic-requirements-v2"),
+  content: {
+    organization: {
+      name: { original: { text: "示例单位", encoding: UTF8_TEXT_ENCODING } }
+    },
+    title: {
+      original: { text: "法律事务岗", encoding: UTF8_TEXT_ENCODING }
+    },
+    locations: []
+  },
+  source_occurrence_version_ids: [branded("source-version-requirements-v2")],
+  effective_from: observedAt
+};
+
+interface FragmentOptions {
+  readonly id?: string;
+  readonly record?: string;
+  readonly snapshot?: string;
+  readonly original?: string;
+  readonly normalized?: string | null;
+  readonly locator?: RequirementEvidenceFragment["locator"];
+  readonly empty?: boolean;
+  readonly directory?: RequirementEvidenceFragment["academic_program_directory"];
+}
+
+function fragment(options: FragmentOptions = {}): RequirementEvidenceFragment {
+  const originalText = options.original ?? "硕士专业：法律硕士（非法学）";
+  const base = {
+    requirement_evidence_fragment_id: branded<RequirementEvidenceFragmentId>(
+      options.id ?? "fragment-default"
+    ),
+    extracted_record_id: branded<ExtractedRecordId>(
+      options.record ?? "record-default"
+    ),
+    snapshot_id: branded<SnapshotId>(options.snapshot ?? "snapshot-default"),
+    locator: options.locator ?? {
+      kind: "HTML",
+      selector: "article.requirements",
+      path: "body > article.requirements",
+      field_path: "requirement_text",
+      start_offset: 10
+    },
+    ...(options.directory ? { academic_program_directory: options.directory } : {}),
+    extractor_name: "source-neutral-fragment-builder",
+    extractor_version: "1.0.0",
+    parser_version: "fragment-contract/1.0.0"
+  };
+  if (options.empty) {
+    return {
+      ...base,
+      observed_value_state: "EMPTY",
+      original_text: null
+    };
   }
-) {
-  const requirementText = {
-    original: { text: originalText, encoding: UTF8_TEXT_ENCODING },
-    normalized: normalizedText === null
-      ? undefined
-      : {
-          text: normalizedText,
-          unicode_form: "NFKC" as const,
-          normalizer_version: "source-normalizer/1.0.0",
-          operations: [
-            "UNICODE_NORMALIZATION" as const,
-            "WIDTH_FOLDING" as const,
-            "PUNCTUATION_FOLDING" as const,
-            "WHITESPACE_FOLDING" as const
-          ]
-        }
-  };
-  const opportunityVersion: OpportunityVersion = {
-    opportunity_version_id: opportunityVersionId,
-    canonical_opportunity_id: branded("canonical-requirements"),
-    revision: 1,
-    semantic_hash: semanticHash,
-    content: {
-      organization: {
-        name: {
-          original: { text: "示例单位", encoding: UTF8_TEXT_ENCODING },
-          normalized: {
-            text: "示例单位",
-            unicode_form: "NFKC",
-            normalizer_version: "source-normalizer/1.0.0",
-            operations: []
-          }
-        }
-      },
-      title: {
-        original: { text: "法律事务岗", encoding: UTF8_TEXT_ENCODING },
-        normalized: {
-          text: "法律事务岗",
-          unicode_form: "NFKC",
-          normalizer_version: "source-normalizer/1.0.0",
-          operations: []
-        }
-      },
-      requirement_text: requirementText,
-      locations: []
-    },
-    source_occurrence_version_ids: [sourceVersionId],
-    effective_from: observedAt
-  };
-  const sourceVersion: SourceOccurrenceVersion = {
-    source_occurrence_version_id: sourceVersionId,
-    source_occurrence_id: sourceOccurrenceId,
-    extracted_record_id: extractedRecordId,
-    revision: 1,
-    semantic_hash: semanticHash,
-    content: opportunityVersion.content,
-    first_observed_at: observedAt
-  };
-  const extractedRecord: ExtractedRecord = {
-    extracted_record_id: extractedRecordId,
-    snapshot_id: snapshotId,
-    source_definition_id: branded("source-requirements"),
-    identity_candidates: [],
-    raw_title: { text: "法律事务岗", encoding: UTF8_TEXT_ENCODING },
-    raw_organization_name: { text: "示例单位", encoding: UTF8_TEXT_ENCODING },
-    raw_location_text: [],
-    raw_requirement_text: { text: originalText, encoding: UTF8_TEXT_ENCODING },
-    source_record_locator: locator,
-    adapter_metadata: {
-      fixture: { ignored_private_value: "不得读取" }
-    },
-    extraction: {
-      extractor_name: "fixture-extractor",
-      extractor_version: "1.0.0",
-      extracted_at: observedAt
-    }
-  };
   return {
-    opportunity_version: opportunityVersion,
-    source_occurrence_versions: [sourceVersion],
-    extracted_records: [extractedRecord]
+    ...base,
+    observed_value_state: "TEXT",
+    original_text: { text: originalText, encoding: UTF8_TEXT_ENCODING },
+    ...(options.normalized === null
+      ? {}
+      : {
+          normalized_text: {
+            text: options.normalized ?? originalText,
+            unicode_form: "NFKC" as const,
+            normalizer_version: "source-normalizer/1.0.0",
+            operations: [
+              "UNICODE_NORMALIZATION" as const,
+              "WIDTH_FOLDING" as const,
+              "PUNCTUATION_FOLDING" as const
+            ]
+          }
+        })
   };
 }
 
-test("parses minimum education, explicit master major, and required legal qualification", () => {
-  const parsed = new DeterministicRequirementParser().parse(inputFor(
-    "学历要求：硕士及以上；硕士专业：法律硕士（非法学）；须通过法律职业资格考试。",
-    "学历要求:硕士及以上;硕士专业:法律硕士(非法学);须通过法律职业资格考试。"
-  ));
+function input(
+  fragments: readonly RequirementEvidenceFragment[],
+  options: {
+    readonly expected?: RequirementParsingInput["expected_sources"];
+    readonly blockers?: RequirementParsingInput["blockers"];
+  } = {}
+): RequirementParsingInput {
+  return {
+    opportunity_version: opportunityVersion,
+    evidence_fragments: fragments,
+    expected_sources: options.expected ?? fragments.map((item) => ({
+      extracted_record_id: item.extracted_record_id,
+      snapshot_id: item.snapshot_id
+    })),
+    ...(options.blockers ? { blockers: options.blockers } : {})
+  };
+}
 
-  assert.equal(parsed.facts.length, 3);
-  assert.equal(parsed.evidence.length, 3);
+test("multi-source HTML and spreadsheet fragments form one traceable complete set", () => {
+  const html = fragment({
+    id: "fragment-html",
+    record: "record-html",
+    snapshot: "snapshot-html",
+    original: "学历要求：硕士及以上",
+    normalized: "学历要求:硕士及以上"
+  });
+  const spreadsheet = fragment({
+    id: "fragment-sheet",
+    record: "record-sheet",
+    snapshot: "snapshot-sheet",
+    original: "硕士专业：法律硕士（非法学）",
+    normalized: "硕士专业:法律硕士(非法学)",
+    locator: {
+      kind: "SPREADSHEET",
+      sheet: "职位及要求表",
+      cell_or_range: "H12",
+      field_path: "graduate_major"
+    }
+  });
+  const parsed = new DeterministicRequirementParser().parse(input([
+    html,
+    spreadsheet
+  ]));
+
+  assert.equal(parsed.completeness.status, "COMPLETE");
+  assert.ok(parsed.complete_requirement_set);
+  assert.deepEqual(parsed.completeness.covered_snapshot_ids, [
+    html.snapshot_id,
+    spreadsheet.snapshot_id
+  ]);
   assert.deepEqual(parsed.facts.map((fact) => fact.dimension), [
     "EDUCATION_LEVEL",
-    "MAJOR",
-    "PROFESSIONAL_QUALIFICATION"
+    "MAJOR"
   ]);
-  assert.equal(parsed.facts[0].operator, "AT_LEAST");
-  assert.deepEqual(parsed.facts[0].value, { kind: "CODE", code: "MASTER" });
-  assert.equal(parsed.facts[1].subject_scope, "MASTER");
-  assert.deepEqual(parsed.facts[1].value, {
+  assert.equal(parsed.evidence[0].locator.kind, "HTML");
+  assert.equal(parsed.evidence[0].locator.start_offset, 10);
+  assert.equal(parsed.evidence[1].locator.kind, "SPREADSHEET");
+  assert.equal(parsed.evidence[1].locator.sheet, "职位及要求表");
+  assert.equal(parsed.evidence[1].locator.cell_or_range, "H12");
+});
+
+test("original and normalized evidence remain distinct and deterministic", () => {
+  const source = fragment({
+    original: "硕士专业：法律硕士（非法学）",
+    normalized: "硕士专业:法律硕士(非法学)"
+  });
+  const parser = new DeterministicRequirementParser();
+  const first = parser.parse(input([source]));
+  const second = parser.parse(input([source]));
+
+  assert.equal(first.evidence[0].evidence_text.text,
+    "硕士专业：法律硕士（非法学）");
+  assert.equal(first.evidence[0].normalized_text?.text,
+    "硕士专业:法律硕士(非法学)");
+  assert.equal(first.requirement_set.requirement_set_id,
+    second.requirement_set.requirement_set_id);
+  assert.equal(first.completeness.requirement_set_content_hash,
+    second.completeness.requirement_set_content_hash);
+});
+
+test("法律硕士 and 法律硕士（非法学） remain different program facts", () => {
+  const jurisMaster = new DeterministicRequirementParser().parse(input([fragment({
+    original: "硕士专业：法律硕士",
+    normalized: "硕士专业:法律硕士"
+  })]));
+  const nonLaw = new DeterministicRequirementParser().parse(input([fragment({
+    id: "fragment-non-law",
+    original: "硕士专业：法律硕士（非法学）",
+    normalized: "硕士专业:法律硕士(非法学)"
+  })]));
+
+  assert.deepEqual(jurisMaster.facts[0].value, {
+    kind: "CODE",
+    code: "JURIS_MASTER"
+  });
+  assert.deepEqual(nonLaw.facts[0].value, {
     kind: "CODE",
     code: "JURIS_MASTER_NON_LAW"
   });
-  assert.equal(parsed.facts[2].operator, "EXISTS");
-  assert.ok(parsed.evidence.every((item) => item.snapshot_id === snapshotId));
-  assert.deepEqual(
-    parsed.evidence.map((item) => item.requirement_fact_id),
-    parsed.facts.map((fact) => fact.requirement_fact_id)
-  );
 });
 
-test("distinguishes bachelor-only law from bachelor-and-master law restrictions", () => {
-  const parsed = new DeterministicRequirementParser().parse(inputFor(
-    "本科专业：法学；本硕均要求法学",
-    "本科专业:法学;本硕均要求法学"
-  ));
+test("研究生 and 硕士 produce isolated GRADUATE and MASTER scopes", () => {
+  const graduate = new DeterministicRequirementParser().parse(input([fragment({
+    original: "研究生专业：法学",
+    normalized: "研究生专业:法学"
+  })]));
+  const master = new DeterministicRequirementParser().parse(input([fragment({
+    id: "fragment-master",
+    original: "硕士专业：法学",
+    normalized: "硕士专业:法学"
+  })]));
 
-  assert.deepEqual(parsed.facts.map((fact) => fact.subject_scope), [
-    "BACHELOR",
-    "BACHELOR",
-    "MASTER"
-  ]);
-  assert.ok(parsed.facts.every((fact) => {
-    return fact.value.kind === "CODE" && fact.value.code === "LAW_STUDIES";
-  }));
-  assert.equal(parsed.facts[1].logic_group.logic_group_id,
-    parsed.facts[2].logic_group.logic_group_id);
-  assert.equal(parsed.facts[1].logic_group.operator, "AND");
+  assert.equal(graduate.facts[0].subject_scope, "GRADUATE");
+  assert.equal(master.facts[0].subject_scope, "MASTER");
+  assert.notEqual(graduate.facts[0].subject_scope, master.facts[0].subject_scope);
 });
 
-test("legal, law studies, and intellectual property alternatives form one OR group", () => {
-  const parsed = new DeterministicRequirementParser().parse(inputFor(
-    "法律、法学、知识产权等相关专业",
-    "法律、法学、知识产权等相关专业"
-  ));
+test("source-neutral academic directory references preserve namespace and version", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "研究生专业：0301（法学）",
+    normalized: "研究生专业:0301(法学)",
+    directory: {
+      directory_namespace: "national-academic-program-catalog",
+      directory_version: "2022"
+    }
+  })]));
 
-  assert.deepEqual(parsed.facts.map((fact) => {
-    return fact.value.kind === "CODE" ? fact.value.code : null;
-  }), ["LAW", "LAW_STUDIES", "INTELLECTUAL_PROPERTY"]);
-  assert.ok(parsed.facts.every((fact) => fact.logic_group.operator === "OR"));
-  assert.ok(parsed.facts.every((fact) => fact.subject_scope === "ANY_EDUCATION"));
-  assert.ok(parsed.facts.every((fact) => fact.certainty === "AMBIGUOUS"));
-  assert.equal(new Set(parsed.facts.map((fact) => fact.logic_group.logic_group_id)).size, 1);
-  assert.deepEqual(parsed.warnings.map((warning) => warning.code), [
-    "AMBIGUOUS_EDUCATION_SCOPE"
-  ]);
+  assert.equal(parsed.completeness.status, "COMPLETE");
+  assert.deepEqual(parsed.facts[0].value, {
+    kind: "PROGRAM_REFERENCE",
+    reference: {
+      directory_namespace: "national-academic-program-catalog",
+      directory_version: "2022",
+      program_code: "0301",
+      program_label: {
+        text: "法学",
+        unicode_form: "NFKC",
+        normalizer_version: "source-normalizer/1.0.0",
+        operations: [
+          "UNICODE_NORMALIZATION",
+          "WIDTH_FOLDING",
+          "PUNCTUATION_FOLDING"
+        ]
+      }
+    }
+  });
 });
 
-test("professional qualification preference is not converted into a mandatory Fact", () => {
-  const parsed = new DeterministicRequirementParser().parse(inputFor(
-    "通过法律职业资格考试者优先",
-    "通过法律职业资格考试者优先"
-  ));
+test("directory-shaped program code without directory evidence blocks completeness", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "研究生专业：0301",
+    normalized: "研究生专业:0301"
+  })]));
 
   assert.equal(parsed.facts.length, 0);
-  assert.equal(parsed.evidence.length, 0);
-  assert.deepEqual(parsed.warnings.map((warning) => warning.code), [
-    "PREFERRED_QUALIFICATION_NOT_MANDATORY"
+  assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
+  assert.deepEqual(parsed.completeness.blockers.map((item) => item.code), [
+    "DOMAIN_GAP_OBSERVED"
   ]);
+  assert.ok(parsed.warnings.some((warning) => {
+    return warning.code === "ACADEMIC_PROGRAM_DIRECTORY_MISSING";
+  }));
 });
 
-test("major unrestricted remains scoped and evidence-backed", () => {
-  const parsed = new DeterministicRequirementParser().parse(inputFor(
-    "本科专业：不限",
-    "本科专业:不限"
-  ));
+test("academic degree, age, cohort, household, and student origin are typed only when explicit", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "学位要求：硕士学位；年龄不超过35周岁（截至2026年12月31日）；招聘对象：应届毕业生；户籍要求：北京市；生源地要求：北京市",
+    normalized: "学位要求:硕士学位;年龄不超过35周岁(截至2026年12月31日);招聘对象:应届毕业生;户籍要求:北京市;生源地要求:北京市"
+  })]));
 
-  assert.equal(parsed.facts.length, 1);
-  assert.equal(parsed.facts[0].subject_scope, "BACHELOR");
-  assert.equal(parsed.facts[0].operator, "UNRESTRICTED");
-  assert.deepEqual(parsed.facts[0].value, { kind: "UNRESTRICTED" });
-  assert.equal(parsed.evidence[0].evidence_text.text, "本科专业：不限");
-});
-
-test("layered bachelor-unrestricted and master-major requirements remain separate", () => {
-  const parsed = new DeterministicRequirementParser().parse(inputFor(
-    "本科专业不限，硕士法律、法学相关专业",
-    "本科专业不限,硕士法律、法学相关专业"
-  ));
-
-  assert.deepEqual(parsed.facts.map((fact) => fact.subject_scope), [
-    "BACHELOR",
-    "MASTER",
-    "MASTER"
+  assert.equal(parsed.completeness.status, "COMPLETE");
+  assert.deepEqual(parsed.facts.map((fact) => fact.dimension), [
+    "ACADEMIC_DEGREE",
+    "AGE",
+    "CANDIDATE_COHORT",
+    "HOUSEHOLD_REGISTRATION",
+    "STUDENT_ORIGIN"
   ]);
-  assert.equal(parsed.facts[0].operator, "UNRESTRICTED");
-  assert.deepEqual(parsed.facts.slice(1).map((fact) => {
-    return fact.value.kind === "CODE" ? fact.value.code : null;
-  }), ["LAW", "LAW_STUDIES"]);
-  assert.ok(parsed.facts.slice(1).every((fact) => fact.logic_group.operator === "OR"));
-});
-
-test("common 法硕（非法学） alias maps to the same program code", () => {
-  const parsed = new DeterministicRequirementParser().parse(inputFor(
-    "硕士专业：法硕（非法学）",
-    "硕士专业:法硕(非法学)"
-  ));
-
-  assert.equal(parsed.facts.length, 1);
-  assert.deepEqual(parsed.facts[0].value, {
-    kind: "CODE",
-    code: "JURIS_MASTER_NON_LAW"
+  assert.deepEqual(parsed.facts[1].value, {
+    kind: "AGE",
+    years: 35,
+    reference_date: "2026-12-31"
   });
-  assert.equal(parsed.evidence[0].evidence_text.text, "硕士专业：法硕（非法学）");
 });
 
-test("original Chinese evidence survives full-width normalization", () => {
-  const parsed = new DeterministicRequirementParser().parse(inputFor(
-    "硕士专业：法律硕士（非法学）专业",
-    "硕士专业:法律硕士(非法学)专业"
-  ));
+test("candidate cohort applicability is preserved without source-specific branching", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "应届毕业生须硕士专业：法学",
+    normalized: "应届毕业生须硕士专业:法学"
+  })]));
 
-  assert.equal(parsed.evidence[0].evidence_text.text,
-    "硕士专业：法律硕士（非法学）专业");
-  assert.equal(parsed.evidence[0].normalized_text?.text,
-    "硕士专业:法律硕士(非法学)专业");
-  assert.notEqual(parsed.evidence[0].evidence_text.text,
-    parsed.evidence[0].normalized_text?.text);
-});
-
-test("HTML, JSON, and DOCUMENT records preserve source-specific evidence positions", () => {
-  const locators: readonly SourceRecordLocator[] = [
-    { kind: "HTML", selector: "article.job", path: "body > article.job" },
-    { kind: "JSON", json_path: "$.jobs[0]" },
-    { kind: "DOCUMENT", page_number: 3, section: "招聘条件", text_locator: "paragraph-2" }
-  ];
-  const parsed = locators.map((locator) => {
-    return new DeterministicRequirementParser().parse(inputFor(
-      "本科专业：法学",
-      "本科专业:法学",
-      locator
-    )).evidence[0].locator;
+  assert.deepEqual(parsed.facts[0].applicability, {
+    candidate_cohorts: ["FRESH_GRADUATE"],
+    operator: "ANY_OF"
   });
-
-  assert.equal(parsed[0].section, "article.job");
-  assert.equal(parsed[0].field_path, "body > article.job.raw_requirement_text");
-  assert.equal(parsed[1].field_path, "$.jobs[0].raw_requirement_text");
-  assert.equal(parsed[2].page_number, 3);
-  assert.equal(parsed[2].section, "招聘条件");
-  assert.equal(parsed[2].field_path, "paragraph-2");
 });
 
-test("merged Canonical content traces Evidence to the selected semantic source version", () => {
-  const selected = inputFor("本科专业：法学", "本科专业:法学");
-  const otherVersionId = branded<SourceOccurrenceVersionId>("a-third-party-version");
-  const otherRecordId = branded<ExtractedRecordId>("a-third-party-record");
-  const otherSnapshotId = branded<SnapshotId>("a-third-party-snapshot");
-  const otherVersion: SourceOccurrenceVersion = {
-    ...selected.source_occurrence_versions[0],
-    source_occurrence_version_id: otherVersionId,
-    extracted_record_id: otherRecordId,
-    semantic_hash: branded<SemanticHash>("semantic-third-party-summary")
-  };
-  const otherRecord: ExtractedRecord = {
-    ...selected.extracted_records[0],
-    extracted_record_id: otherRecordId,
-    snapshot_id: otherSnapshotId
-  };
-  const parsed = new DeterministicRequirementParser().parse({
-    opportunity_version: {
-      ...selected.opportunity_version,
-      source_occurrence_version_ids: [otherVersionId, sourceVersionId]
+test("empty evidence remains NOT_OBSERVED and never becomes unrestricted", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    empty: true
+  })]));
+
+  assert.equal(parsed.facts.length, 0);
+  assert.equal(parsed.observations[0].status, "NOT_OBSERVED");
+  assert.equal(parsed.completeness.status, "INCOMPLETE");
+  assert.equal(parsed.completeness.blockers[0].code, "NOT_OBSERVED");
+  assert.equal(parsed.complete_requirement_set, null);
+});
+
+test("unparsed, ambiguous, and domain-gap clauses each block completeness", () => {
+  const cases = [
+    {
+      source: fragment({ original: "须符合其他全部条件", normalized: "须符合其他全部条件" }),
+      status: "UNPARSED_CLAUSE"
     },
-    source_occurrence_versions: [otherVersion, ...selected.source_occurrence_versions],
-    extracted_records: [otherRecord, ...selected.extracted_records]
-  });
+    {
+      source: fragment({ original: "法律专业", normalized: "法律专业" }),
+      status: "AMBIGUOUS"
+    },
+    {
+      source: fragment({ original: "硕士专业：临床医学", normalized: "硕士专业:临床医学" }),
+      status: "DOMAIN_GAP_OBSERVED"
+    }
+  ] as const;
 
-  assert.equal(parsed.facts.length, 1);
-  assert.equal(parsed.evidence[0].snapshot_id, snapshotId);
-  assert.notEqual(parsed.evidence[0].snapshot_id, otherSnapshotId);
+  for (const item of cases) {
+    const parsed = new DeterministicRequirementParser().parse(input([item.source]));
+    assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
+    assert.ok(parsed.completeness.blockers.some((blocker) => {
+      return blocker.code === item.status;
+    }));
+    assert.equal(parsed.complete_requirement_set, null);
+  }
 });
 
-test("missing normalization or traceability produces warnings instead of Facts", () => {
-  const missingNormalization = new DeterministicRequirementParser().parse(inputFor(
-    "本科专业：法学",
-    null
-  ));
-  assert.deepEqual(missingNormalization.warnings.map((warning) => warning.code), [
-    "NORMALIZED_TEXT_MISSING"
-  ]);
-  assert.equal(missingNormalization.facts.length, 0);
+test("missing expected source and attachment blockers produce INCOMPLETE", () => {
+  const source = fragment({ original: "本科专业：法学", normalized: "本科专业:法学" });
+  const missingSource = new DeterministicRequirementParser().parse(input([source], {
+    expected: [
+      { extracted_record_id: source.extracted_record_id, snapshot_id: source.snapshot_id },
+      {
+        extracted_record_id: branded<ExtractedRecordId>("record-missing"),
+        snapshot_id: branded<SnapshotId>("snapshot-missing")
+      }
+    ]
+  }));
+  const missingAttachment = new DeterministicRequirementParser().parse(input([source], {
+    blockers: [{
+      code: "ATTACHMENT_MISSING",
+      description: "A referenced requirement-bearing attachment is unavailable"
+    }]
+  }));
 
-  const missingTraceabilityInput = inputFor("本科专业：法学", "本科专业:法学");
-  const missingTraceability = new DeterministicRequirementParser().parse({
-    ...missingTraceabilityInput,
-    extracted_records: []
-  });
-  assert.deepEqual(missingTraceability.warnings.map((warning) => warning.code), [
-    "TRACEABILITY_SOURCE_MISSING"
-  ]);
-  assert.equal(missingTraceability.facts.length, 0);
+  assert.equal(missingSource.completeness.status, "INCOMPLETE");
+  assert.ok(missingSource.completeness.blockers.some((blocker) => {
+    return blocker.code === "EVIDENCE_INCOMPLETE";
+  }));
+  assert.equal(missingAttachment.completeness.status, "INCOMPLETE");
+  assert.ok(missingAttachment.completeness.blockers.some((blocker) => {
+    return blocker.code === "ATTACHMENT_MISSING";
+  }));
 });
 
-test("Fact and Evidence identities are deterministic", () => {
-  const parser = new DeterministicRequirementParser();
-  const input = inputFor("本科专业：法学", "本科专业:法学");
-  const first = parser.parse(input);
-  const second = parser.parse(input);
-  assert.equal(first.facts[0].requirement_fact_id, second.facts[0].requirement_fact_id);
-  assert.equal(first.evidence[0].requirement_evidence_id,
-    second.evidence[0].requirement_evidence_id);
+test("age without an evidence-backed reference date remains ambiguous", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "年龄不超过35周岁",
+    normalized: "年龄不超过35周岁"
+  })]));
+
+  assert.equal(parsed.facts.length, 0);
+  assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
+  assert.equal(parsed.completeness.blockers[0].code, "AMBIGUOUS");
+  assert.ok(parsed.warnings.some((warning) => {
+    return warning.code === "AGE_REFERENCE_DATE_MISSING";
+  }));
 });
 
-test("P1-08 Requirement parsing remains offline", async () => {
-  await assert.rejects(fetch("https://example.invalid"), /Network access is disabled in tests/);
+test("preferred qualification is observed but not promoted to a mandatory Fact", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "通过法律职业资格考试者优先",
+    normalized: "通过法律职业资格考试者优先"
+  })]));
+
+  assert.equal(parsed.facts.length, 0);
+  assert.equal(parsed.observations[0].clause_role, "PREFERRED");
+  assert.equal(parsed.observations[0].status, "CONFIRMED_REQUIREMENT");
+  assert.equal(parsed.completeness.status, "COMPLETE");
+});
+
+test("parser uses source-neutral fragments and ignores no adapter metadata path", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    locator: {
+      kind: "SPREADSHEET",
+      sheet: "Requirements",
+      cell_or_range: "B7:B7"
+    },
+    original: "本科专业：不限",
+    normalized: "本科专业:不限"
+  })]));
+
+  assert.equal(parsed.facts[0].operator, "UNRESTRICTED");
+  assert.equal(parsed.evidence[0].locator.sheet, "Requirements");
+  assert.equal(parsed.evidence[0].locator.cell_or_range, "B7:B7");
+});
+
+test("Requirement V2 parsing remains offline", async () => {
+  await assert.rejects(fetch("https://example.invalid"),
+    /Network access is disabled in tests/);
 });

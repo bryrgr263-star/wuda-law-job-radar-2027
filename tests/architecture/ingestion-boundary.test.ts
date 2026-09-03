@@ -167,3 +167,30 @@ test("core business layers do not depend on namespaced adapter metadata", async 
   }
   assert.deepEqual(violations, []);
 });
+
+test("Requirement V2 and Eligibility remain source and file-format neutral", async () => {
+  const protectedFiles = [
+    path.join(ingestionRoot, "domain", "requirements.ts"),
+    path.join(ingestionRoot, "domain", "eligibility.ts"),
+    ...(await collectTypeScriptFiles(path.join(ingestionRoot, "requirements"))),
+    ...(await collectTypeScriptFiles(path.join(ingestionRoot, "eligibility")))
+  ];
+  const forbidden = [
+    /beijing/iu,
+    /北京急救中心/u,
+    /p2-04/iu,
+    /xlsx/iu,
+    /adapter_metadata/u,
+    /live-canary/iu
+  ];
+  const violations: string[] = [];
+  for (const filePath of protectedFiles) {
+    const source = await readFile(filePath, "utf8");
+    for (const pattern of forbidden) {
+      if (pattern.test(source)) {
+        violations.push(`${path.relative(repositoryRoot, filePath)}: ${pattern}`);
+      }
+    }
+  }
+  assert.deepEqual(violations, []);
+});

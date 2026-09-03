@@ -5,20 +5,20 @@ import test from "node:test";
 
 import {
   DeterministicEligibilityEngine,
+  DeterministicRequirementParser,
   EligibilityInputError,
   UTF8_TEXT_ENCODING,
   type AcademicProgramCode,
   type CandidateProfile,
   type CandidateProfileId,
+  type CompleteRequirementSet,
+  type ExtractedRecordId,
+  type IsoDate,
   type IsoDateTime,
-  type LogicGroupId,
   type OpportunityVersion,
   type OpportunityVersionId,
-  type RequirementEvidence,
-  type RequirementEvidenceId,
-  type RequirementFact,
-  type RequirementFactId,
-  type RequirementSubjectScope,
+  type RequirementEvidenceFragment,
+  type RequirementEvidenceFragmentId,
   type SemanticHash,
   type SnapshotId
 } from "../../lib/ingestion";
@@ -27,26 +27,26 @@ function branded<Value extends string>(value: string) {
   return value as Value;
 }
 
-const opportunityVersionId = branded<OpportunityVersionId>("opportunity-version-eligibility");
+const opportunityVersionId = branded<OpportunityVersionId>(
+  "opportunity-version-eligibility-v2"
+);
 const assessedAt = branded<IsoDateTime>("2026-09-01T12:00:00+08:00");
 
 const opportunityVersion: OpportunityVersion = {
   opportunity_version_id: opportunityVersionId,
-  canonical_opportunity_id: branded("canonical-eligibility"),
+  canonical_opportunity_id: branded("canonical-eligibility-v2"),
   revision: 1,
-  semantic_hash: branded<SemanticHash>("semantic-eligibility"),
+  semantic_hash: branded<SemanticHash>("semantic-eligibility-v2"),
   content: {
     organization: {
-      name: {
-        original: { text: "示例研究院", encoding: UTF8_TEXT_ENCODING }
-      }
+      name: { original: { text: "示例研究院", encoding: UTF8_TEXT_ENCODING } }
     },
     title: {
       original: { text: "法律事务岗", encoding: UTF8_TEXT_ENCODING }
     },
     locations: []
   },
-  source_occurrence_version_ids: [branded("source-version-eligibility")],
+  source_occurrence_version_ids: [branded("source-version-eligibility-v2")],
   effective_from: assessedAt
 };
 
@@ -59,7 +59,9 @@ function candidate(
   ]
 ): CandidateProfile {
   return {
-    candidate_profile_id: branded<CandidateProfileId>("candidate-wuhan-jm-non-law-2027"),
+    candidate_profile_id: branded<CandidateProfileId>(
+      "candidate-wuhan-jm-non-law-2027"
+    ),
     education: [
       {
         level: "BACHELOR",
@@ -70,6 +72,7 @@ function candidate(
           original: { text: "经济学", encoding: UTF8_TEXT_ENCODING }
         },
         normalized_program_codes: [],
+        academic_degree_codes: ["BACHELOR_DEGREE"],
         academic_background: "NON_LAW",
         graduation_year: 2024
       },
@@ -82,11 +85,21 @@ function candidate(
           original: { text: "法律硕士（非法学）", encoding: UTF8_TEXT_ENCODING }
         },
         normalized_program_codes: masterCodes,
+        program_directory_references: [{
+          directory_namespace: "national-academic-program-catalog",
+          directory_version: "2022",
+          program_code: "0301"
+        }],
+        academic_degree_codes: ["MASTER_DEGREE"],
         academic_background: "NON_LAW",
         graduation_year: 2027
       }
     ],
     target_graduation_year: 2027,
+    date_of_birth: branded<IsoDate>("1992-12-31"),
+    candidate_cohorts: ["FRESH_GRADUATE"],
+    household_registration_codes: ["北京市"],
+    student_origin_codes: ["北京市"],
     professional_qualifications: [{
       qualification_code: "LEGAL_PROFESSIONAL_QUALIFICATION",
       status: qualificationStatus,
@@ -98,265 +111,362 @@ function candidate(
   };
 }
 
-interface FactOptions {
-  readonly code: string;
-  readonly scope?: RequirementSubjectScope;
-  readonly group?: string;
-  readonly group_operator?: "AND" | "OR";
-  readonly certainty?: RequirementFact["certainty"];
-  readonly dimension?: RequirementFact["dimension"];
-  readonly operator?: RequirementFact["operator"];
+interface SetOptions {
+  readonly original: string;
+  readonly normalized: string;
+  readonly directory?: RequirementEvidenceFragment["academic_program_directory"];
 }
 
-function fact(id: string, options: FactOptions): RequirementFact {
-  return {
-    requirement_fact_id: branded<RequirementFactId>(id),
-    opportunity_version_id: opportunityVersionId,
-    dimension: options.dimension ?? "MAJOR",
-    operator: options.operator ?? "EQUALS",
-    value: { kind: "CODE", code: options.code },
-    subject_scope: options.scope ?? "MASTER",
-    logic_group: {
-      logic_group_id: branded<LogicGroupId>(options.group ?? `group-${id}`),
-      operator: options.group_operator ?? "AND"
-    },
-    polarity: "POSITIVE",
-    certainty: options.certainty ?? "EXPLICIT",
-    parser_version: "deterministic-requirement-parser/1.0.0"
-  };
-}
-
-function evidence(requirementFact: RequirementFact): RequirementEvidence {
-  return {
-    requirement_evidence_id: branded<RequirementEvidenceId>(
-      `evidence-${requirementFact.requirement_fact_id}`
+function parse(options: SetOptions) {
+  const fragment: RequirementEvidenceFragment = {
+    requirement_evidence_fragment_id: branded<RequirementEvidenceFragmentId>(
+      `fragment-${options.normalized}`
     ),
-    requirement_fact_id: requirementFact.requirement_fact_id,
-    snapshot_id: branded<SnapshotId>("snapshot-eligibility"),
-    locator: { field_path: "raw_requirement_text", start_offset: 0, end_offset: 18 },
-    evidence_text: {
-      text: "招聘公告中的中文原始条件",
-      encoding: UTF8_TEXT_ENCODING
+    extracted_record_id: branded<ExtractedRecordId>("record-eligibility-v2"),
+    snapshot_id: branded<SnapshotId>("snapshot-eligibility-v2"),
+    locator: {
+      kind: "HTML",
+      selector: "article.requirements",
+      field_path: "requirement_text"
     },
-    extractor_name: "fixture-extractor",
+    observed_value_state: "TEXT",
+    original_text: { text: options.original, encoding: UTF8_TEXT_ENCODING },
+    normalized_text: {
+      text: options.normalized,
+      unicode_form: "NFKC",
+      normalizer_version: "source-normalizer/1.0.0",
+      operations: [
+        "UNICODE_NORMALIZATION",
+        "WIDTH_FOLDING",
+        "PUNCTUATION_FOLDING"
+      ]
+    },
+    ...(options.directory ? { academic_program_directory: options.directory } : {}),
+    extractor_name: "source-neutral-fragment-builder",
     extractor_version: "1.0.0",
-    parser_version: requirementFact.parser_version
+    parser_version: "fragment-contract/1.0.0"
   };
+  return new DeterministicRequirementParser().parse({
+    opportunity_version: opportunityVersion,
+    evidence_fragments: [fragment],
+    expected_sources: [{
+      extracted_record_id: fragment.extracted_record_id,
+      snapshot_id: fragment.snapshot_id
+    }]
+  });
+}
+
+function complete(options: SetOptions): CompleteRequirementSet {
+  const parsed = parse(options);
+  assert.ok(parsed.complete_requirement_set);
+  return parsed.complete_requirement_set;
 }
 
 function evaluate(
-  facts: readonly RequirementFact[],
+  requirementSet: CompleteRequirementSet,
   profile: CandidateProfile = candidate(),
-  evidenceItems: readonly RequirementEvidence[] = facts.map(evidence)
+  timestamp: IsoDateTime = assessedAt
 ) {
   return new DeterministicEligibilityEngine().evaluate({
     opportunity_version: opportunityVersion,
-    requirement_facts: facts,
-    requirement_evidence: evidenceItems,
+    complete_requirement_set: requirementSet,
     candidate_profile: profile,
-    assessed_at: assessedAt
+    assessed_at: timestamp
   });
 }
 
-test("explicit 法律硕士（非法学） master requirement is ELIGIBLE with evidence", () => {
-  const requirement = fact("fact-explicit-jm-non-law", {
-    code: "JURIS_MASTER_NON_LAW"
+test("explicit 法律硕士（非法学） complete set is ELIGIBLE", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法律硕士（非法学）",
+    normalized: "硕士专业:法律硕士(非法学)"
   });
-  const assessment = evaluate([requirement]);
+  const assessment = evaluate(requirementSet);
 
   assert.equal(assessment.result, "ELIGIBLE");
-  assert.deepEqual(assessment.requirement_fact_ids, [requirement.requirement_fact_id]);
-  assert.deepEqual(assessment.evidence_ids, [evidence(requirement).requirement_evidence_id]);
-  assert.ok(assessment.reason_codes.includes("REQUIREMENT_SATISFIED"));
+  assert.deepEqual(assessment.requirement_fact_ids,
+    requirementSet.completeness.fact_ids);
+  assert.deepEqual(assessment.evidence_ids,
+    requirementSet.completeness.evidence_ids);
 });
 
-test("master 法学、法律 alternatives are not treated as explicit JM non-law acceptance", () => {
-  const lawStudies = fact("fact-master-law-studies", {
-    code: "LAW_STUDIES",
-    group: "group-master-law-or-law-studies",
-    group_operator: "OR"
+test("法律硕士 is not rewritten to 法律硕士（非法学）", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法律硕士",
+    normalized: "硕士专业:法律硕士"
   });
-  const law = fact("fact-master-law", {
-    code: "LAW",
-    group: "group-master-law-or-law-studies",
-    group_operator: "OR"
-  });
-  const assessment = evaluate([lawStudies, law]);
+  const withoutGenericJurisMaster = candidate("UNKNOWN", [
+    "JURIS_MASTER_NON_LAW"
+  ]);
 
-  assert.equal(assessment.result, "INELIGIBLE");
-  assert.ok(assessment.reason_codes.includes("REQUIREMENT_NOT_SATISFIED"));
+  assert.deepEqual(requirementSet.facts[0].value, {
+    kind: "CODE",
+    code: "JURIS_MASTER"
+  });
+  assert.equal(evaluate(requirementSet, withoutGenericJurisMaster).result,
+    "INELIGIBLE");
 });
 
-test("bachelor law restriction makes the non-law bachelor candidate INELIGIBLE", () => {
-  const assessment = evaluate([fact("fact-bachelor-law", {
-    code: "LAW_STUDIES",
-    scope: "BACHELOR"
-  })]);
+test("master 法学、法律 alternatives remain OR and do not accept a non-law JM", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法学、法律",
+    normalized: "硕士专业:法学、法律"
+  });
 
-  assert.equal(assessment.result, "INELIGIBLE");
+  assert.ok(requirementSet.facts.every((fact) => {
+    return fact.logic_group.operator === "OR";
+  }));
+  assert.equal(evaluate(requirementSet).result, "INELIGIBLE");
 });
 
-test("bachelor-and-master law requirements remain AND and are INELIGIBLE", () => {
-  const bachelor = fact("fact-both-bachelor-law", {
-    code: "LAW_STUDIES",
-    scope: "BACHELOR",
-    group: "group-bachelor-and-master-law"
+test("GRADUATE scope accepts master or doctor without becoming MASTER", () => {
+  const requirementSet = complete({
+    original: "研究生专业：法学",
+    normalized: "研究生专业:法学"
   });
-  const master = fact("fact-both-master-law", {
-    code: "LAW_STUDIES",
-    scope: "MASTER",
-    group: "group-bachelor-and-master-law"
-  });
-
-  assert.equal(evaluate([bachelor, master]).result, "INELIGIBLE");
-});
-
-test("法律、法学、知识产权 alternatives are evaluated as OR, not AND", () => {
-  const alternatives = [
-    fact("fact-law", {
-      code: "LAW",
-      scope: "ANY_EDUCATION",
-      group: "group-related-major-alternatives",
-      group_operator: "OR",
-      certainty: "AMBIGUOUS"
-    }),
-    fact("fact-law-studies", {
-      code: "LAW_STUDIES",
-      scope: "ANY_EDUCATION",
-      group: "group-related-major-alternatives",
-      group_operator: "OR",
-      certainty: "AMBIGUOUS"
-    }),
-    fact("fact-intellectual-property", {
-      code: "INTELLECTUAL_PROPERTY",
-      scope: "ANY_EDUCATION",
-      group: "group-related-major-alternatives",
-      group_operator: "OR",
-      certainty: "AMBIGUOUS"
-    })
-  ];
-  const matchingProfile = candidate("UNKNOWN", ["INTELLECTUAL_PROPERTY"]);
-
-  assert.equal(evaluate(alternatives, matchingProfile).result, "LIKELY_ELIGIBLE");
-  assert.equal(evaluate(alternatives).result, "LIKELY_INELIGIBLE");
-});
-
-test("missing evidence or absent structured requirements requires review", () => {
-  const requirement = fact("fact-without-evidence", {
-    code: "JURIS_MASTER_NON_LAW"
-  });
-  const missingEvidence = evaluate([requirement], candidate(), []);
-  const noRequirements = evaluate([], candidate(), []);
-
-  assert.equal(missingEvidence.result, "NEEDS_REVIEW");
-  assert.ok(missingEvidence.reason_codes.includes("INSUFFICIENT_EVIDENCE"));
-  assert.equal(noRequirements.result, "NEEDS_REVIEW");
-  assert.notEqual(missingEvidence.result, "ELIGIBLE");
-});
-
-test("unknown legal qualification status requires review; known failure is ineligible", () => {
-  const qualification = fact("fact-legal-qualification", {
-    code: "LEGAL_PROFESSIONAL_QUALIFICATION",
-    scope: "CANDIDATE",
-    dimension: "PROFESSIONAL_QUALIFICATION",
-    operator: "EXISTS"
-  });
-
-  assert.equal(evaluate([qualification], candidate("UNKNOWN")).result, "NEEDS_REVIEW");
-  assert.equal(evaluate([qualification], candidate("NOT_OBTAINED")).result, "INELIGIBLE");
-  assert.equal(evaluate([qualification], candidate("OBTAINED")).result, "ELIGIBLE");
-});
-
-test("all five frozen Eligibility results are reachable by deterministic rules", () => {
-  const explicitMatch = fact("fact-five-explicit-match", {
-    code: "JURIS_MASTER_NON_LAW"
-  });
-  const ambiguousMatch = fact("fact-five-ambiguous-match", {
-    code: "JURIS_MASTER_NON_LAW",
-    certainty: "AMBIGUOUS"
-  });
-  const ambiguousMismatch = fact("fact-five-ambiguous-mismatch", {
-    code: "INTELLECTUAL_PROPERTY",
-    certainty: "AMBIGUOUS"
-  });
-  const explicitMismatch = fact("fact-five-explicit-mismatch", {
-    code: "LAW_STUDIES",
-    scope: "BACHELOR"
-  });
-
-  assert.deepEqual(new Set([
-    evaluate([explicitMatch]).result,
-    evaluate([ambiguousMatch]).result,
-    evaluate([], candidate(), []).result,
-    evaluate([ambiguousMismatch]).result,
-    evaluate([explicitMismatch]).result
-  ]), new Set([
-    "ELIGIBLE",
-    "LIKELY_ELIGIBLE",
-    "NEEDS_REVIEW",
-    "LIKELY_INELIGIBLE",
-    "INELIGIBLE"
-  ]));
-});
-
-test("assessment identity is deterministic and excludes the assessment timestamp", () => {
-  const requirement = fact("fact-deterministic", {
-    code: "JURIS_MASTER_NON_LAW"
-  });
-  const engine = new DeterministicEligibilityEngine();
-  const first = evaluate([requirement]);
-  const second = engine.evaluate({
-    opportunity_version: opportunityVersion,
-    requirement_facts: [requirement],
-    requirement_evidence: [evidence(requirement)],
-    candidate_profile: candidate(),
-    assessed_at: branded<IsoDateTime>("2026-09-02T12:00:00+08:00")
-  });
-
-  assert.equal(first.eligibility_assessment_id, second.eligibility_assessment_id);
-  assert.notEqual(first.assessed_at, second.assessed_at);
-});
-
-test("Facts from another OpportunityVersion are rejected", () => {
-  const mismatched = {
-    ...fact("fact-wrong-opportunity", { code: "JURIS_MASTER_NON_LAW" }),
-    opportunity_version_id: branded<OpportunityVersionId>("another-opportunity-version")
+  const doctor: CandidateProfile = {
+    ...candidate(),
+    education: [{
+      level: "DOCTOR",
+      institution: {
+        original: { text: "示例大学", encoding: UTF8_TEXT_ENCODING }
+      },
+      program_name: {
+        original: { text: "法学", encoding: UTF8_TEXT_ENCODING }
+      },
+      normalized_program_codes: ["LAW_STUDIES"],
+      academic_background: "LAW"
+    }]
   };
 
-  assert.throws(() => evaluate([mismatched]), (error) => {
-    return error instanceof EligibilityInputError
-      && error.code === "FACT_OPPORTUNITY_MISMATCH";
-  });
+  assert.equal(requirementSet.facts[0].subject_scope, "GRADUATE");
+  assert.equal(evaluate(requirementSet, doctor).result, "ELIGIBLE");
 });
 
-test("orphan Evidence is rejected instead of being silently attached", () => {
-  const requirement = fact("fact-present", { code: "JURIS_MASTER_NON_LAW" });
-  const orphanFact = fact("fact-orphan", { code: "LAW_STUDIES" });
+test("MASTER scope is not widened to a doctor-only credential", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法学",
+    normalized: "硕士专业:法学"
+  });
+  const doctor: CandidateProfile = {
+    ...candidate(),
+    education: [{
+      level: "DOCTOR",
+      institution: {
+        original: { text: "示例大学", encoding: UTF8_TEXT_ENCODING }
+      },
+      program_name: {
+        original: { text: "法学", encoding: UTF8_TEXT_ENCODING }
+      },
+      normalized_program_codes: ["LAW_STUDIES"],
+      academic_background: "LAW"
+    }]
+  };
 
-  assert.throws(() => evaluate([requirement], candidate(), [evidence(orphanFact)]),
-    (error) => {
-      return error instanceof EligibilityInputError
-        && error.code === "EVIDENCE_FACT_MISSING";
-    });
+  assert.equal(requirementSet.facts[0].subject_scope, "MASTER");
+  assert.equal(evaluate(requirementSet, doctor).result, "NEEDS_REVIEW");
 });
 
-test("Eligibility consumes structured values and does not inspect Chinese Evidence text", () => {
-  const requirement = fact("fact-no-substring", {
-    code: "JURIS_MASTER_NON_LAW"
-  });
-  const misleadingEvidence = {
-    ...evidence(requirement),
-    evidence_text: {
-      text: "此处原文故意写成完全不同的专业名称，判断不得重新解析该字符串。",
-      encoding: UTF8_TEXT_ENCODING
+test("source-neutral directory references match namespace, version, and code exactly", () => {
+  const requirementSet = complete({
+    original: "研究生专业：0301（法学）",
+    normalized: "研究生专业:0301(法学)",
+    directory: {
+      directory_namespace: "national-academic-program-catalog",
+      directory_version: "2022"
     }
+  });
+  const wrongVersion: CandidateProfile = {
+    ...candidate(),
+    education: candidate().education.map((credential) => {
+      if (credential.level !== "MASTER") return credential;
+      return {
+        ...credential,
+        program_directory_references: [{
+          directory_namespace: "national-academic-program-catalog",
+          directory_version: "2012",
+          program_code: "0301"
+        }]
+      };
+    })
   };
 
-  assert.equal(evaluate([requirement], candidate(), [misleadingEvidence]).result,
+  assert.equal(evaluate(requirementSet).result, "ELIGIBLE");
+  assert.equal(evaluate(requirementSet, wrongVersion).result, "INELIGIBLE");
+});
+
+test("new degree, age, cohort, household, and student-origin dimensions evaluate deterministically", () => {
+  const requirementSet = complete({
+    original: "学位要求：硕士学位；年龄不超过35周岁（截至2026年12月31日）；招聘对象：应届毕业生；户籍要求：北京市；生源地要求：北京市",
+    normalized: "学位要求:硕士学位;年龄不超过35周岁(截至2026年12月31日);招聘对象:应届毕业生;户籍要求:北京市;生源地要求:北京市"
+  });
+  const tooOld: CandidateProfile = {
+    ...candidate(),
+    date_of_birth: branded<IsoDate>("1990-01-01")
+  };
+
+  assert.equal(evaluate(requirementSet).result, "ELIGIBLE");
+  assert.equal(evaluate(requirementSet, tooOld).result, "INELIGIBLE");
+});
+
+test("cohort applicability skips another cohort but unknown cohort requires review", () => {
+  const requirementSet = complete({
+    original: "应届毕业生须硕士专业：法学",
+    normalized: "应届毕业生须硕士专业:法学"
+  });
+  const socialCandidate: CandidateProfile = {
+    ...candidate(),
+    candidate_cohorts: ["SOCIAL_CANDIDATE"]
+  };
+  const unknownCohort: CandidateProfile = {
+    ...candidate(),
+    candidate_cohorts: undefined
+  };
+
+  assert.equal(evaluate(requirementSet, socialCandidate).result, "ELIGIBLE");
+  assert.equal(evaluate(requirementSet, unknownCohort).result, "NEEDS_REVIEW");
+});
+
+test("unknown qualification status needs review; known failure is ineligible", () => {
+  const requirementSet = complete({
+    original: "须通过法律职业资格考试",
+    normalized: "须通过法律职业资格考试"
+  });
+
+  assert.equal(evaluate(requirementSet, candidate("UNKNOWN")).result,
+    "NEEDS_REVIEW");
+  assert.equal(evaluate(requirementSet, candidate("NOT_OBTAINED")).result,
+    "INELIGIBLE");
+  assert.equal(evaluate(requirementSet, candidate("OBTAINED")).result,
     "ELIGIBLE");
 });
 
-test("P1-09 Eligibility remains offline", async () => {
+test("incomplete Requirement Set is rejected before any assessment exists", () => {
+  const parsed = parse({
+    original: "须符合其他全部条件",
+    normalized: "须符合其他全部条件"
+  });
+  assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
+  let assessmentCreated = false;
+
+  assert.throws(() => {
+    const assessment = new DeterministicEligibilityEngine().evaluate({
+      opportunity_version: opportunityVersion,
+      // @ts-expect-error Incomplete sets are intentionally rejected at compile time too.
+      complete_requirement_set: parsed.requirement_set,
+      candidate_profile: candidate(),
+      assessed_at: assessedAt
+    });
+    assessmentCreated = assessment !== undefined;
+  }, (error) => {
+    return error instanceof EligibilityInputError
+      && error.code === "REQUIREMENT_SET_INCOMPLETE";
+  });
+  assert.equal(assessmentCreated, false);
+});
+
+test("omitting one parsed Fact cannot bypass completeness", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法律硕士（非法学）；须通过法律职业资格考试",
+    normalized: "硕士专业:法律硕士(非法学);须通过法律职业资格考试"
+  });
+  const tampered = structuredClone(requirementSet);
+  Object.defineProperty(tampered, "facts", {
+    value: [tampered.facts[0]],
+    enumerable: true
+  });
+
+  assert.throws(() => evaluate(tampered, candidate("NOT_OBTAINED")), (error) => {
+    return error instanceof EligibilityInputError
+      && error.code === "REQUIREMENT_SET_FACT_MISMATCH";
+  });
+});
+
+test("omitting Evidence or changing complete-set content is rejected", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法律硕士（非法学）",
+    normalized: "硕士专业:法律硕士(非法学)"
+  });
+  const withoutEvidence = structuredClone(requirementSet);
+  Object.defineProperty(withoutEvidence, "evidence", {
+    value: [],
+    enumerable: true
+  });
+  const changedFact = structuredClone(requirementSet);
+  Object.defineProperty(changedFact.facts[0], "operator", {
+    value: "NOT_EQUALS",
+    enumerable: true
+  });
+
+  assert.throws(() => evaluate(withoutEvidence), (error) => {
+    return error instanceof EligibilityInputError
+      && error.code === "REQUIREMENT_SET_EVIDENCE_MISMATCH";
+  });
+  assert.throws(() => evaluate(changedFact), (error) => {
+    return error instanceof EligibilityInputError
+      && error.code === "REQUIREMENT_SET_CONTENT_MISMATCH";
+  });
+});
+
+test("Requirement Set from another OpportunityVersion is rejected", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法律硕士（非法学）",
+    normalized: "硕士专业:法律硕士(非法学)"
+  });
+  const otherOpportunity: OpportunityVersion = {
+    ...opportunityVersion,
+    opportunity_version_id: branded<OpportunityVersionId>("another-opportunity")
+  };
+
+  assert.throws(() => new DeterministicEligibilityEngine().evaluate({
+    opportunity_version: otherOpportunity,
+    complete_requirement_set: requirementSet,
+    candidate_profile: candidate(),
+    assessed_at: assessedAt
+  }), (error) => {
+    return error instanceof EligibilityInputError
+      && error.code === "REQUIREMENT_SET_OPPORTUNITY_MISMATCH";
+  });
+});
+
+test("assessment identity is deterministic and excludes assessment timestamp", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法律硕士（非法学）",
+    normalized: "硕士专业:法律硕士(非法学)"
+  });
+  const first = evaluate(requirementSet);
+  const second = evaluate(
+    requirementSet,
+    candidate(),
+    branded<IsoDateTime>("2026-09-02T12:00:00+08:00")
+  );
+
+  assert.equal(first.eligibility_assessment_id,
+    second.eligibility_assessment_id);
+  assert.notEqual(first.assessed_at, second.assessed_at);
+});
+
+test("Eligibility consumes structured values and never reparses Evidence text", () => {
+  const requirementSet = complete({
+    original: "硕士专业：法律硕士（非法学）",
+    normalized: "硕士专业:法律硕士(非法学)"
+  });
+  const changedEvidence = structuredClone(requirementSet);
+  Object.defineProperty(changedEvidence.evidence[0], "evidence_text", {
+    value: {
+      text: "完全不同的专业名称",
+      encoding: UTF8_TEXT_ENCODING
+    },
+    enumerable: true
+  });
+
+  assert.throws(() => evaluate(changedEvidence), (error) => {
+    return error instanceof EligibilityInputError
+      && error.code === "REQUIREMENT_SET_CONTENT_MISMATCH";
+  });
+  assert.equal(evaluate(requirementSet).result, "ELIGIBLE");
+});
+
+test("Requirement V2 Eligibility remains offline", async () => {
   await assert.rejects(fetch("https://example.invalid"),
     /Network access is disabled in tests/);
 });
