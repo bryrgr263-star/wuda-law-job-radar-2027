@@ -25,32 +25,41 @@ import {
   type RecruitmentEndpointId,
   type Snapshot,
   type SnapshotId,
-  type SourceDefinitionId,
   type TransportHeaders,
   type TransportResponse
 } from "../../ingestion";
+import {
+  BEIJING_ATTACHMENT_ENDPOINT,
+  BEIJING_ATTACHMENT_EXPECTED_MIME,
+  BEIJING_ATTACHMENT_MAX_DECOMPRESSED_BYTES,
+  BEIJING_ATTACHMENT_MAX_EXPANSION_RATIO,
+  BEIJING_ATTACHMENT_MAX_RESPONSE_BYTES,
+  BEIJING_ATTACHMENT_MAX_SINGLE_ENTRY_BYTES,
+  BEIJING_ATTACHMENT_MAX_ZIP_ENTRIES,
+  BEIJING_ATTACHMENT_OBSERVATION_TIMEOUT_MS,
+  BEIJING_ATTACHMENT_RECRUITMENT_ENDPOINT_ID,
+  BEIJING_ATTACHMENT_REFERRING_DETAIL_ENDPOINT,
+  BEIJING_ATTACHMENT_SOURCE_DEFINITION_ID
+} from "./beijing-public-institution-attachment-contract";
 
-export const BEIJING_ATTACHMENT_SOURCE_DEFINITION_ID =
-  "source-cn-beijing-government-public-institution-recruitment" as SourceDefinitionId;
+export {
+  BEIJING_ATTACHMENT_ENDPOINT,
+  BEIJING_ATTACHMENT_EXPECTED_MIME,
+  BEIJING_ATTACHMENT_MAX_DECOMPRESSED_BYTES,
+  BEIJING_ATTACHMENT_MAX_EXPANSION_RATIO,
+  BEIJING_ATTACHMENT_MAX_RESPONSE_BYTES,
+  BEIJING_ATTACHMENT_MAX_SINGLE_ENTRY_BYTES,
+  BEIJING_ATTACHMENT_MAX_ZIP_ENTRIES,
+  BEIJING_ATTACHMENT_OBSERVATION_TIMEOUT_MS,
+  BEIJING_ATTACHMENT_RECRUITMENT_ENDPOINT_ID,
+  BEIJING_ATTACHMENT_REFERRING_DETAIL_ENDPOINT,
+  BEIJING_ATTACHMENT_SOURCE_DEFINITION_ID
+} from "./beijing-public-institution-attachment-contract";
+
 export const BEIJING_ATTACHMENT_SOURCE_ADMISSION_ID =
   "admission-cn-beijing-government-public-institution-recruitment-attachment-xlsx" as
     SourceAdmission["source_admission_id"];
-export const BEIJING_ATTACHMENT_RECRUITMENT_ENDPOINT_ID =
-  "endpoint-cn-beijing-government-public-institution-recruitment-attachment-xlsx" as
-    RecruitmentEndpointId;
-export const BEIJING_ATTACHMENT_ENDPOINT =
-  "https://www.beijing.gov.cn/gongkai/rsxx/sydwzp/202606/P020260625349755441673.xlsx";
-export const BEIJING_ATTACHMENT_REFERRING_DETAIL_ENDPOINT =
-  "https://www.beijing.gov.cn/gongkai/rsxx/sydwzp/202606/t20260625_4714884.html";
-export const BEIJING_ATTACHMENT_EXPECTED_MIME =
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 export const BEIJING_ATTACHMENT_OBSERVATION_REVIEWER = "human-approved-by-user";
-export const BEIJING_ATTACHMENT_OBSERVATION_TIMEOUT_MS = 15_000;
-export const BEIJING_ATTACHMENT_MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
-export const BEIJING_ATTACHMENT_MAX_ZIP_ENTRIES = 256;
-export const BEIJING_ATTACHMENT_MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;
-export const BEIJING_ATTACHMENT_MAX_SINGLE_ENTRY_BYTES = 16 * 1024 * 1024;
-export const BEIJING_ATTACHMENT_MAX_EXPANSION_RATIO = 100;
 export const BEIJING_ATTACHMENT_DETAIL_RAW_SHA256 =
   "8a44dad79da041e1aefb7d9aed442df40f5de844eefe5d1708cb52996f511d8a";
 export const BEIJING_ATTACHMENT_DETAIL_SNAPSHOT_ID =

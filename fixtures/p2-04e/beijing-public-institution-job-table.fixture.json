@@ -1,0 +1,12 @@
+{
+  "fixture_status": "TEST_FIXTURE_FROM_REAL_P2_04E_OBSERVATION_CANARY",
+  "offline_only": true,
+  "source_url": "https://www.beijing.gov.cn/gongkai/rsxx/sydwzp/202606/P020260625349755441673.xlsx",
+  "source_canary_run_id": "p2-04e-observation-run:c240b387-9ed7-415a-b7f1-4b53cc95bf6c",
+  "authorization_id": "p2-04e-observation-authorization:9f8533e7-8865-4506-af98-3c71f1beddf7",
+  "evidence_id": "p2-04e-evidence:human-observation-approval:5bbe25ce-edac-4f1a-8dd3-0506dba17c7c",
+  "snapshot_id": "p2-04e-observation-snapshot:d6368e80-f6b9-4f18-ad9a-2727a7dd8c8b",
+  "raw_sha256": "b8a3c2832ab77782b2215370a72f40c524ab1e8179731fc025aafd6452514766",
+  "raw_byte_length": 12414,
+  "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+}
