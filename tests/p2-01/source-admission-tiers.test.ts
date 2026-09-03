@@ -321,6 +321,42 @@ test("approved Level B uses one endpoint, one run, and consumes manual authoriza
   assert.equal(register.get(approved.source_admission_id).admission_level, "B");
 });
 
+test("a B-level recruitment attachment never gains permanent automation permission", () => {
+  const register = new InMemorySourceAdmissionRegister();
+  const review = register.register({
+    ...levelBReview({
+      sourceAdmissionId: branded<SourceAdmissionId>("admission-tier-attachment"),
+      endpoint: "https://example.invalid/careers/position-table.xlsx"
+    }),
+    source_type: "OFFICIAL_RECRUITMENT_PAGE",
+    endpoint_purpose: "RECRUITMENT_ATTACHMENT",
+    content_kind: "FILE",
+    structure: "DOCUMENT"
+  });
+  const approved = register.revise(revisedWithEvidence(review, "attachment-canary-approval", {
+    admission_level: "B",
+    automation_basis: "HUMAN_REVIEWED_CANARY",
+    admission_decision: "APPROVED"
+  }, "MANUAL_REVIEW", "ALLOWED"));
+
+  assert.deepEqual(evaluateSourceAutomationPermission(approved), {
+    allowed: true,
+    admission_level: "B",
+    mode: "ONE_ENDPOINT_ONE_RUN",
+    requires_manual_authorization: true
+  });
+  const signed = authorization(
+    approved,
+    approved.evidence.at(-1)!.source_admission_evidence_id
+  );
+  const gate = new InMemoryLiveCanaryAuthorizationGate();
+  assert.equal(gate.authorize(approved, execution(approved), signed).allowed, true);
+  const replay = gate.authorize(approved, execution(approved), signed);
+  assert.equal(replay.allowed, false);
+  if (!replay.allowed) assert.deepEqual(replay.reason_codes, ["AUTHORIZATION_ALREADY_USED"]);
+  assert.equal(register.get(approved.source_admission_id).admission_level, "B");
+});
+
 test("Level C and D both deny collection and Live Canary execution", () => {
   const restricted = admission({
     level: "C",

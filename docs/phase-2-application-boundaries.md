@@ -16,6 +16,8 @@ P1 code under `lib/ingestion/` must never import `lib/application/`. The legacy 
 
 The in-memory P2-01 register records a candidate source's name, type, official owner, endpoint, P1 `RecruitmentEndpoint` reference, endpoint purpose, allowed HTTP method, authority, robots and terms evidence, login/CAPTCHA conditions, structure, stability, update frequency, priority, prohibited actions, evidence, and review records. P1 remains the only Endpoint semantic source; Admission approves one referenced Endpoint's permitted use.
 
+Supported endpoint purposes are `JOB_LIST`, `JOB_DETAIL`, `RECRUITMENT_NOTICE`, and `RECRUITMENT_ATTACHMENT`. An attachment is always a separate exact Endpoint and requires its own Source Admission, robots evidence, terms evidence, review evidence, Authorization, and Collection Run. A list, detail, or notice Admission does not authorize an attachment discovered in its content.
+
 Admission decisions remain `APPROVED`, `REJECTED`, or `REVIEW` and are separate from the A/B/C/D admission level. Access evidence remains explicit: `UNKNOWN` is neither `ALLOWED` nor `PROHIBITED`, and the legacy `DISALLOWED` value remains a prohibited result for compatibility.
 
 | Level | Meaning | Permission |
@@ -34,6 +36,8 @@ Third-party recruitment platforms may be recorded only as `REJECTED`; they canno
 ## Network default deny
 
 P2-01 contains no network implementation. A Live Canary is denied unless a specific approved admission has a matching, human-authored, single-endpoint/single-run authorization with referenced admission evidence. B-level approval grants only this Canary scope and never permanent collection permission. The authorization record itself binds the authorization ID, admission ID, exact endpoint locator, P1 `RecruitmentEndpoint` ID, endpoint purpose, allowed HTTP method, one collection-run ID, reviewer, issue time, and evidence ID. Evaluation directly compares each execution field with the authorization and then verifies the admitted scope. Any source, endpoint, P1 Endpoint reference, endpoint purpose, HTTP method, run, evidence, scope, level, or approval mismatch is rejected. P2-04 admission currently permits `GET` only. The in-memory authorization gate consumes an authorization ID after its first successful evaluation, so it cannot authorize a second execution. The contract grants no execution capability; P2-04 will be the first stage permitted to supply a network-capable runner.
+
+A B-level `RECRUITMENT_ATTACHMENT` remains `HUMAN_REVIEWED_CANARY` and `ONE_ENDPOINT_ONE_RUN`. It cannot inherit or reuse a list, detail, or notice Authorization, Collection Run, or Evidence, and its authorization cannot be used for another endpoint purpose. This purpose extension adds no attachment transport, redirect handling, cookie use, parser, or network permission.
 
 Formal tests continue to install the shared Network Guard. Any accidental `fetch`, HTTP, HTTPS, TCP, or TLS operation fails.
 

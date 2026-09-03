@@ -57,7 +57,8 @@ export type SourceAutomationBasis = (typeof SOURCE_AUTOMATION_BASES)[number];
 export const SOURCE_ADMISSION_ENDPOINT_PURPOSES = [
   "JOB_LIST",
   "JOB_DETAIL",
-  "RECRUITMENT_NOTICE"
+  "RECRUITMENT_NOTICE",
+  "RECRUITMENT_ATTACHMENT"
 ] as const;
 
 export type SourceAdmissionEndpointPurpose =

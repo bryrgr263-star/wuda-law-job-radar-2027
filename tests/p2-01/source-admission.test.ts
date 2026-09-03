@@ -183,6 +183,25 @@ function authorization(
   };
 }
 
+function attachmentAdmission(): SourceAdmission {
+  return admission("APPROVED", {
+    source_admission_id: branded<SourceAdmissionId>("admission-official-attachment"),
+    admission_level: "B",
+    automation_basis: "HUMAN_REVIEWED_CANARY",
+    source_name: traceable("官方招聘职位及要求表"),
+    source_type: "OFFICIAL_RECRUITMENT_PAGE",
+    endpoint: "https://example.invalid/careers/position-table.xlsx",
+    recruitment_endpoint_id: branded<RecruitmentEndpointId>("endpoint-official-attachment"),
+    endpoint_purpose: "RECRUITMENT_ATTACHMENT",
+    content_kind: "FILE",
+    terms: {
+      status: "UNKNOWN",
+      evidence_id: branded<SourceAdmissionEvidenceId>("admission-evidence-terms")
+    },
+    structure: "DOCUMENT"
+  });
+}
+
 test("Source Admission Register preserves Chinese review evidence and all required fields", () => {
   const register = new InMemorySourceAdmissionRegister();
   const registered = register.register(admission());
@@ -348,6 +367,70 @@ test("Live Canary directly rejects mismatched fields stored by Authorization", (
   ];
   for (const [candidate, expected] of cases) {
     const decision = evaluateLiveCanaryAuthorization(approved, request, candidate);
+    assert.equal(decision.allowed, false);
+    if (!decision.allowed) assert.deepEqual(decision.reason_codes, [expected]);
+  }
+});
+
+test("RECRUITMENT_ATTACHMENT is a legal exact Endpoint purpose", () => {
+  const attachment = attachmentAdmission();
+  const registered = new InMemorySourceAdmissionRegister().register(attachment);
+  assert.equal(registered.endpoint_purpose, "RECRUITMENT_ATTACHMENT");
+  assert.equal(registered.content_kind, "FILE");
+  assert.equal(registered.admission_level, "B");
+  assert.equal(registered.automation_basis, "HUMAN_REVIEWED_CANARY");
+});
+
+test("list, detail, and notice authorizations cannot authorize an attachment", () => {
+  const attachment = attachmentAdmission();
+  for (const endpointPurpose of ["JOB_LIST", "JOB_DETAIL", "RECRUITMENT_NOTICE"] as const) {
+    const decision = evaluateLiveCanaryAuthorization(
+      attachment,
+      execution(attachment),
+      authorization(attachment, { endpoint_purpose: endpointPurpose })
+    );
+    assert.equal(decision.allowed, false);
+    if (!decision.allowed) {
+      assert.deepEqual(decision.reason_codes, ["AUTHORIZATION_ENDPOINT_PURPOSE_MISMATCH"]);
+    }
+  }
+});
+
+test("an attachment authorization cannot authorize another endpoint purpose", () => {
+  const attachment = attachmentAdmission();
+  const signed = authorization(attachment);
+  for (const endpointPurpose of ["JOB_LIST", "JOB_DETAIL", "RECRUITMENT_NOTICE"] as const) {
+    const decision = evaluateLiveCanaryAuthorization(
+      attachment,
+      execution(attachment, { endpoint_purpose: endpointPurpose }),
+      signed
+    );
+    assert.equal(decision.allowed, false);
+    if (!decision.allowed) {
+      assert.deepEqual(decision.reason_codes, ["AUTHORIZATION_ENDPOINT_PURPOSE_MISMATCH"]);
+    }
+  }
+});
+
+test("an attachment authorization remains bound to endpoint, method, run, and evidence", () => {
+  const attachment = attachmentAdmission();
+  const signed = authorization(attachment);
+  const cases: Array<[LiveCanaryExecutionRequest, LiveCanaryManualAuthorization, string]> = [
+    [execution(attachment, {
+      endpoint: "https://example.invalid/careers/another.xlsx"
+    }), signed, "AUTHORIZATION_ENDPOINT_MISMATCH"],
+    [execution(attachment, {
+      allowed_http_method: "HEAD"
+    }), signed, "AUTHORIZATION_HTTP_METHOD_MISMATCH"],
+    [execution(attachment, {
+      collection_run_id: branded<LiveCanaryCollectionRunId>("attachment-another-run")
+    }), signed, "AUTHORIZATION_RUN_MISMATCH"],
+    [execution(attachment), authorization(attachment, {
+      evidence_id: branded<SourceAdmissionEvidenceId>("attachment-missing-evidence")
+    }), "AUTHORIZATION_EVIDENCE_MISSING"]
+  ];
+  for (const [request, candidate, expected] of cases) {
+    const decision = evaluateLiveCanaryAuthorization(attachment, request, candidate);
     assert.equal(decision.allowed, false);
     if (!decision.allowed) assert.deepEqual(decision.reason_codes, [expected]);
   }
