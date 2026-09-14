@@ -1,5 +1,7 @@
 import type {
+  CanonicalOpportunityId,
   CanonicalOpportunity,
+  IdentityReconciliation,
   IdentityHash,
   OpportunityVersion,
   Organization,
@@ -14,6 +16,7 @@ export interface CanonicalizationCandidate {
   readonly occurrence: SourceOccurrence;
   readonly version: SourceOccurrenceVersion;
   readonly source_definition: SourceDefinition;
+  readonly legacy_canonical_opportunity_id?: CanonicalOpportunityId;
 }
 
 export const CANONICALIZATION_REASON_CODES = [
@@ -33,7 +36,34 @@ export const CANONICALIZATION_REASON_CODES = [
   "LOCATION_MISSING",
   "LOCATION_CONFLICT",
   "TIME_WINDOW_MISSING",
-  "TIME_WINDOW_CONFLICT"
+  "TIME_WINDOW_CONFLICT",
+  "RECRUITMENT_CONTEXT_MATCH",
+  "OPPORTUNITY_IDENTITY_MATCH",
+  "OPPORTUNITY_IDENTITY_CONFLICT",
+  "POSITION_IDENTITY_MATCH",
+  "POSITION_IDENTITY_CONFLICT",
+  "POSITION_IDENTITY_PROVISIONAL",
+  "POSITION_IDENTITY_UNRESOLVED",
+  "RECRUITMENT_PLAN_IDENTITY_MATCH",
+  "RECRUITMENT_PLAN_IDENTITY_CONFLICT",
+  "RECRUITMENT_PLAN_IDENTITY_PROVISIONAL",
+  "RECRUITMENT_PLAN_IDENTITY_UNRESOLVED",
+  "RECRUITMENT_BATCH_IDENTITY_MATCH",
+  "RECRUITMENT_BATCH_IDENTITY_CONFLICT",
+  "RECRUITMENT_BATCH_IDENTITY_PROVISIONAL",
+  "RECRUITMENT_BATCH_IDENTITY_UNRESOLVED",
+  "RECRUITMENT_BATCH_APPLICABILITY_CONFLICT",
+  "EMPLOYER_IDENTITY_MATCH",
+  "EMPLOYER_IDENTITY_UNRESOLVED",
+  "EMPLOYER_IDENTITY_CONFLICT",
+  "LOCATION_IDENTITY_DISCRIMINATOR_MATCH",
+  "LOCATION_IDENTITY_DISCRIMINATOR_UNRESOLVED",
+  "LOCATION_IDENTITY_DISCRIMINATOR_CONFLICT",
+  "IDENTITY_EVIDENCE_INSUFFICIENT",
+  "IDENTITY_EVIDENCE_CONFLICT",
+  "LEGACY_CONTEXT_RECONCILIATION_MISSING",
+  "EXPLICIT_RECONCILIATION_MATCH",
+  "TRANSITIVE_MERGE_CONFLICT_BLOCKED"
 ] as const;
 
 export type CanonicalizationReasonCode =
@@ -61,4 +91,5 @@ export interface CanonicalizationResult {
 
 export interface CanonicalizationContext {
   readonly organizations: readonly Organization[];
+  readonly identity_reconciliations?: readonly IdentityReconciliation[];
 }

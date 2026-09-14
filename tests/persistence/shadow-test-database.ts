@@ -15,12 +15,27 @@ export const shadowMigrationPath = path.join(
   "001_shadow_persistence.sql"
 );
 
+export const opportunityRecallMigrationPath = path.join(
+  repositoryRoot,
+  "shadow",
+  "migrations",
+  "002_opportunity_recall.sql"
+);
+
 export function readShadowMigration() {
   return readFileSync(shadowMigrationPath, "utf8");
 }
 
+export function readOpportunityRecallMigration() {
+  return readFileSync(opportunityRecallMigrationPath, "utf8");
+}
+
+export function readShadowMigrations() {
+  return [readShadowMigration(), readOpportunityRecallMigration()];
+}
+
 export function createMigratedShadowDatabase() {
   const database = new DatabaseSync(":memory:");
-  database.exec(readShadowMigration());
+  for (const migration of readShadowMigrations()) database.exec(migration);
   return database;
 }

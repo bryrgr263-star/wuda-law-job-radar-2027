@@ -414,3 +414,26 @@ test("Requirement V2 parsing remains offline", async () => {
   await assert.rejects(fetch("https://example.invalid"),
     /Network access is disabled in tests/);
 });
+
+test("legacy flat Requirement output remains separate from CR#12 structured sets", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "本科专业：法学",
+    normalized: "本科专业:法学"
+  })]));
+
+  assert.equal("logic_model_version" in parsed.requirement_set, false);
+  assert.equal("condition_registry" in parsed.requirement_set, false);
+  assert.notEqual(parsed.complete_requirement_set, null);
+});
+
+test("CR#11 semantic projections do not rewrite historical flat major Facts", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "研究生专业：法律",
+    normalized: "研究生专业:法律"
+  })]));
+
+  assert.deepEqual(parsed.facts[0]?.value, { kind: "CODE", code: "LAW" });
+  assert.equal(parsed.facts.some((fact) => {
+    return fact.value.kind === "CR11_MAJOR_SEMANTIC";
+  }), false);
+});

@@ -7,6 +7,8 @@ import type {
   EligibilityAssessmentId,
   OpportunityVersion,
   OpportunityVersionId,
+  OpportunityCandidate,
+  OpportunityCandidateId,
   Organization,
   OrganizationId,
   RecruitmentEndpoint,
@@ -15,6 +17,8 @@ import type {
   RequirementEvidenceId,
   RequirementFact,
   RequirementFactId,
+  RecallDisposition,
+  RecallDispositionId,
   SourceDefinition,
   SourceDefinitionId,
   SourceOccurrence,
@@ -29,7 +33,24 @@ export interface AppendOnlyRepository<Entity, Id> {
   count(): number;
 }
 
+export interface OpportunityRecallPersistenceRepository {
+  appendRegistration(
+    candidate: OpportunityCandidate,
+    initialDisposition: RecallDisposition
+  ): {
+    readonly candidate: OpportunityCandidate;
+    readonly disposition: RecallDisposition;
+  };
+  appendDisposition(disposition: RecallDisposition): RecallDisposition;
+  getCandidate(id: OpportunityCandidateId): OpportunityCandidate | null;
+  getDisposition(id: RecallDispositionId): RecallDisposition | null;
+  listDispositions(id: OpportunityCandidateId): readonly RecallDisposition[];
+  candidateCount(): number;
+  dispositionCount(): number;
+}
+
 export interface ShadowPersistenceRepositories {
+  readonly opportunity_recall: OpportunityRecallPersistenceRepository;
   readonly organizations: AppendOnlyRepository<Organization, OrganizationId>;
   readonly source_definitions: AppendOnlyRepository<
     SourceDefinition,

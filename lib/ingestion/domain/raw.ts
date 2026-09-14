@@ -5,11 +5,13 @@ import type {
   RawBlobId,
   RawContentSha256,
   RecruitmentEndpointId,
+  SemanticHash,
   SnapshotId,
   SourceDefinitionId
 } from "./primitives";
 import type { HttpRequestMethod } from "./source";
 import type { OriginalText } from "./text";
+import type { ExtractedRecruitmentContext } from "./recruitment-context";
 
 export type TransportScalar = string | number | boolean | null;
 export type TransportParameterValue = TransportScalar | readonly TransportScalar[];
@@ -105,6 +107,16 @@ export interface ExtractionDescriptor {
   readonly extracted_at: IsoDateTime;
 }
 
+export interface ExtractionDescriptorV2 extends ExtractionDescriptor {
+  readonly schema_version: string;
+}
+
+export interface ExtractionDescriptorV2Input {
+  readonly extractor_name: string;
+  readonly extractor_version: string;
+  readonly schema_version: string;
+}
+
 export const IDENTITY_CANDIDATE_KINDS = [
   "SOURCE_RECORD_ID",
   "ANNOUNCEMENT_URL",
@@ -159,7 +171,26 @@ export interface ExtractedRecord {
   readonly deadline?: OriginalText;
   readonly recruitment_year?: OriginalText;
   readonly recruitment_batch?: OriginalText;
+  readonly recruitment_context?: ExtractedRecruitmentContext;
   readonly source_record_locator: SourceRecordLocator;
   readonly adapter_metadata: NamespacedAdapterMetadata;
   readonly extraction: ExtractionDescriptor;
 }
+
+export const EXTRACTED_RECORD_V2_CONTRACT_VERSION =
+  "EXTRACTED_RECORD_V2" as const;
+
+export interface ExtractedRecordV2 extends ExtractedRecord {
+  readonly contract_version: typeof EXTRACTED_RECORD_V2_CONTRACT_VERSION;
+  readonly snapshot_content_hash: RawContentSha256;
+  readonly observed_at: IsoDateTime;
+  readonly semantic_hash: SemanticHash;
+  readonly extraction: ExtractionDescriptorV2;
+}
+
+export type ExtractedRecordV2Input = Omit<
+  ExtractedRecord,
+  "extracted_record_id" | "snapshot_id" | "extraction"
+> & {
+  readonly extraction: ExtractionDescriptorV2Input;
+};

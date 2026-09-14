@@ -115,6 +115,77 @@ test("ingestion modules do not import legacy production modules", async () => {
   assert.deepEqual(violations, []);
 });
 
+test("Opportunity Recall is isolated from legacy filters and candidate eligibility", async () => {
+  const recallFiles = [
+    path.join(ingestionRoot, "domain", "recall.ts"),
+    path.join(ingestionRoot, "normalization", "opportunity-recall-tracker.ts")
+  ];
+  const forbidden = [
+    /candidate_?profile/iu,
+    /candidate_?evidence/iu,
+    /eligibility/iu,
+    /match_?score/iu,
+    /non_?law_?rule/iu
+  ];
+  const violations: string[] = [];
+  for (const filePath of recallFiles) {
+    const source = await readFile(filePath, "utf8");
+    for (const pattern of forbidden) {
+      if (pattern.test(source)) {
+        violations.push(`${path.relative(repositoryRoot, filePath)}: ${pattern}`);
+      }
+    }
+  }
+  assert.deepEqual(violations, []);
+});
+
+test("Legal Employment Relevance is isolated from candidates and legacy scoring", async () => {
+  const relevanceFiles = [
+    path.join(ingestionRoot, "domain", "relevance.ts"),
+    path.join(ingestionRoot, "pipeline", "legal-employment-relevance.ts")
+  ];
+  const forbidden = [
+    /candidate_?profile/iu,
+    /candidate_?evidence/iu,
+    /candidate_?eligibility/iu,
+    /predicate_?resolution/iu,
+    /wuhan university/iu,
+    /武汉大学/u,
+    /law_?master_?non_?law/iu,
+    /match_?score/iu,
+    /non_?law_?rule/iu,
+    /relevance_?score/iu,
+    /keyword_?score/iu,
+    /ranking_?score/iu,
+    /probability/iu,
+    /threshold/iu,
+    /excluded_?terms/iu
+  ];
+  const forbiddenImportRoots = [
+    path.join(repositoryRoot, "lib", "crawler"),
+    path.join(repositoryRoot, "lib", "scoring"),
+    path.join(repositoryRoot, "lib", "sync")
+  ];
+  const violations: string[] = [];
+  for (const filePath of relevanceFiles) {
+    const source = await readFile(filePath, "utf8");
+    for (const pattern of forbidden) {
+      if (pattern.test(source)) {
+        violations.push(`${path.relative(repositoryRoot, filePath)}: ${pattern}`);
+      }
+    }
+    for (const specifier of importSpecifiers(source)) {
+      const resolved = resolveLocalImport(filePath, specifier);
+      if (!resolved) continue;
+      const target = withoutExtension(resolved);
+      if (forbiddenImportRoots.some((root) => target === root || target.startsWith(`${root}${path.sep}`))) {
+        violations.push(`${path.relative(repositoryRoot, filePath)} -> ${specifier}`);
+      }
+    }
+  }
+  assert.deepEqual(violations, []);
+});
+
 test("ingestion layer imports follow the frozen direction", async () => {
   const violations: string[] = [];
   for (const filePath of await collectTypeScriptFiles(ingestionRoot)) {

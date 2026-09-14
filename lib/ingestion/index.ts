@@ -4,6 +4,7 @@ export * from "./domain";
 export * from "./eligibility";
 export * from "./lifecycle";
 export * from "./normalization";
+export * from "./pipeline";
 export * from "./persistence";
 export * from "./raw";
 export * from "./registry";

@@ -54,8 +54,15 @@ import type {
 import {
   AUTHORITY_LEVELS,
   CONTENT_KINDS,
+  CR11_MAJOR_EXPRESSION_SEMANTIC_TYPES,
+  CR11_MAJOR_MATCH_RELATION_KINDS,
+  CR11_MAJOR_SCOPES,
+  CR12_ENGINE_CAPABILITIES,
+  CR12_LOGIC_MODEL_VERSION,
+  GENERAL_ELIGIBILITY_REQUIREMENT_DIMENSIONS,
   PUBLISHER_KINDS,
   REQUIREMENT_DIMENSIONS,
+  REQUIREMENT_MODALITIES,
   REQUIREMENT_SUBJECT_SCOPES,
   SOURCE_SCOPES,
   UTF8_TEXT_ENCODING
@@ -449,13 +456,18 @@ test("requirements support AND and OR logic without turning alternatives into AN
   assert.notEqual(intellectualPropertyFact.logic_group.logic_group_id, ids.logicAnd);
 });
 
-test("Requirement V2 adds only the evidence-proven source-neutral dimensions", () => {
-  assert.deepEqual(REQUIREMENT_DIMENSIONS.slice(-5), [
-    "ACADEMIC_DEGREE",
-    "AGE",
-    "CANDIDATE_COHORT",
-    "HOUSEHOLD_REGISTRATION",
-    "STUDENT_ORIGIN"
+test("Requirement Domain keeps the approved general-eligibility dimensions closed", () => {
+  assert.deepEqual(GENERAL_ELIGIBILITY_REQUIREMENT_DIMENSIONS, [
+    "CITIZENSHIP_STATUS",
+    "SERVICE_OR_ENROLMENT_STATUS",
+    "DISQUALIFICATION_RECORD",
+    "FORMAL_CLEARANCE_DECISION"
+  ]);
+  assert.deepEqual(REQUIREMENT_DIMENSIONS.slice(-4), [
+    "CITIZENSHIP_STATUS",
+    "SERVICE_OR_ENROLMENT_STATUS",
+    "DISQUALIFICATION_RECORD",
+    "FORMAL_CLEARANCE_DECISION"
   ]);
   assert.ok(REQUIREMENT_SUBJECT_SCOPES.includes("GRADUATE"));
   assert.notEqual(
@@ -596,6 +608,55 @@ test("raw SHA-256, identity hash, and semantic hash remain separate concepts", (
   assert.equal(occurrence.identity_hash, identityHash);
   assert.equal(occurrenceVersion.semantic_hash, semanticHash);
   assert.notEqual(blob.raw_content_sha256, occurrenceVersion.semantic_hash);
+});
+
+test("CR#12 structured logic and modality contracts are explicit and versioned", () => {
+  assert.equal(CR12_LOGIC_MODEL_VERSION, "CR12_STRUCTURED_LOGIC_V1");
+  assert.deepEqual(REQUIREMENT_MODALITIES, [
+    "MANDATORY",
+    "PREFERRED",
+    "OPTIONAL",
+    "INFORMATIONAL"
+  ]);
+  assert.ok(CR12_ENGINE_CAPABILITIES.includes("LOGIC_TREE_V1"));
+  assert.ok(CR12_ENGINE_CAPABILITIES.includes("CONDITIONAL_SELECTOR_V1"));
+  assert.ok(CR12_ENGINE_CAPABILITIES.includes("CONTENT_HASH_MANIFEST_V1"));
+});
+
+test("CR#11 keeps major semantic, scope, and relation contracts distinct", () => {
+  assert.deepEqual(CR11_MAJOR_EXPRESSION_SEMANTIC_TYPES, [
+    "EXACT_IDENTITY",
+    "LAW",
+    "LAW_FAMILY",
+    "LAW_RELATED",
+    "ANY_MAJOR",
+    "QUALIFICATION_ORIENTED",
+    "OTHER_EXPLICIT",
+    "UNRESOLVED"
+  ]);
+  assert.deepEqual(CR11_MAJOR_SCOPES, [
+    "CLOSED",
+    "OPEN",
+    "UNRESTRICTED",
+    "UNRESOLVED"
+  ]);
+  assert.ok(CR11_MAJOR_MATCH_RELATION_KINDS.includes("NOT_ESTABLISHED"));
+  assert.ok(CR11_MAJOR_MATCH_RELATION_KINDS.includes("EXPLICIT_EXCLUDED"));
+});
+
+test("RecruitmentContext remains an SOV projection without standalone identity or persistence", async () => {
+  const recruitmentContextSource = await readFile(
+    path.join(domainRoot, "recruitment-context.ts"),
+    "utf8"
+  );
+  const persistenceSource = await readFile(
+    path.join(repositoryRoot, "lib", "ingestion", "persistence", "repositories.ts"),
+    "utf8"
+  );
+  assert.doesNotMatch(recruitmentContextSource, /\bRecruitmentContextId\b/u);
+  assert.doesNotMatch(recruitmentContextSource, /interface\s+RecruitmentContext\b/u);
+  assert.doesNotMatch(persistenceSource, /\bRecruitmentContextRepository\b/u);
+  assert.doesNotMatch(persistenceSource, /recruitment_contexts/u);
 });
 
 test("Chinese UTF-8 originals survive width and punctuation normalization", async () => {

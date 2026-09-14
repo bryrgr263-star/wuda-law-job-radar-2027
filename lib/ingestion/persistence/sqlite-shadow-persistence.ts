@@ -9,6 +9,8 @@ import type {
   EligibilityAssessmentId,
   OpportunityVersion,
   OpportunityVersionId,
+  OpportunityCandidate,
+  OpportunityCandidateId,
   Organization,
   OrganizationId,
   RecruitmentEndpoint,
@@ -17,6 +19,8 @@ import type {
   RequirementEvidenceId,
   RequirementFact,
   RequirementFactId,
+  RecallDisposition,
+  RecallDispositionId,
   SourceDefinition,
   SourceDefinitionId,
   SourceOccurrence,
@@ -26,6 +30,7 @@ import type {
 } from "../domain";
 import type {
   AppendOnlyRepository,
+  OpportunityRecallPersistenceRepository,
   ShadowPersistenceRepositories
 } from "./repositories";
 
@@ -94,7 +99,122 @@ implements AppendOnlyRepository<Entity, Id> {
   }
 }
 
+class SqliteOpportunityRecallPersistence
+implements OpportunityRecallPersistenceRepository {
+  readonly #database: DatabaseSync;
+
+  constructor(database: DatabaseSync) {
+    this.#database = database;
+  }
+
+  appendRegistration(
+    candidate: OpportunityCandidate,
+    initialDisposition: RecallDisposition
+  ) {
+    if (initialDisposition.opportunity_candidate_id
+        !== candidate.opportunity_candidate_id
+        || initialDisposition.revision !== 1
+        || initialDisposition.supersedes_recall_disposition_id !== null) {
+      throw new Error("Initial RecallDisposition must belong to its OpportunityCandidate");
+    }
+    this.#database.exec("BEGIN IMMEDIATE");
+    try {
+      insert(this.#database, "shadow_opportunity_candidates", [
+        column("opportunity_candidate_id", candidate.opportunity_candidate_id),
+        column("source_definition_id", candidate.source_definition_id),
+        column("recruitment_endpoint_id", candidate.recruitment_endpoint_id),
+        column("discovery_locator", candidate.discovery_locator),
+        column("snapshot_id", candidate.snapshot_id),
+        column("extracted_record_id", candidate.extracted_record_id),
+        column("source_occurrence_version_id", candidate.source_occurrence_version_id),
+        column("first_observed_at", candidate.first_observed_at),
+        column("integrity_hash", candidate.integrity_hash),
+        column("payload_json", JSON.stringify(candidate))
+      ]);
+      insertRecallDisposition(this.#database, initialDisposition);
+      this.#database.exec("COMMIT");
+      return {
+        candidate: clone(candidate),
+        disposition: clone(initialDisposition)
+      };
+    } catch (error) {
+      this.#database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  appendDisposition(disposition: RecallDisposition) {
+    if (disposition.revision <= 1
+        || !disposition.supersedes_recall_disposition_id) {
+      throw new Error("Appended RecallDisposition must supersede a prior revision");
+    }
+    this.#database.exec("BEGIN IMMEDIATE");
+    try {
+      const current = this.#database.prepare(
+        `SELECT recall_disposition_id, revision
+         FROM shadow_recall_dispositions
+         WHERE opportunity_candidate_id = ?
+         ORDER BY revision DESC
+         LIMIT 1`
+      ).get(disposition.opportunity_candidate_id) as {
+        recall_disposition_id: string;
+        revision: number;
+      } | undefined;
+      if (!current
+          || Number(current.revision) + 1 !== disposition.revision
+          || current.recall_disposition_id
+            !== disposition.supersedes_recall_disposition_id) {
+        throw new Error("RecallDisposition must append to the current persisted revision");
+      }
+      insertRecallDisposition(this.#database, disposition);
+      this.#database.exec("COMMIT");
+      return clone(disposition);
+    } catch (error) {
+      this.#database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  getCandidate(id: OpportunityCandidateId) {
+    return readPayload<OpportunityCandidate>(
+      this.#database,
+      "shadow_opportunity_candidates",
+      "opportunity_candidate_id",
+      id
+    );
+  }
+
+  getDisposition(id: RecallDispositionId) {
+    return readPayload<RecallDisposition>(
+      this.#database,
+      "shadow_recall_dispositions",
+      "recall_disposition_id",
+      id
+    );
+  }
+
+  listDispositions(id: OpportunityCandidateId) {
+    return this.#database.prepare(
+      `SELECT payload_json
+       FROM shadow_recall_dispositions
+       WHERE opportunity_candidate_id = ?
+       ORDER BY revision`
+    ).all(id).map((row) => {
+      return JSON.parse(String(row.payload_json)) as RecallDisposition;
+    });
+  }
+
+  candidateCount() {
+    return countRows(this.#database, "shadow_opportunity_candidates");
+  }
+
+  dispositionCount() {
+    return countRows(this.#database, "shadow_recall_dispositions");
+  }
+}
+
 export class SqliteShadowPersistence implements ShadowPersistenceRepositories {
+  readonly opportunity_recall: OpportunityRecallPersistenceRepository;
   readonly organizations: AppendOnlyRepository<Organization, OrganizationId>;
   readonly source_definitions: AppendOnlyRepository<
     SourceDefinition,
@@ -138,6 +258,7 @@ export class SqliteShadowPersistence implements ShadowPersistenceRepositories {
   >;
 
   constructor(database: DatabaseSync) {
+    this.opportunity_recall = new SqliteOpportunityRecallPersistence(database);
     this.organizations = repository(database, {
       table: "shadow_organizations",
       id_column: "organization_id",
@@ -283,6 +404,40 @@ function insert(
   database.prepare(
     `INSERT INTO ${table} (${names}) VALUES (${placeholders})`
   ).run(...columns.map((item) => item.value));
+}
+
+function insertRecallDisposition(
+  database: DatabaseSync,
+  disposition: RecallDisposition
+) {
+  insert(database, "shadow_recall_dispositions", [
+    column("recall_disposition_id", disposition.recall_disposition_id),
+    column("opportunity_candidate_id", disposition.opportunity_candidate_id),
+    column("revision", disposition.revision),
+    column("status", disposition.status),
+    column("decided_at", disposition.decided_at),
+    column("integrity_hash", disposition.integrity_hash),
+    column("payload_json", JSON.stringify(disposition))
+  ]);
+}
+
+function readPayload<Entity>(
+  database: DatabaseSync,
+  table: string,
+  idColumn: string,
+  id: string
+): Entity | null {
+  const row = database.prepare(
+    `SELECT payload_json FROM ${table} WHERE ${idColumn} = ?`
+  ).get(id) as { payload_json: string } | undefined;
+  return row ? JSON.parse(row.payload_json) as Entity : null;
+}
+
+function countRows(database: DatabaseSync, table: string) {
+  const row = database.prepare(
+    `SELECT COUNT(*) AS count FROM ${table}`
+  ).get() as { count: number };
+  return Number(row.count);
 }
 
 function clone<Value>(value: Value): Value {

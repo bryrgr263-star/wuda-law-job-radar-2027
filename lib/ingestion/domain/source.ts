@@ -4,6 +4,7 @@ import type {
   SourceDefinitionId
 } from "./primitives";
 import type { OriginalText, TraceableText, TextEncoding } from "./text";
+import type { OrganizationHierarchyReference } from "./recruitment-context";
 
 export const PUBLISHER_KINDS = [
   "EMPLOYER_OFFICIAL",
@@ -70,6 +71,7 @@ export interface Organization {
   readonly name: TraceableText;
   readonly aliases: readonly TraceableText[];
   readonly country_code?: string;
+  readonly hierarchy_references?: readonly OrganizationHierarchyReference[];
 }
 
 export interface SourceDefinition {

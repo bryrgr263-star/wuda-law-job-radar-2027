@@ -5,7 +5,7 @@ import test from "node:test";
 
 import {
   createMigratedShadowDatabase,
-  readShadowMigration
+  readShadowMigrations
 } from "./shadow-test-database";
 
 const expectedBusinessTables = [
@@ -16,10 +16,12 @@ const expectedBusinessTables = [
   "shadow_eligibility_assessments",
   "shadow_opportunity_version_sources",
   "shadow_opportunity_versions",
+  "shadow_opportunity_candidates",
   "shadow_organizations",
   "shadow_recruitment_endpoints",
   "shadow_requirement_evidence",
   "shadow_requirement_facts",
+  "shadow_recall_dispositions",
   "shadow_source_definitions",
   "shadow_source_occurrence_versions",
   "shadow_source_occurrences"
@@ -42,17 +44,20 @@ test("shadow migration applies to a fresh in-memory database", () => {
 
 test("shadow migration is idempotent and records its isolated migration id", () => {
   const database = createMigratedShadowDatabase();
-  database.exec(readShadowMigration());
+  for (const migration of readShadowMigrations()) database.exec(migration);
   const migrations = database.prepare(
     "SELECT migration_id FROM shadow_schema_migrations ORDER BY migration_id"
   ).all().map((row) => String(row.migration_id));
 
-  assert.deepEqual(migrations, ["001_shadow_persistence"]);
+  assert.deepEqual(migrations, [
+    "001_shadow_persistence",
+    "002_opportunity_recall"
+  ]);
   database.close();
 });
 
 test("migration never creates or modifies legacy production tables", () => {
-  const migration = readShadowMigration();
+  const migration = readShadowMigrations().join("\n");
   const database = createMigratedShadowDatabase();
   const productionTables = database.prepare(
     "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('sources', 'jobs', 'applications', 'sync_runs')"
