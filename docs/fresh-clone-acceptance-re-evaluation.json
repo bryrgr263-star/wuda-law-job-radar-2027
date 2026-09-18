@@ -1,0 +1,799 @@
+{
+  "accepted": true,
+  "status": "COMPLETE_ACCEPTED_WITH_PRE_EXISTING_BASELINE_FAILURE",
+  "exit_code": 1,
+  "counts": {
+    "tests": 990,
+    "pass": 989,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "full_footer_present": true,
+  "expected_guard_launches": 95,
+  "guard_launches": 95,
+  "guard_normal_exits": 95,
+  "guard_abnormal_or_missing_exits": 0,
+  "missing_guard_coverage": [],
+  "baseline_failure_count": 1,
+  "new_regression_count": 0,
+  "failures": [
+    {
+      "name": "production repository delegates SOV construction to the shared materializer",
+      "baseline": true
+    }
+  ],
+  "mappings": [
+    {
+      "file": "tests/adapters/fixture-adapter.test.ts",
+      "guard_launch_line": 2,
+      "guard_exit_line": 105,
+      "unique_test_anchor": "ExtractedRecord contract preserves raw fields and identity candidates",
+      "covered": true
+    },
+    {
+      "file": "tests/architecture/historical-evidence-boundary.test.ts",
+      "guard_launch_line": 106,
+      "guard_exit_line": 143,
+      "unique_test_anchor": "production fixture guard rejects forbidden helper and fixture dependency paths",
+      "covered": true
+    },
+    {
+      "file": "tests/architecture/ingestion-boundary.test.ts",
+      "guard_launch_line": 144,
+      "guard_exit_line": 223,
+      "unique_test_anchor": "test network access is disabled",
+      "covered": true
+    },
+    {
+      "file": "tests/canonicalization/conservative-canonicalizer.test.ts",
+      "guard_launch_line": 224,
+      "guard_exit_line": 273,
+      "unique_test_anchor": "official and third-party records merge when conservative evidence agrees",
+      "covered": true
+    },
+    {
+      "file": "tests/canonicalization/position-bound-opportunity-tracker.test.ts",
+      "guard_launch_line": 274,
+      "guard_exit_line": 492,
+      "unique_test_anchor": "valid Position and validated PositionVersion materialize one PBOV",
+      "covered": true
+    },
+    {
+      "file": "tests/canonicalization/recruitment-context-position-identity.test.ts",
+      "guard_launch_line": 493,
+      "guard_exit_line": 662,
+      "unique_test_anchor": "Control A: one announcement with same-title Positions remains row-scoped",
+      "covered": true
+    },
+    {
+      "file": "tests/ci/phase-1-ci.test.ts",
+      "guard_launch_line": 663,
+      "guard_exit_line": 682,
+      "unique_test_anchor": "Phase 1 exposes independent repeatable test and CI commands",
+      "covered": true
+    },
+    {
+      "file": "tests/domain/domain-types.test.ts",
+      "guard_launch_line": 683,
+      "guard_exit_line": 774,
+      "unique_test_anchor": "domain source contains no platform or legacy scoring fields",
+      "covered": true
+    },
+    {
+      "file": "tests/eligibility/eligibility-engine.test.ts",
+      "guard_launch_line": 775,
+      "guard_exit_line": 870,
+      "unique_test_anchor": "GRADUATE scope accepts master or doctor without becoming MASTER",
+      "covered": true
+    },
+    {
+      "file": "tests/eligibility/p1-cr10-candidate-model-major-equivalence.test.ts",
+      "guard_launch_line": 871,
+      "guard_exit_line": 1022,
+      "unique_test_anchor": "CandidateProfile models gender",
+      "covered": true
+    },
+    {
+      "file": "tests/eligibility/p1-cr10-engine-integration-cr11-major-match-relation.test.ts",
+      "guard_launch_line": 1023,
+      "guard_exit_line": 1078,
+      "unique_test_anchor": "CR#10 structured controls cover all twelve frozen major outcomes",
+      "covered": true
+    },
+    {
+      "file": "tests/eligibility/p1-general-eligibility-prerequisites-gate.test.ts",
+      "guard_launch_line": 1079,
+      "guard_exit_line": 1116,
+      "unique_test_anchor": "candidate assertion hashes are self-excluding, deterministic, and independently validatable",
+      "covered": true
+    },
+    {
+      "file": "tests/eligibility/p2-legal-08a-candidate-profile.test.ts",
+      "guard_launch_line": 1117,
+      "guard_exit_line": 1200,
+      "unique_test_anchor": "synthetic CandidateProfile contains only the minimal control schema",
+      "covered": true
+    },
+    {
+      "file": "tests/helpers/historical-evidence.test.ts",
+      "guard_launch_line": 1201,
+      "guard_exit_line": 1244,
+      "unique_test_anchor": "every packaged historical file has its exact original hash and size",
+      "covered": true
+    },
+    {
+      "file": "tests/integration/phase-1-pipeline.test.ts",
+      "guard_launch_line": 1245,
+      "guard_exit_line": 1282,
+      "unique_test_anchor": "one Fixture Source reaches Eligibility when explicit requirements are complete",
+      "covered": true
+    },
+    {
+      "file": "tests/lifecycle/source-run-missing-guard.test.ts",
+      "guard_launch_line": 1283,
+      "guard_exit_line": 1368,
+      "unique_test_anchor": "complete non-empty run resets observed and records only safe missing",
+      "covered": true
+    },
+    {
+      "file": "tests/normalization/opportunity-recall-tracker.test.ts",
+      "guard_launch_line": 1369,
+      "guard_exit_line": 1424,
+      "unique_test_anchor": "every record entering Recall atomically receives Candidate and disposition",
+      "covered": true
+    },
+    {
+      "file": "tests/normalization/position-identity-resolver.test.ts",
+      "guard_launch_line": 1425,
+      "guard_exit_line": 1582,
+      "unique_test_anchor": "OFFICIAL_POSITION_CODE resolves from validated SOV evidence",
+      "covered": true
+    },
+    {
+      "file": "tests/normalization/position-version-tracker.test.ts",
+      "guard_launch_line": 1583,
+      "guard_exit_line": 1752,
+      "unique_test_anchor": "PositionVersion semantic hash is deterministic",
+      "covered": true
+    },
+    {
+      "file": "tests/normalization/source-discovery-support.test.ts",
+      "guard_launch_line": 1753,
+      "guard_exit_line": 1856,
+      "unique_test_anchor": "Case A: exact rediscovery issues support, retains original SOV, and reuses original envelope",
+      "covered": true
+    },
+    {
+      "file": "tests/normalization/source-occurrence-materializer-parity.test.ts",
+      "guard_launch_line": 1857,
+      "guard_exit_line": 2909,
+      "unique_test_anchor": "ExtractedRecord V2 identity and semantic hash are deterministic",
+      "covered": true
+    },
+    {
+      "file": "tests/normalization/source-occurrence.test.ts",
+      "guard_launch_line": 2910,
+      "guard_exit_line": 2993,
+      "unique_test_anchor": "Source identity follows source ID, detail URL, then composite fields",
+      "covered": true
+    },
+    {
+      "file": "tests/normalization/trusted-source-occurrence-registry.test.ts",
+      "guard_launch_line": 2994,
+      "guard_exit_line": 3025,
+      "unique_test_anchor": "trusted SOV registry seals package artifacts idempotently",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-01/application-boundary.test.ts",
+      "guard_launch_line": 3026,
+      "guard_exit_line": 3045,
+      "unique_test_anchor": "P2 application depends only downstream on frozen ingestion and has no network implementation",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-01/observation-canary-authorization.test.ts",
+      "guard_launch_line": 3046,
+      "guard_exit_line": 3089,
+      "unique_test_anchor": "B review with insufficient evidence can use one Observation Canary without upgrading",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-01/source-admission-tiers.test.ts",
+      "guard_launch_line": 3090,
+      "guard_exit_line": 3157,
+      "unique_test_anchor": "Level A expresses approved normal controlled collection permission",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-01/source-admission.test.ts",
+      "guard_launch_line": 3158,
+      "guard_exit_line": 3255,
+      "unique_test_anchor": "Source Admission Register preserves Chinese review evidence and all required fields",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-02/preview-local-exercise.test.ts",
+      "guard_launch_line": 3256,
+      "guard_exit_line": 3281,
+      "unique_test_anchor": "local Preview exercise supports a clean migration and replay",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-02/preview-migration-contract.test.ts",
+      "guard_launch_line": 3282,
+      "guard_exit_line": 3313,
+      "unique_test_anchor": "Preview PostgreSQL migration maps frozen domain entities into an isolated schema",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-02/preview-persistence-boundary.test.ts",
+      "guard_launch_line": 3314,
+      "guard_exit_line": 3333,
+      "unique_test_anchor": "P2-02 Preview implementation contains no network or collection capability",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-02/preview-raw-storage.test.ts",
+      "guard_launch_line": 3334,
+      "guard_exit_line": 3359,
+      "unique_test_anchor": "Preview Raw Storage uses deterministic private SHA-256 object paths",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-02/preview-recovery.test.ts",
+      "guard_launch_line": 3360,
+      "guard_exit_line": 3385,
+      "unique_test_anchor": "Preview recovery manifest is deterministic and content-addressed",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-03/collection-runner.test.ts",
+      "guard_launch_line": 3386,
+      "guard_exit_line": 3405,
+      "unique_test_anchor": "Collection Runner paginates local HTTP, captures Raw before Adapter extraction, and rate limits",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-03/collection-runtime-boundary.test.ts",
+      "guard_launch_line": 3406,
+      "guard_exit_line": 3425,
+      "unique_test_anchor": "P2-03 runtime is the only local HTTP layer and depends only on P1 plus itself",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-03/collection-timeout.test.ts",
+      "guard_launch_line": 3426,
+      "guard_exit_line": 3433,
+      "unique_test_anchor": "Collection Runner records timeout as FAILED without creating a successful RawBlob",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-03/local-http-transport.test.ts",
+      "guard_launch_line": 3434,
+      "guard_exit_line": 3453,
+      "unique_test_anchor": "Local HTTP Transport accepts only an explicit loopback test server and returns raw bytes",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-03/network-guard.test.ts",
+      "guard_launch_line": 3454,
+      "guard_exit_line": 3467,
+      "unique_test_anchor": "shared Network Guard still blocks accidental external network access",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-04/beijing-canary-authorization-preparation.test.ts",
+      "guard_launch_line": 3468,
+      "guard_exit_line": 3505,
+      "unique_test_anchor": "Beijing candidate remains Level B and REVIEW",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-04/beijing-first-live-canary.test.ts",
+      "guard_launch_line": 3506,
+      "guard_exit_line": 3549,
+      "unique_test_anchor": "human approval produces a valid Level B one-endpoint one-run authorization",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-04/beijing-public-institution-html-adapter.test.ts",
+      "guard_launch_line": 3550,
+      "guard_exit_line": 3605,
+      "unique_test_anchor": "real Canary fixture is byte-identical to its recorded Raw SHA-256",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-04/ntsc-official-html-adapter.test.ts",
+      "guard_launch_line": 3606,
+      "guard_exit_line": 3691,
+      "unique_test_anchor": "synthetic/test-only HTML extracts traceable recruitment list records",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-04d/beijing-public-institution-detail-html-adapter.test.ts",
+      "guard_launch_line": 3692,
+      "guard_exit_line": 3741,
+      "unique_test_anchor": "real Detail Canary fixture is byte-identical to recorded Raw provenance",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-04d/beijing-public-institution-detail-live-canary.test.ts",
+      "guard_launch_line": 3742,
+      "guard_exit_line": 3785,
+      "unique_test_anchor": "human approval creates a directly bound Level B detail authorization",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-04e/beijing-public-institution-attachment-observation-canary.test.ts",
+      "guard_launch_line": 3786,
+      "guard_exit_line": 3835,
+      "unique_test_anchor": "manual approval is exactly bound to one attachment observation run",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-04e/beijing-public-institution-xlsx-job-table-adapter.test.ts",
+      "guard_launch_line": 3836,
+      "guard_exit_line": 3897,
+      "unique_test_anchor": "real XLSX fixture is byte-identical to the sealed Observation Canary Raw",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-05/boundary.test.ts",
+      "guard_launch_line": 3898,
+      "guard_exit_line": 3917,
+      "unique_test_anchor": "P2-05 is offline and depends only downstream on frozen P1/P2 contracts",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-05/incremental-discovery.test.ts",
+      "guard_launch_line": 3918,
+      "guard_exit_line": 3961,
+      "unique_test_anchor": "incremental discovery classifies NEW, UPDATED, and UNCHANGED by stable detail locator",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-05/source-scheduler.test.ts",
+      "guard_launch_line": 3962,
+      "guard_exit_line": 4011,
+      "unique_test_anchor": "approved A sources register and issue independently identified Collection Run dispatches",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-06/production-isolated-write.test.ts",
+      "guard_launch_line": 4012,
+      "guard_exit_line": 4067,
+      "unique_test_anchor": "production schema contract is isolated and is not a real production connection",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-07/read-only-api.test.ts",
+      "guard_launch_line": 4068,
+      "guard_exit_line": 4111,
+      "unique_test_anchor": "Opportunity list filters persisted projections and paginates without collection",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-07/read-only-runtime-composition.test.ts",
+      "guard_launch_line": 4112,
+      "guard_exit_line": 4137,
+      "unique_test_anchor": "runtime serves only the immutable official Beijing dataset through the P2-07 API",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-acq-01/official-html-xlsx-canary.test.ts",
+      "guard_launch_line": 4138,
+      "guard_exit_line": 4145,
+      "unique_test_anchor": "archived official HTML and XLSX retain all positions and stop at missing DOCX evidence",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-legal-01/guizhou-legal-canary-admission-preflight.test.ts",
+      "guard_launch_line": 4146,
+      "guard_exit_line": 4195,
+      "unique_test_anchor": "preflight binds the official source to the exact notice endpoint",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts",
+      "guard_launch_line": 4196,
+      "guard_exit_line": 4239,
+      "unique_test_anchor": "approval is an exact B REVIEW observation canary",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-legal-03/guizhou-attachment-admission-preflight.test.ts",
+      "guard_launch_line": 4240,
+      "guard_exit_line": 4289,
+      "unique_test_anchor": "attachment reuses the source definition but has an independent exact endpoint",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts",
+      "guard_launch_line": 4290,
+      "guard_exit_line": 4333,
+      "unique_test_anchor": "approval is an exact independent B REVIEW attachment observation canary",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+      "guard_launch_line": 4334,
+      "guard_exit_line": 4411,
+      "unique_test_anchor": "sealed P2-LEGAL-04 Raw and Snapshot are the only offline inputs",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+      "guard_launch_line": 4412,
+      "guard_exit_line": 4479,
+      "unique_test_anchor": "announcement and XLSX compose into one Requirement Set with both sources",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts",
+      "guard_launch_line": 4480,
+      "guard_exit_line": 4553,
+      "unique_test_anchor": "all 24 composition blockers are audited exactly once",
+      "covered": true
+    },
+    {
+      "file": "tests/p2-legal-08b/target-source-composition.test.ts",
+      "guard_launch_line": 4554,
+      "guard_exit_line": 4603,
+      "unique_test_anchor": "offline discovery records all four official attachment identities",
+      "covered": true
+    },
+    {
+      "file": "tests/persistence/opportunity-recall-shadow.test.ts",
+      "guard_launch_line": 4604,
+      "guard_exit_line": 4623,
+      "unique_test_anchor": "Recall registration persists Candidate and initial disposition atomically",
+      "covered": true
+    },
+    {
+      "file": "tests/persistence/presentation-shadow.test.ts",
+      "guard_launch_line": 4624,
+      "guard_exit_line": 4631,
+      "unique_test_anchor": "Presentation persistence is immutable, idempotent, and current-revision ordered",
+      "covered": true
+    },
+    {
+      "file": "tests/persistence/shadow-migration.test.ts",
+      "guard_launch_line": 4632,
+      "guard_exit_line": 4669,
+      "unique_test_anchor": "shadow migration applies to a fresh in-memory database",
+      "covered": true
+    },
+    {
+      "file": "tests/persistence/shadow-repository.test.ts",
+      "guard_launch_line": 4670,
+      "guard_exit_line": 4719,
+      "unique_test_anchor": "repository contract round-trips the approved frozen domain graph",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/approved-requirement-projection-coverage.test.ts",
+      "guard_launch_line": 4720,
+      "guard_exit_line": 4817,
+      "unique_test_anchor": "approved projection covers explicit education ranges",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/legal-employment-relevance.test.ts",
+      "guard_launch_line": 4818,
+      "guard_exit_line": 5071,
+      "unique_test_anchor": "Source conflict is REVIEW_REQUIRED even with direct legal text",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/position-bound-eligibility-assessment.test.ts",
+      "guard_launch_line": 5072,
+      "guard_exit_line": 5169,
+      "unique_test_anchor": "Phase I consumes only trusted PredicateResolution IDs",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/position-bound-predicate-resolution.test.ts",
+      "guard_launch_line": 5170,
+      "guard_exit_line": 5243,
+      "unique_test_anchor": "Phase H resolves only trusted E/F/G IDs",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/position-bound-requirement-set.test.ts",
+      "guard_launch_line": 5244,
+      "guard_exit_line": 5323,
+      "unique_test_anchor": "Phase G uses the approved deterministic projection rather than caller typed facts",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/position-bound-source-composition.test.ts",
+      "guard_launch_line": 5324,
+      "guard_exit_line": 5355,
+      "unique_test_anchor": "Phase F resolves PBOV only through the root-pinned trusted resolver",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/presentation-decision.test.ts",
+      "guard_launch_line": 5356,
+      "guard_exit_line": 5489,
+      "unique_test_anchor": "PresentationPolicy V1 is an approved root-owned boundary",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/trusted-candidate-evidence.test.ts",
+      "guard_launch_line": 5490,
+      "guard_exit_line": 5551,
+      "unique_test_anchor": "synthetic Candidate Evidence preserves independent bachelor and master credentials",
+      "covered": true
+    },
+    {
+      "file": "tests/pipeline/trusted-chain-restoration.test.ts",
+      "guard_launch_line": 5552,
+      "guard_exit_line": 5655,
+      "unique_test_anchor": "fresh composition root replays the complete trusted chain after restart",
+      "covered": true
+    },
+    {
+      "file": "tests/presentation-read-api/presentation-api.test.ts",
+      "guard_launch_line": 5656,
+      "guard_exit_line": 5663,
+      "unique_test_anchor": "Presentation API returns all retained sealed statuses and hides NOT_DISPLAY",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/architecture-boundary.test.ts",
+      "guard_launch_line": 5664,
+      "guard_exit_line": 5689,
+      "unique_test_anchor": "Trusted Chain never imports the production PostgreSQL infrastructure",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/git-append-only-execution-store.test.ts",
+      "guard_launch_line": 5690,
+      "guard_exit_line": 5727,
+      "unique_test_anchor": "canonical Git layout is deterministic, append-only, and restart-readable",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/git-raw-object-persistence.test.ts",
+      "guard_launch_line": 5728,
+      "guard_exit_line": 5795,
+      "unique_test_anchor": "RawBlob uses deterministic SHA-256 paths and exact replay is idempotent",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/journal-contract.test.ts",
+      "guard_launch_line": 5796,
+      "guard_exit_line": 5821,
+      "unique_test_anchor": "verified checkpoint, journal, artifacts, and upstream seals restore records",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/migration-005-hardening.test.ts",
+      "guard_launch_line": 5822,
+      "guard_exit_line": 5847,
+      "unique_test_anchor": "Migration 005 rejects NULL-unsafe journal and checkpoint continuity",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/migration-security.test.ts",
+      "guard_launch_line": 5848,
+      "guard_exit_line": 5927,
+      "unique_test_anchor": "production persistence contains deterministic forward migrations 001 through 006",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/phase-1-contracts.test.ts",
+      "guard_launch_line": 5928,
+      "guard_exit_line": 5983,
+      "unique_test_anchor": "source versions are stable, immutable, and collision-addressed",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/phase-3-contracts.test.ts",
+      "guard_launch_line": 5984,
+      "guard_exit_line": 6003,
+      "unique_test_anchor": "Candidate Evidence object boundary writes once and verifies SHA-256 before trust",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/zero-cost-production-architecture.test.ts",
+      "guard_launch_line": 6004,
+      "guard_exit_line": 6023,
+      "unique_test_anchor": "zero-cost production root composes existing authoritative owners only",
+      "covered": true
+    },
+    {
+      "file": "tests/production-persistence/zero-cost-production-composition-root.test.ts",
+      "guard_launch_line": 6024,
+      "guard_exit_line": 6073,
+      "unique_test_anchor": "one production run forms one atomic commit and fresh Process B restores it",
+      "covered": true
+    },
+    {
+      "file": "tests/real-2027-haier/haier-2027-canary.test.ts",
+      "guard_launch_line": 6074,
+      "guard_exit_line": 6099,
+      "unique_test_anchor": "Haier admission and allowlist authorize only the exact approved URL",
+      "covered": true
+    },
+    {
+      "file": "tests/real-2027-zhenghan/zhenghan-2027-source.test.ts",
+      "guard_launch_line": 6100,
+      "guard_exit_line": 6119,
+      "unique_test_anchor": "formal Source Admission and two exact allowlists preserve approved scope",
+      "covered": true
+    },
+    {
+      "file": "tests/real-legal-canary/shenzhen-bankruptcy-observation-canary.test.ts",
+      "guard_launch_line": 6120,
+      "guard_exit_line": 6157,
+      "unique_test_anchor": "notice and PDF approvals remain separate B + REVIEW observation canaries",
+      "covered": true
+    },
+    {
+      "file": "tests/registry/source-registry.test.ts",
+      "guard_launch_line": 6158,
+      "guard_exit_line": 6231,
+      "unique_test_anchor": "Source Registry registers Organization, SourceDefinition, and Endpoint separately",
+      "covered": true
+    },
+    {
+      "file": "tests/requirements/p1-cr11-recruitment-major-expression.test.ts",
+      "guard_launch_line": 6232,
+      "guard_exit_line": 6293,
+      "unique_test_anchor": "CR#11 controls A-H keep distinct legal-major identities and source scopes",
+      "covered": true
+    },
+    {
+      "file": "tests/requirements/p1-cr12-requirement-logic-modality-applicability.test.ts",
+      "guard_launch_line": 6294,
+      "guard_exit_line": 6517,
+      "unique_test_anchor": "Modality contract preserves mandatory, preferred, optional, and informational clauses",
+      "covered": true
+    },
+    {
+      "file": "tests/requirements/p1-cr9-minimal-domain-extension.test.ts",
+      "guard_launch_line": 6518,
+      "guard_exit_line": 6637,
+      "unique_test_anchor": "GENDER formally models an explicit male restriction",
+      "covered": true
+    },
+    {
+      "file": "tests/requirements/p1-general-eligibility-prerequisites-disqualifications.test.ts",
+      "guard_launch_line": 6638,
+      "guard_exit_line": 6675,
+      "unique_test_anchor": "accepts only a closed, evidence-backed citizenship predicate projection",
+      "covered": true
+    },
+    {
+      "file": "tests/requirements/requirement-parser.test.ts",
+      "guard_launch_line": 6676,
+      "guard_exit_line": 6833,
+      "unique_test_anchor": "multi-source HTML and spreadsheet fragments form one traceable complete set",
+      "covered": true
+    },
+    {
+      "file": "tests/requirements/source-surface-composition.test.ts",
+      "guard_launch_line": 6834,
+      "guard_exit_line": 6961,
+      "unique_test_anchor": "complete composition is hash-verified and records all material contracts",
+      "covered": true
+    },
+    {
+      "file": "tests/transport/transport-raw.test.ts",
+      "guard_launch_line": 6962,
+      "guard_exit_line": 7035,
+      "unique_test_anchor": "FixtureTransport returns the original HTML Fixture bytes and MIME",
+      "covered": true
+    }
+  ],
+  "original_status": "COMPLETE_NOT_ACCEPTED",
+  "original_status_preserved": true,
+  "original_status_sha256": "003a9b648598fc8a145e2a18b7906ea62598799edf345c6f4e318094142fea89",
+  "log_sha256": "49f087f480cd93b5f0b6fad17d7c87f1c7a0e0ea37d5bc1b1b1eb77effdbc56f",
+  "file_hashes": {
+    "tests/adapters/fixture-adapter.test.ts": "56fe6a116de35958bf5a21bfefce46e040989145be249408073f479c2b127cb1",
+    "tests/architecture/historical-evidence-boundary.test.ts": "a6687260e02a46d1591ee02599a30f8ceee2b7bb531cbc40e367a78c5647e81f",
+    "tests/architecture/ingestion-boundary.test.ts": "48408082666792f21ed659b01df19f11f430e9b0428318dcf3b6ae75758fe117",
+    "tests/canonicalization/conservative-canonicalizer.test.ts": "25c5b4e98484e46bc52e0d577e971b256d5f007fcbd48ab0948744bc54f21546",
+    "tests/canonicalization/position-bound-opportunity-tracker.test.ts": "b802732afbfc3e2da6bc00890adc7dfd3cf59e8cad9106826824133f85bcfd1a",
+    "tests/canonicalization/recruitment-context-position-identity.test.ts": "b036bc94ce9a90f6b0a8084eb259d41ca2eba72e5ad22e9f2db465aaefc6390e",
+    "tests/ci/phase-1-ci.test.ts": "7282ba550b04328fd081205b1dc1c0ff613c7ddc6448631994aa888b641cf52a",
+    "tests/domain/domain-types.test.ts": "7f6b9d597925df7f96ad0e02281cf3fc1ded30c593cfcd53b5cbb89c0d5765f1",
+    "tests/eligibility/eligibility-engine.test.ts": "1048ed357b4d587dc7687f06afedd0117a4189fdb6bf7fdcbee13593b831b4f8",
+    "tests/eligibility/p1-cr10-candidate-model-major-equivalence.test.ts": "239f7cca4404d47828e52ccce84b84ced9ec604259c1a315d7016b1cf7ddaaa5",
+    "tests/eligibility/p1-cr10-engine-integration-cr11-major-match-relation.test.ts": "91952b07fbb21924686f73b487233212c6e2d647394476c61279c05dd78fa5cf",
+    "tests/eligibility/p1-general-eligibility-prerequisites-gate.test.ts": "f88f782e9062e5879a9436bdd6fdbbbc03fbb9cb3385f7cbf1aa5157c2e4004b",
+    "tests/eligibility/p2-legal-08a-candidate-profile.test.ts": "904e68a7ac7844c083711e9ef96074ca8687967808b380e0a5ecffd3f87765da",
+    "tests/helpers/historical-evidence.test.ts": "4cd6c78825972af40748e95615bbb8e38957c98818e3f1401da1d0ebec15413c",
+    "tests/integration/phase-1-pipeline.test.ts": "b36bec42262a6d1ed17897e967220c0cf78a670007328f637edc8e49b10833a7",
+    "tests/lifecycle/source-run-missing-guard.test.ts": "14b31d36e42efdc7624cb647ddcb2c2973cdd265c949fb509831849741ff593b",
+    "tests/normalization/opportunity-recall-tracker.test.ts": "5ea9a4c8331bb219eced69ccefb2f7df6bcef308458ba33fd1a1b84c8dba2357",
+    "tests/normalization/position-identity-resolver.test.ts": "2121f7510c4ce33f801f36b41b1da20a0676e4f80fd875c0152e7e779a63330f",
+    "tests/normalization/position-version-tracker.test.ts": "0798c3815fa1146063cab9f3d3a5db5c2e8ee6ba3ff646d311f3b8af4a46637e",
+    "tests/normalization/source-discovery-support.test.ts": "0ebbe47c63be7a60633db786a8cbb9952db50b6e05553e60f112c67c326260a6",
+    "tests/normalization/source-occurrence-materializer-parity.test.ts": "c0c8a544ccc8718b40a8bfc6f193df0c0d41580f03ecc355f1c81f248d37c39e",
+    "tests/normalization/source-occurrence.test.ts": "e26a8b97cf0423ec485a5331808587997fb9ef8a298a28d7114f8c4df229f93e",
+    "tests/normalization/trusted-source-occurrence-registry.test.ts": "22a20cd5366e441369bbc92876ccadabcc39841e5e31d191694f71d24fcb39df",
+    "tests/p2-01/application-boundary.test.ts": "3ead18f7f34e543d54f92a0ac2b8552a102d45e6ff7725ba35130b201cc39934",
+    "tests/p2-01/observation-canary-authorization.test.ts": "c6ceb9867ac294a99104de1203757f9c81e9728e01d30680ffbf6bf1e71f80ff",
+    "tests/p2-01/source-admission-tiers.test.ts": "5f7bca8e8d75a1869396f1a8627465d2bb513985e2ae7ee3b4b74d64ae46989b",
+    "tests/p2-01/source-admission.test.ts": "88b6d07c744ae1add0ace3071a7c94771e74213f126ceaa6b4b2900bb5a83f50",
+    "tests/p2-02/preview-local-exercise.test.ts": "4498318dbcce61035fa6283cf032e5c2c4a4dc78afbe8125532eee82be83aec3",
+    "tests/p2-02/preview-migration-contract.test.ts": "e85a7f7dafa1229f081b7225ce2657045aef795bc8af114d569231d611378bec",
+    "tests/p2-02/preview-persistence-boundary.test.ts": "91610a9b609f0a2aa5f671aa19b4318efc31acfb8ca71664e5e23b96d811409e",
+    "tests/p2-02/preview-raw-storage.test.ts": "3e122dc81bf67ed1c47eb76c1fc2d727e12685ac777f0c58ec9a8ed3011e52d4",
+    "tests/p2-02/preview-recovery.test.ts": "f343d4db5e217080c9320fdb7154e6418def688900ebf410d6bfc3f57cf41a7c",
+    "tests/p2-03/collection-runner.test.ts": "9a2997e2d0b6c3ed3f6904d992e01deacc287d87b9f8c02f7e9a55b11a2cca81",
+    "tests/p2-03/collection-runtime-boundary.test.ts": "8da062e23bf4163f1bc585d424705e9f16a6576258f8137ecaeaa93747e8ba9e",
+    "tests/p2-03/collection-timeout.test.ts": "e465c389edd9dae7641784bd147c8b3c6f6c1d4f4057493c79a68a084db2e650",
+    "tests/p2-03/local-http-transport.test.ts": "0dfd17501ca8c84e1d63b8d9fe748a03fb91a87fb0685c29327a2e055cd2e9b6",
+    "tests/p2-03/network-guard.test.ts": "bfb14ef4a014dccb112af5b110649b7513a018c174b358328a4ae33b8fb6f66e",
+    "tests/p2-04/beijing-canary-authorization-preparation.test.ts": "ef45dfbb0d85cc08aab902c7c45cef775feaabc7f4ba6aa264405faee938d40c",
+    "tests/p2-04/beijing-first-live-canary.test.ts": "8fa61ae5092b021336c477e8c1bd2d8142a88b25016f5efb9341d384e6c798d1",
+    "tests/p2-04/beijing-public-institution-html-adapter.test.ts": "4d6b79582734c88e4a58d01176abb3bc32af4280906b0f7d7525f69e14b6da4c",
+    "tests/p2-04/ntsc-official-html-adapter.test.ts": "f64ed16af41f0ff04af9335544813099bc572300f84acff3a6d09ed0a467232f",
+    "tests/p2-04d/beijing-public-institution-detail-html-adapter.test.ts": "1304e035c9cbc84f0db299ea908dc87a0b91379b94aaff114bbe0f4564638762",
+    "tests/p2-04d/beijing-public-institution-detail-live-canary.test.ts": "90377ea3e11378eb0173e603515da1a2755b2994b8f085c82fc842c09f995855",
+    "tests/p2-04e/beijing-public-institution-attachment-observation-canary.test.ts": "ccf47ffe3fea63bdfabfb439849dc95ce9a72186453d20472a9255e0f1c70ac9",
+    "tests/p2-04e/beijing-public-institution-xlsx-job-table-adapter.test.ts": "a9dac272331c38065bac59e21c7c081f7a91849e9e3a889b7be43a6911acbb2b",
+    "tests/p2-05/boundary.test.ts": "4ec2601da11fe51ff9d8130e63e322e5dd28a0e5a59e6fe97ddbb1c9ad7921b2",
+    "tests/p2-05/incremental-discovery.test.ts": "b9edc5d460940bf0f7451f54f7f4a03dd933ff2cd27a3adc760dd9c02756fd48",
+    "tests/p2-05/source-scheduler.test.ts": "e9308634b08e1025ce9f1559536f10f8464362dc843d573ea505d1d0b5a7c480",
+    "tests/p2-06/production-isolated-write.test.ts": "4702f4e7dede5c32ef9431f2fb5693ef6fa71ebc3f739f492bdd59258cfa6e60",
+    "tests/p2-07/read-only-api.test.ts": "3a1375e5154ba5997f87b1c85521d5c1929741b3cccaf89097dcc5397bee5d97",
+    "tests/p2-07/read-only-runtime-composition.test.ts": "e00417f26fb051b40c0fe63eea7b49d4e0f13e6e22e7add4c9c1c028ed7e2283",
+    "tests/p2-acq-01/official-html-xlsx-canary.test.ts": "563b1cf75f928f861755a3641c94a7b46fd09c31b3c2e0dc4fc4640a7a8867cb",
+    "tests/p2-legal-01/guizhou-legal-canary-admission-preflight.test.ts": "731cb85ff6b301f1e0d1ea6d2d0f96aeb04fc84647999483ab83f985a6c7c1ac",
+    "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts": "c6ad6782626ee772aac4104643ba676f974bdc4aab1d94bebc5ead63d11b7357",
+    "tests/p2-legal-03/guizhou-attachment-admission-preflight.test.ts": "417945bf8734d37b22834f356eef7ebe49069ae1fbe4abe1921bbfe7a539f155",
+    "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts": "ef2f9d01904ad7a8920586b3eed0ff6546b9fbb3b3b6c87fdedb35553b3dc7fb",
+    "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts": "46c6a51d369e97ab86a4356c83dc34304ff77d92d33fd7d8a0be92d99003f095",
+    "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts": "2d0e314db8063f425056da59c726ae1ca784d917975a1a2a366be41b8dbd63f9",
+    "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts": "847eca9555e60e79fdd1ba3e772e071e89953b9fa1b28d6d5575a72c37ac22ef",
+    "tests/p2-legal-08b/target-source-composition.test.ts": "444011bd92bd44c94e5041e8d4f16fc012f4be54397610ac1bd377155c384c70",
+    "tests/persistence/opportunity-recall-shadow.test.ts": "5afd129e3683a4cd94a75faab73b8515457686ccbf205c82f1b0fbfb5030fb7c",
+    "tests/persistence/presentation-shadow.test.ts": "845d3764ae216e3d74e75eb2a47ae143fece44675d97d72afc4f15d59eda8703",
+    "tests/persistence/shadow-migration.test.ts": "25ebd04fd2b28dfb4fa3e22651b90071462309428b1a65d3b2be5e5da07c9afb",
+    "tests/persistence/shadow-repository.test.ts": "84bd2b0c40381fd6df429638d5005e07edf1846eac9d5471309c0014e6ad1a3e",
+    "tests/pipeline/approved-requirement-projection-coverage.test.ts": "b616688b7525667076b0955e9f29e9e5f5f95351dcce0710d8aa5aec3d963581",
+    "tests/pipeline/legal-employment-relevance.test.ts": "6066e94718d2e7cca0bb24ca60fc48877c4608d508a7c41b9f16d3a1a6d38bbe",
+    "tests/pipeline/position-bound-eligibility-assessment.test.ts": "3462b9aa24539133e1c2b115a16d4590d9c2e9ca4ff2f47df0982160f6fe4515",
+    "tests/pipeline/position-bound-predicate-resolution.test.ts": "c56468d2e6c8d86c004a6446c3dc5a6427d8936f0586df0e31b823aba4dc758a",
+    "tests/pipeline/position-bound-requirement-set.test.ts": "0788b461eba7c93bd9e3fa4af77b5b64f4afe7fc770bc5d72418c17ae0f3039a",
+    "tests/pipeline/position-bound-source-composition.test.ts": "c768741fe7605696fb0febb712bd622cb6bb66cf3762c7aef4b5b51455c54b32",
+    "tests/pipeline/presentation-decision.test.ts": "e4c1edf176bb02060984faf8adadf92d73ad8aa4112b78778243b9fb18aa856b",
+    "tests/pipeline/trusted-candidate-evidence.test.ts": "804167597418bff56d4651bcc7d48450636980ffc52c1573e15b1e451db59fae",
+    "tests/pipeline/trusted-chain-restoration.test.ts": "52a856d33cbea111388c99a0221794760ad7eb12c7e510f2b48d73e32e61ae10",
+    "tests/presentation-read-api/presentation-api.test.ts": "59a3314d30157d8635835537cf274da35667aad050b5e3c636fbcb9b661aab59",
+    "tests/production-persistence/architecture-boundary.test.ts": "c99cc42dbbe8b0423893427c59e77166e27e6fdeeb256f1cb97296b1006e7da6",
+    "tests/production-persistence/git-append-only-execution-store.test.ts": "221019e1e705fa9c1e83499ddb428c0e42b90247b72263c20ed600f640e89648",
+    "tests/production-persistence/git-raw-object-persistence.test.ts": "ae5cabff66949092d6da94006843ca477bd75a07f7a2c48f7645a9dbf8a9aef0",
+    "tests/production-persistence/journal-contract.test.ts": "84e1cdfea9ca91ce7e6814a1a3ce5710d96febb4dabf43d4c80f759658675b5d",
+    "tests/production-persistence/migration-005-hardening.test.ts": "438685454cbe88e154c45b66950f16ca8d4ac8cccafb02ba6a798d79cb9c96ed",
+    "tests/production-persistence/migration-security.test.ts": "08631a239fe4e5d1b173a17ada3c2759bf46c7155a271419483a470be29f24ea",
+    "tests/production-persistence/phase-1-contracts.test.ts": "f2065ee61195d9b9f3c8a754efff5cea65d5a689d01728023241aaa2e2451929",
+    "tests/production-persistence/phase-3-contracts.test.ts": "201ef2b65de924549d530c895bf3ed6e942da18543a14b132309d8e25ce8cf6a",
+    "tests/production-persistence/zero-cost-production-architecture.test.ts": "5ac456200155b7d9f87a62478308c762b38171fb09c2a35de0f255e19cf768da",
+    "tests/production-persistence/zero-cost-production-composition-root.test.ts": "43a20aab58c0571abba261e6a204dad3866e856447d3db95d4d312a3e7cc6df8",
+    "tests/real-2027-haier/haier-2027-canary.test.ts": "cc57102b7338e5ee0df31672bae5455fc014d2858cf06f4aea8fe4335150cea4",
+    "tests/real-2027-zhenghan/zhenghan-2027-source.test.ts": "0f70150fbe138f0cc771bbeada339b6dcc2c90fc0cfccad75d3de4a37e76bb58",
+    "tests/real-legal-canary/shenzhen-bankruptcy-observation-canary.test.ts": "c7161adce58b743c85d5eb6315fa29f6e694ccb0f521c74c07b0f3d07deae124",
+    "tests/registry/source-registry.test.ts": "3cda98291a58d4566abccf38ac7dd4ad21c514abcebc4eb8f9b42ca8346e384b",
+    "tests/requirements/p1-cr11-recruitment-major-expression.test.ts": "fedc34a8f4d64a6345e4b4afa20b75fa1c0deed7be1c37d1d72e3dd8e3a0b353",
+    "tests/requirements/p1-cr12-requirement-logic-modality-applicability.test.ts": "8fa69a8be2d225ed08ad2f6cbcc55ef23c43bc5df85327656cd9719adc137f85",
+    "tests/requirements/p1-cr9-minimal-domain-extension.test.ts": "07ad1d8cf41b5d15ea8e41814908c02df1266ce03f5ba5bfec2839405fa1695e",
+    "tests/requirements/p1-general-eligibility-prerequisites-disqualifications.test.ts": "1be0069c2a4e361cde34fd7ac2b8945cde876c4016028d4f8e4671417ccebce4",
+    "tests/requirements/requirement-parser.test.ts": "16246946aaae92ca00dc02905021395b024b875c1f331722f1ecc8b214a42b47",
+    "tests/requirements/source-surface-composition.test.ts": "c722a8ca82bf4691db162da3585a3891b81d43a2131ea05400d1af22eb86022c",
+    "tests/transport/transport-raw.test.ts": "93f313ee42e0ee33f7088706b90a8e1e195ce8c3381be479f4f2c64eb31f98a1"
+  },
+  "fresh_clone_head": "dab9ad52ec6310bb4b2aafc4b9285111459227a9",
+  "process_b_restoration": true,
+  "run_facts_consistent": true,
+  "full_regression_rerun": false
+}
