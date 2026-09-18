@@ -414,27 +414,166 @@ function parseFragment(
   const observations: RequirementObservation[] = [];
   const warnings: RequirementParseWarning[] = [];
   for (const clause of clauses) {
-    const parsed = parseClause(clause, fragment);
-    const clauseFacts = parsed.drafts.map((draft, draftIndex) => {
-      return createFact(input, fragment, clause, draft, draftIndex);
-    });
-    const clauseEvidence = clauseFacts.map((fact) => {
-      return createEvidence(fact, clause, fragment);
-    });
-    facts.push(...clauseFacts);
-    evidence.push(...clauseEvidence);
-    observations.push(createObservation(
-      input,
-      fragment,
-      clause.index,
-      parsed.status,
-      parsed.clause_role,
-      clauseFacts.map((fact) => fact.requirement_fact_id),
-      parsed.dimension_hint
-    ));
-    warnings.push(...parsed.warnings);
+    const parts = parseClauseParts(clause, fragment);
+    for (const [partIndex, parsed] of parts.entries()) {
+      const clauseFacts = parsed.drafts.map((draft, draftIndex) => {
+        return createFact(input, fragment, clause, draft,
+          partIndex * 100 + draftIndex);
+      });
+      const clauseEvidence = clauseFacts.map((fact) => {
+        return createEvidence(fact, clause, fragment);
+      });
+      facts.push(...clauseFacts);
+      evidence.push(...clauseEvidence);
+      observations.push(createObservation(
+        input,
+        fragment,
+        clause.index,
+        parsed.status,
+        parsed.clause_role,
+        clauseFacts.map((fact) => fact.requirement_fact_id),
+        parsed.dimension_hint,
+        clause,
+        partIndex
+      ));
+      warnings.push(...parsed.warnings);
+    }
   }
   return { facts, evidence, observations, warnings };
+}
+
+function parseClauseParts(
+  clause: Clause,
+  fragment: RequirementEvidenceFragment
+): readonly ClauseParsing[] {
+  const body = stripClauseListMarker(clause.normalized.text.replace(/\s+/gu, ""));
+  const internship = body.match(
+    /^(?:(国内外知名院校)(?:的)?)?法学专业(?:(\d{4})年应届|(\d{4})届及之后(?:的)?)在校本科生或研究生$/u
+  );
+  if (internship) {
+    const exactYear = internship[2] ? Number(internship[2]) : null;
+    const lowerBoundYear = internship[3] ? Number(internship[3]) : null;
+    const parsed: ClauseParsing[] = [
+      confirmed([majorDraft({ kind: "CODE", code: "LAW_STUDIES" },
+        "ANY_EDUCATION", "AND")], "MAJOR"),
+      confirmed([{
+        dimension: "GRADUATION_YEAR",
+        operator: exactYear === null ? "AT_LEAST" : "EQUALS",
+        value: exactYear === null
+          ? { kind: "INTEGER", value: lowerBoundYear!, unit: "year" }
+          : {
+              kind: "GRADUATION_WINDOW",
+              exact_graduation_year: exactYear,
+              current_cohort: "FRESH_GRADUATE"
+            },
+        subject_scope: "CANDIDATE",
+        logic_operator: "AND",
+        polarity: "POSITIVE",
+        certainty: "EXPLICIT"
+      }], "GRADUATION_YEAR"),
+      confirmed([{
+        dimension: "CANDIDATE_COHORT",
+        operator: "EQUALS",
+        value: { kind: "CODE", code: "CURRENT_STUDENT" },
+        subject_scope: "CANDIDATE",
+        logic_operator: "AND",
+        polarity: "POSITIVE",
+        certainty: "EXPLICIT"
+      }], "CANDIDATE_COHORT"),
+      confirmed([educationLevelDraft("BACHELOR", "OR"),
+        educationLevelDraft("GRADUATE", "OR")], "EDUCATION_LEVEL")
+    ];
+    if (internship[1]) parsed.push(domainGap(clause));
+    return parsed;
+  }
+
+  const bachelorMasterLaw = body.match(
+    /^(?:拥有)?(?:(国内外知名院校)(?:的)?)?法学专业本硕学历$/u
+  );
+  if (bachelorMasterLaw) {
+    const parsed: ClauseParsing[] = [
+      confirmed([
+        majorDraft({ kind: "CODE", code: "LAW_STUDIES" }, "BACHELOR", "AND"),
+        majorDraft({ kind: "CODE", code: "LAW_STUDIES" }, "MASTER", "AND")
+      ], "MAJOR")
+    ];
+    if (bachelorMasterLaw[1]) parsed.push(domainGap(clause));
+    return parsed;
+  }
+
+  const lawyerExperience = body.match(
+    /^(?:拥有)?(\d+)[-—~～至到](\d+)年律师工作经验[,，]?并持有律师执业证$/u
+  );
+  if (lawyerExperience) {
+    return [confirmed([
+      workExperienceDraft(clause, Number(lawyerExperience[1]),
+        Number(lawyerExperience[2]), "律师"),
+      lawyerPracticeCertificateDraft()
+    ], "WORK_EXPERIENCE")];
+  }
+
+  return [parseClause(clause, fragment)];
+}
+
+function stripClauseListMarker(value: string) {
+  return value.replace(
+    /^(?:(?:\d+|[一二三四五六七八九十百]+)[.．、)）]|[（(](?:\d+|[一二三四五六七八九十百]+)[)）])/u,
+    ""
+  );
+}
+
+function educationLevelDraft(
+  code: "BACHELOR" | "GRADUATE",
+  logicOperator: "AND" | "OR"
+): FactDraft {
+  return {
+    dimension: "EDUCATION_LEVEL",
+    operator: "EQUALS",
+    value: { kind: "CODE", code },
+    subject_scope: "CANDIDATE",
+    logic_operator: logicOperator,
+    polarity: "POSITIVE",
+    certainty: "EXPLICIT"
+  };
+}
+
+function workExperienceDraft(
+  clause: Clause,
+  minimumYears: number,
+  maximumYears: number,
+  scope: string
+): FactDraft {
+  return {
+    dimension: "WORK_EXPERIENCE",
+    operator: "EXISTS",
+    value: {
+      kind: "WORK_EXPERIENCE",
+      minimum_years: minimumYears,
+      maximum_years: maximumYears,
+      experience_scope: { ...clause.normalized, text: scope },
+      scope_definition: "EXPLICIT"
+    },
+    subject_scope: "CANDIDATE",
+    logic_operator: "AND",
+    polarity: "POSITIVE",
+    certainty: "EXPLICIT"
+  };
+}
+
+function lawyerPracticeCertificateDraft(): FactDraft {
+  return {
+    dimension: "PROFESSIONAL_QUALIFICATION",
+    operator: "EXISTS",
+    value: {
+      kind: "PROFESSIONAL_QUALIFICATION",
+      qualification_type: "LAWYER_PRACTICE_CERTIFICATE",
+      strength: "REQUIRED"
+    },
+    subject_scope: "CANDIDATE",
+    logic_operator: "AND",
+    polarity: "POSITIVE",
+    certainty: "EXPLICIT"
+  };
 }
 
 function alignClauses(original: OriginalText, normalized: NormalizedText) {
@@ -493,7 +632,7 @@ function parseClause(
   clause: Clause,
   fragment: RequirementEvidenceFragment
 ): ClauseParsing {
-  const compact = clause.normalized.text.replace(/\s+/gu, "");
+  const compact = stripClauseListMarker(clause.normalized.text.replace(/\s+/gu, ""));
   const applicability = extractApplicability(compact);
   const body = applicability?.body ?? compact;
   const apply = (draft: FactDraft): FactDraft => applicability
@@ -716,6 +855,19 @@ function parseClause(
     return confirmed([draft], "WORK_EXPERIENCE");
   }
 
+  const experienceRange = body.match(
+    /^(?:工作经历(?:要求)?[:：]?)?(?:拥有|具有|具备)?(\d+)[-—~～至到](\d+)年(.+?)(?:工作)?经验$/u
+  );
+  if (experienceRange) {
+    const scope = experienceRange[3].replace(/(?:相关)?工作$/u, "").trim();
+    return confirmed([workExperienceDraft(
+      clause,
+      Number(experienceRange[1]),
+      Number(experienceRange[2]),
+      scope
+    )], "WORK_EXPERIENCE");
+  }
+
   const household = regionFact(body, "户籍", "HOUSEHOLD_REGISTRATION");
   if (household) return confirmed([apply(household)], "HOUSEHOLD_REGISTRATION");
 
@@ -819,20 +971,26 @@ function parseClause(
     }
   }
 
-  if (/(?:专业|法学|法律|知识产权|法律硕士)/u.test(body)) {
-    const parsed = parseMajorValues(body, fragment, "ANY_EDUCATION", "AMBIGUOUS");
+  if (/^(?:必须|须|要求|应当|应取得|须取得|取得|持有|具有)?律师执业证(?:书)?$/u.test(body)) {
+    return confirmed([lawyerPracticeCertificateDraft()], "PROFESSIONAL_QUALIFICATION");
+  }
+
+  if (/^(?:(?:所学)?专业(?:要求)?[:：]?)?(?:法学|法律)(?:专业|学科|学)?$/u.test(body)
+      || /^(?:法律硕士|法硕)(?:\(非法学\))?(?:专业)?$/u.test(body)
+      || /^(?:法学类|法律类)$/u.test(body)) {
+    const parsed = parseMajorValues(body, fragment, "ANY_EDUCATION");
     if (parsed.unresolved) return parsed.unresolved;
     return {
       drafts: parsed.drafts.map(apply),
-      status: "AMBIGUOUS",
-      clause_role: "UNKNOWN",
+      status: "CONFIRMED_REQUIREMENT",
+      clause_role: "MANDATORY",
       dimension_hint: "MAJOR",
-      warnings: [{
-        code: "AMBIGUOUS_EDUCATION_SCOPE",
-        message: "Major requirement has no explicit bachelor, master, graduate, or doctor scope",
-        clause: clause.original
-      }]
+      warnings: []
     };
+  }
+
+  if (/(?:知名院校|著名律所|成绩优秀|法律思维|法律运用能力|法律工作.*热情|抗压能力|团队合作|沟通能力|市场拓展能力|文化和价值观念|视情况安排|每周实习至少|完整实习\d+个月|商事诉讼|仲裁案件|独立出庭)/u.test(body)) {
+    return domainGap(clause);
   }
 
   if (/(?:中华人民共和国国籍|政治立场|政治态度|理想信念|思想品德|遵纪守法|诚实守信|品行端正|人格健全|身体健康|身体条件|现役军人|刑事处罚|劳动教养|开除公职|失信被执行人|党纪|政纪处分)/u.test(body)) {
@@ -1400,7 +1558,9 @@ function createObservation(
   status: RequirementObservationStatus,
   clauseRole: RequirementClauseRole,
   factIds: readonly RequirementFactId[],
-  dimensionHint: RequirementFact["dimension"] | undefined
+  dimensionHint: RequirementFact["dimension"] | undefined,
+  clause?: Clause,
+  partIndex = 0
 ): RequirementObservation {
   const requirementObservationId = `requirement-observation:${sha256(stableSerialize({
     opportunity_version_id: input.opportunity_version.opportunity_version_id,
@@ -1409,7 +1569,8 @@ function createObservation(
     status,
     clause_role: clauseRole,
     dimension_hint: dimensionHint,
-    fact_ids: factIds
+    fact_ids: factIds,
+    ...(partIndex > 0 ? { part_index: partIndex } : {})
   }))}` as RequirementObservationId;
   return {
     requirement_observation_id: requirementObservationId,
@@ -1417,6 +1578,10 @@ function createObservation(
     status,
     clause_role: clauseRole,
     ...(dimensionHint ? { dimension_hint: dimensionHint } : {}),
+    ...(clause ? {
+      original_clause: clause.original,
+      clause_locator: evidenceLocator(fragment, clause)
+    } : {}),
     requirement_fact_ids: [...factIds],
     evidence_fragment_ids: [fragment.requirement_evidence_fragment_id],
     parser_version: DETERMINISTIC_REQUIREMENT_PARSER_VERSION

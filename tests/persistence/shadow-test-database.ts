@@ -21,6 +21,12 @@ export const opportunityRecallMigrationPath = path.join(
   "migrations",
   "002_opportunity_recall.sql"
 );
+export const presentationMigrationPath = path.join(
+  repositoryRoot,
+  "shadow",
+  "migrations",
+  "003_presentation_read_model.sql"
+);
 
 export function readShadowMigration() {
   return readFileSync(shadowMigrationPath, "utf8");
@@ -31,7 +37,12 @@ export function readOpportunityRecallMigration() {
 }
 
 export function readShadowMigrations() {
-  return [readShadowMigration(), readOpportunityRecallMigration()];
+  return [
+    readShadowMigration(),
+    readOpportunityRecallMigration(),
+    readFileSync(presentationMigrationPath, "utf8"),
+    readFileSync(path.join(repositoryRoot, "shadow", "migrations", "004_presentation_identity_v2.sql"), "utf8")
+  ];
 }
 
 export function createMigratedShadowDatabase() {

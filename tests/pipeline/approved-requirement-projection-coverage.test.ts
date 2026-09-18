@@ -261,6 +261,99 @@ test("missing requirement semantics propagate unresolved instead of false", () =
   assert.equal(JSON.stringify(projection.output).includes("INELIGIBLE"), false);
 });
 
+test("real-world numbered composite clauses retain supported facts and residual review", () => {
+  const { projection } = projectionFor(
+    "zhenghan-2027-long-term",
+    "1.国内外知名院校法学专业2027年应届在校本科生或研究生"
+  );
+  const dimensions = projection.output.facts.map((fact) => fact.dimension);
+
+  assert.deepEqual(dimensions, [
+    "MAJOR", "GRADUATION_YEAR", "CANDIDATE_COHORT",
+    "EDUCATION_LEVEL", "EDUCATION_LEVEL"
+  ]);
+  const educationCondition = projection.output.conditions.find((condition) => {
+    if (condition.representation_kind !== "LOGIC_TREE") return false;
+    const tree = projection.output.requirement_logic_trees.find((item) => {
+      return item.requirement_logic_tree_id === condition.requirement_logic_tree_id;
+    });
+    return tree?.nodes.some((node) => node.kind === "GROUP" && node.operator === "OR");
+  });
+  assert.ok(educationCondition);
+  assert.ok(projection.output.observations.some((observation) => {
+    return observation.status === "DOMAIN_GAP_OBSERVED"
+      && observation.original_clause?.text.includes("知名院校");
+  }));
+});
+
+test("preferred observations without facts never enter the mandatory root", () => {
+  const { projection } = projectionFor(
+    "zhenghan-preferred-qualification",
+    "2.曾有法律相关岗位实习经历者/通过国家法律职业资格考试（本科生/非法本研究生无需遵循此条）优先"
+  );
+
+  assert.equal(projection.output.facts.length, 0);
+  assert.equal(projection.output.conditions.length, 0);
+  assert.equal(projection.output.candidate_credential_applicabilities.length, 0);
+  assert.equal(projection.output.candidate_state_applicabilities.length, 0);
+  assert.equal(projection.output.mandatory_root.kind, "EMPTY_CONFIRMED");
+  assert.equal(projection.output.observations[0]?.clause_role, "PREFERRED");
+});
+
+test("unknown observations remain observations and are never upgraded to mandatory", () => {
+  const { projection } = projectionFor(
+    "unknown-not-mandatory",
+    "无法安全判断的附加条件"
+  );
+
+  assert.equal(projection.output.observations[0]?.clause_role, "UNKNOWN");
+  assert.equal(projection.output.conditions.length, 0);
+  assert.equal(projection.output.mandatory_root.kind, "EMPTY_CONFIRMED");
+  assert.equal(JSON.stringify(projection.output).includes('"modality":"MANDATORY"'), false);
+});
+
+test("unresolved mandatory conditions use clause-local scope and locator", () => {
+  const { projection } = projectionFor(
+    "clause-local-unresolved",
+    "3.在校期间成绩优秀，具有极强的法律思维和运用能力；6.认同公司制律所的文化和价值观念"
+  );
+  const unresolved = projection.output.conditions.filter((condition) => {
+    return condition.resolution_state === "UNRESOLVED";
+  });
+
+  assert.equal(unresolved.length, 2);
+  const scopes = projection.output.candidate_credential_applicabilities.map((item) => {
+    return item.mode === "UNRESOLVED" ? item.raw_scope?.text : null;
+  });
+  assert.deepEqual(scopes, [
+    "3.在校期间成绩优秀，具有极强的法律思维和运用能力",
+    "6.认同公司制律所的文化和价值观念"
+  ]);
+  assert.ok(unresolved.every((condition) => {
+    return condition.source_locator.start_offset !== undefined
+      && condition.source_locator.end_offset !== undefined;
+  }));
+  assert.equal(projection.output.facts.some((fact) => fact.dimension === "MAJOR"), false);
+});
+
+test("lawyer practice certificate is not rewritten as legal professional qualification", () => {
+  const { projection } = projectionFor(
+    "zhenghan-lawyer-experience",
+    "2.拥有3-5年律师工作经验，并持有律师执业证"
+  );
+  const qualification = projection.output.facts.find((fact) => {
+    return fact.dimension === "PROFESSIONAL_QUALIFICATION";
+  });
+
+  assert.equal(qualification?.value.kind, "PROFESSIONAL_QUALIFICATION");
+  if (qualification?.value.kind === "PROFESSIONAL_QUALIFICATION") {
+    assert.equal(qualification.value.qualification_type,
+      "LAWYER_PRACTICE_CERTIFICATE");
+  }
+  assert.equal(JSON.stringify(projection.output).includes(
+    "LEGAL_PROFESSIONAL_QUALIFICATION"), false);
+});
+
 test("target 22828700101 remains blocked by non-COMPLETE SourceComposition", () => {
   const fixture = trustedFixture("target-22828700101-projector-gate");
   assert.equal(fixture.chain.requirement_projections.resolve("22828700101"), null);

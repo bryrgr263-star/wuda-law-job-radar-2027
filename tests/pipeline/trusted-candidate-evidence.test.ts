@@ -7,6 +7,7 @@ import {
   ELIGIBILITY_ASSESSMENT_RULE_VERSION,
   PREDICATE_RESOLUTION_RULE_VERSION,
   assertTrustedCandidateEvidenceResolver,
+  createCandidateEvidenceSourceManifest,
   type PredicateCandidateEvidence
 } from "../../lib/ingestion";
 import {
@@ -103,8 +104,74 @@ test("CandidateProfile claims cannot self-upgrade to verified evidence", () => {
   }));
   assert.deepEqual(
     Object.keys(fixture.chain.candidate_evidence).sort(),
-    ["materialize_claimed", "materialize_synthetic_fixture", "resolve"]
+    ["issue", "materialize_claimed", "materialize_synthetic_fixture", "resolve"]
   );
+});
+
+test("explicit CANDIDATE_ASSERTED issuance remains insufficient and cannot downgrade-upgrade", () => {
+  const fixture = trustedFixture("candidate-explicit-asserted");
+  const profile = syntheticCandidateProfile("candidate-explicit-asserted");
+  const credential = structuredClone(profile.education[0]!);
+  (credential as { provenance: string }).provenance = "CANDIDATE_ASSERTED";
+  const manifest = createCandidateEvidenceSourceManifest({
+    manifest_stream_id: "candidate-claim-stream",
+    candidate_profile_id: profile.candidate_profile_id,
+    evidence_class: "CANDIDATE_ASSERTED",
+    scope: "SYNTHETIC_TEST",
+    revision: 1,
+    supersedes_manifest_id: null,
+    locator: { kind: "CANDIDATE_CLAIM", value: "fixture://candidate/claim" },
+    evidence_object: null,
+    verifier: null,
+    actor: "candidate-test-actor",
+    issued_at: OBSERVED_AT,
+    provenance_references: ["fixture:explicit-claim"]
+  });
+  const command = {
+    source_manifest: manifest,
+    evidence: [{
+      candidate_credential_id: credential.candidate_credential_id,
+      value: { kind: "EDUCATION_CREDENTIAL" as const, credential },
+      original_value: credential.program_name.original,
+      normalized_value: {
+        text: credential.program_name.original.text.normalize("NFKC"),
+        unicode_form: "NFKC" as const,
+        normalizer_version: "candidate-issuance-test/1.0.0",
+        operations: ["UNICODE_NORMALIZATION"] as const
+      },
+      observation_status: "INSUFFICIENT" as const,
+      observed_at: OBSERVED_AT
+    }]
+  };
+  const first = fixture.chain.candidate_evidence.issue(command);
+  const second = fixture.chain.candidate_evidence.issue(command);
+  assert.deepEqual(second, first);
+  assert.equal(first.provenance, "CANDIDATE_ASSERTED");
+  assert.equal(first.evidence[0]?.observation_status, "INSUFFICIENT");
+  assert.notEqual(first.evidence[0]?.provenance, "DOCUMENT_VERIFIED");
+
+  const forgedConfirmed = structuredClone(command);
+  (forgedConfirmed.evidence[0] as { observation_status: string }).observation_status =
+    "CONFIRMED";
+  assert.throws(() => fixture.chain.candidate_evidence.issue(forgedConfirmed));
+});
+
+test("DOCUMENT_VERIFIED manifest requires object, verifier, and exact credential provenance", () => {
+  const profile = syntheticCandidateProfile("candidate-document-contract");
+  assert.throws(() => createCandidateEvidenceSourceManifest({
+    manifest_stream_id: "candidate-document-stream",
+    candidate_profile_id: profile.candidate_profile_id,
+    evidence_class: "DOCUMENT_VERIFIED",
+    scope: "SYNTHETIC_TEST",
+    revision: 1,
+    supersedes_manifest_id: null,
+    locator: { kind: "CANDIDATE_CLAIM", value: "fixture://missing-document" },
+    evidence_object: null,
+    verifier: null,
+    actor: "candidate-test-actor",
+    issued_at: OBSERVED_AT,
+    provenance_references: ["fixture:missing-document"]
+  }));
 });
 
 test("claimed evidence remains insufficient through PredicateResolution", () => {

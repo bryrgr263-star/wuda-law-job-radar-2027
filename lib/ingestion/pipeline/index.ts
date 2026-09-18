@@ -1,5 +1,10 @@
 export * from "./trusted-artifact-chain";
 export * from "./legal-employment-relevance";
+export * from "./presentation-decision";
+export * from "./presentation-read-model";
+export * from "./presentation-persistence";
+export * from "./trusted-chain-composition-root";
+export * from "./trusted-chain-restoration";
 export type {
   PositionBoundRequirementSetVersion
 } from "./position-bound-requirement-set";
@@ -37,10 +42,19 @@ export type {
   TrustedRequirementProjectionResolver
 } from "./trusted-requirement-projection";
 export {
-  assertTrustedCandidateEvidenceResolver
+  CANDIDATE_EVIDENCE_SOURCE_MANIFEST_SCHEMA_VERSION,
+  assertCandidateEvidenceSourceManifestIntegrity,
+  assertTrustedCandidateEvidenceResolver,
+  createCandidateEvidenceSourceManifest
 } from "./trusted-candidate-evidence";
 export type {
+  CandidateEvidenceIssuanceItem,
+  CandidateEvidenceIssuanceResult,
+  CandidateEvidenceSourceManifest,
+  CandidateEvidenceSourceManifestInput,
   CandidateProfileEvidenceMaterializationCommand,
+  IssueCandidateEvidenceCommand,
   TrustedCandidateEvidenceBatch,
-  TrustedCandidateEvidenceResolver
+  TrustedCandidateEvidenceResolver,
+  TrustedCandidateEvidenceSourceVerifier
 } from "./trusted-candidate-evidence";

@@ -696,6 +696,8 @@ export interface RequirementObservation {
   readonly status: RequirementObservationStatus;
   readonly clause_role: RequirementClauseRole;
   readonly dimension_hint?: RequirementDimension;
+  readonly original_clause?: OriginalText;
+  readonly clause_locator?: EvidenceLocator;
   readonly requirement_fact_ids: readonly RequirementFactId[];
   readonly evidence_fragment_ids:
     NonEmptyReadonlyArray<RequirementEvidenceFragmentId>;

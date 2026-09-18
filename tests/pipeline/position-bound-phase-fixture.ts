@@ -62,6 +62,7 @@ export function trustedFixture(
   suffix = "base",
   requirementText = "学历要求：本科及以上",
   options: {
+    readonly raw_title?: string;
     readonly academic_program_directory?: {
       readonly directory_namespace: string;
       readonly directory_version: string;
@@ -459,6 +460,7 @@ function syntheticSource(
   suffix: string,
   requirementText: string,
   options: {
+    readonly raw_title?: string;
     readonly academic_program_directory?: {
       readonly directory_namespace: string;
       readonly directory_version: string;
@@ -522,7 +524,7 @@ function syntheticSource(
       confidence: "HIGH"
     }],
     raw_source_record_id: `Sheet1!row:${suffix}`,
-    raw_title: original("助理研究员"),
+    raw_title: original(options.raw_title ?? "助理研究员"),
     raw_organization_name: original("贵州省法治研究服务保障中心"),
     raw_location_text: [original("贵州省")],
     raw_requirement_text: original(requirementText),

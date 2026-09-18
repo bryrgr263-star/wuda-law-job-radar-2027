@@ -1,0 +1,30 @@
+{
+  "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+  "recruitment_endpoint_id": "endpoint-cn-guizhou-rst-judicial-public-institution-recruitment-attachment-xlsx",
+  "request_metadata": {
+    "locator": "https://rst.guizhou.gov.cn/zwgk/zdlyxx/sydwgkzp/202502/P020250210600360721175.xlsx",
+    "method": "GET",
+    "requested_at": "2026-09-04T00:54:57.388Z",
+    "headers": {},
+    "parameters": {}
+  },
+  "response_metadata": {
+    "http_status": 200,
+    "headers": {
+      "content-length": "13319",
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "date": "Fri, 04 Sep 2026 00:54:57 GMT",
+      "etag": "\"67a9bb78-3407\"",
+      "last-modified": "Mon, 10 Feb 2025 08:40:24 GMT",
+      "server": "nginx"
+    },
+    "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "content_length": 13319,
+    "transport_error": null
+  },
+  "transport_status": "SUCCESS",
+  "raw_blob_id": "sha256:87b013e13ea78cd1de130553f203024fbd8c274479219b39ae1bd4280fc8f7ec",
+  "content_hash": "87b013e13ea78cd1de130553f203024fbd8c274479219b39ae1bd4280fc8f7ec",
+  "content_length": 13319,
+  "observed_at": "2026-09-04T00:54:58.960Z"
+}

@@ -29,8 +29,21 @@ export class InMemorySourceRegistry {
         `Organization already exists: ${organization.organization_id}`
       );
     }
-    this.#organizations.set(organization.organization_id, organization);
-    return organization;
+    const stored = clone(organization);
+    this.#organizations.set(stored.organization_id, stored);
+    return clone(stored);
+  }
+
+  reviseOrganization(organization: Organization) {
+    if (!this.#organizations.has(organization.organization_id)) {
+      throw new SourceRegistryError(
+        "MISSING_ORGANIZATION",
+        `Organization does not exist: ${organization.organization_id}`
+      );
+    }
+    const stored = clone(organization);
+    this.#organizations.set(stored.organization_id, stored);
+    return clone(stored);
   }
 
   registerSourceDefinition(source: SourceDefinition) {
@@ -46,8 +59,34 @@ export class InMemorySourceRegistry {
         `Publisher organization does not exist: ${source.publisher_organization_id}`
       );
     }
-    this.#sources.set(source.source_definition_id, source);
-    return source;
+    const stored = clone(source);
+    this.#sources.set(stored.source_definition_id, stored);
+    return clone(stored);
+  }
+
+  reviseSourceDefinition(source: SourceDefinition) {
+    const current = this.#sources.get(source.source_definition_id);
+    if (!current) {
+      throw new SourceRegistryError(
+        "MISSING_SOURCE_DEFINITION",
+        `Source definition does not exist: ${source.source_definition_id}`
+      );
+    }
+    if (current.publisher_organization_id !== source.publisher_organization_id) {
+      throw new SourceRegistryError(
+        "INVALID_ENDPOINT",
+        "Source definition revisions cannot change publisher organization"
+      );
+    }
+    if (!this.#organizations.has(source.publisher_organization_id)) {
+      throw new SourceRegistryError(
+        "MISSING_ORGANIZATION",
+        `Publisher organization does not exist: ${source.publisher_organization_id}`
+      );
+    }
+    const stored = clone(source);
+    this.#sources.set(stored.source_definition_id, stored);
+    return clone(stored);
   }
 
   registerRecruitmentEndpoint(endpoint: RecruitmentEndpoint) {
@@ -77,8 +116,36 @@ export class InMemorySourceRegistry {
         `Adapter ${endpoint.adapter_key} does not support ${endpoint.content_kind}`
       );
     }
-    this.#endpoints.set(endpoint.recruitment_endpoint_id, endpoint);
-    return endpoint;
+    const stored = clone(endpoint);
+    this.#endpoints.set(stored.recruitment_endpoint_id, stored);
+    return clone(stored);
+  }
+
+  reviseRecruitmentEndpoint(endpoint: RecruitmentEndpoint) {
+    const current = this.#endpoints.get(endpoint.recruitment_endpoint_id);
+    if (!current) {
+      throw new SourceRegistryError(
+        "MISSING_ENDPOINT",
+        `Recruitment endpoint does not exist: ${endpoint.recruitment_endpoint_id}`
+      );
+    }
+    if (current.source_definition_id !== endpoint.source_definition_id) {
+      throw new SourceRegistryError(
+        "INVALID_ENDPOINT",
+        "Recruitment endpoint revisions cannot change source definition"
+      );
+    }
+    validateRecruitmentEndpoint(endpoint);
+    const adapter = this.#adapterKeys.get(endpoint.adapter_key);
+    if (!adapter || !adapter.supported_content_kinds.includes(endpoint.content_kind)) {
+      throw new SourceRegistryError(
+        adapter ? "UNSUPPORTED_CONTENT_KIND" : "UNKNOWN_ADAPTER_KEY",
+        `Recruitment endpoint revision has incompatible adapter: ${endpoint.adapter_key}`
+      );
+    }
+    const stored = clone(endpoint);
+    this.#endpoints.set(stored.recruitment_endpoint_id, stored);
+    return clone(stored);
   }
 
   registerAdapterKey(registration: AdapterKeyRegistration) {
@@ -95,8 +162,39 @@ export class InMemorySourceRegistry {
         `Adapter key must support at least one content kind: ${registration.adapter_key}`
       );
     }
-    this.#adapterKeys.set(registration.adapter_key, registration);
-    return registration;
+    const stored = clone(registration);
+    this.#adapterKeys.set(stored.adapter_key, stored);
+    return clone(stored);
+  }
+
+  reviseAdapterKey(registration: AdapterKeyRegistration) {
+    if (!this.#adapterKeys.has(registration.adapter_key)) {
+      throw new SourceRegistryError(
+        "UNKNOWN_ADAPTER_KEY",
+        `Adapter key is not registered: ${registration.adapter_key}`
+      );
+    }
+    validateAdapterKey(registration.adapter_key);
+    if (registration.supported_content_kinds.length === 0) {
+      throw new SourceRegistryError(
+        "INVALID_ADAPTER_KEY",
+        `Adapter key must support at least one content kind: ${registration.adapter_key}`
+      );
+    }
+    const supported = new Set(registration.supported_content_kinds);
+    const incompatibleEndpoint = [...this.#endpoints.values()].find((endpoint) => {
+      return endpoint.adapter_key === registration.adapter_key
+        && !supported.has(endpoint.content_kind);
+    });
+    if (incompatibleEndpoint) {
+      throw new SourceRegistryError(
+        "UNSUPPORTED_CONTENT_KIND",
+        `Adapter revision would invalidate endpoint: ${incompatibleEndpoint.recruitment_endpoint_id}`
+      );
+    }
+    const stored = clone(registration);
+    this.#adapterKeys.set(stored.adapter_key, stored);
+    return clone(stored);
   }
 
   getOrganization(organizationId: OrganizationId) {
@@ -107,7 +205,7 @@ export class InMemorySourceRegistry {
         `Organization does not exist: ${organizationId}`
       );
     }
-    return organization;
+    return clone(organization);
   }
 
   getSourceDefinition(sourceDefinitionId: SourceDefinitionId) {
@@ -118,7 +216,7 @@ export class InMemorySourceRegistry {
         `Source definition does not exist: ${sourceDefinitionId}`
       );
     }
-    return source;
+    return clone(source);
   }
 
   getRecruitmentEndpoint(endpointId: RecruitmentEndpointId) {
@@ -129,7 +227,7 @@ export class InMemorySourceRegistry {
         `Recruitment endpoint does not exist: ${endpointId}`
       );
     }
-    return endpoint;
+    return clone(endpoint);
   }
 
   resolveAdapterKey(adapterKey: string) {
@@ -140,7 +238,7 @@ export class InMemorySourceRegistry {
         `Adapter key is not registered: ${adapterKey}`
       );
     }
-    return registration;
+    return clone(registration);
   }
 
   resolveAdapterForEndpoint(endpointId: RecruitmentEndpointId) {
@@ -148,21 +246,21 @@ export class InMemorySourceRegistry {
   }
 
   listOrganizations() {
-    return [...this.#organizations.values()];
+    return [...this.#organizations.values()].map(clone);
   }
 
   listSourceDefinitionsForOrganization(organizationId: OrganizationId) {
     this.getOrganization(organizationId);
     return [...this.#sources.values()].filter(
       (source) => source.publisher_organization_id === organizationId
-    );
+    ).map(clone);
   }
 
   listRecruitmentEndpointsForSource(sourceDefinitionId: SourceDefinitionId) {
     this.getSourceDefinition(sourceDefinitionId);
     return [...this.#endpoints.values()].filter(
       (endpoint) => endpoint.source_definition_id === sourceDefinitionId
-    );
+    ).map(clone);
   }
 
   listCollectableEndpoints(contentKinds?: ReadonlySet<ContentKind>) {
@@ -171,6 +269,10 @@ export class InMemorySourceRegistry {
       const source = this.#sources.get(endpoint.source_definition_id);
       if (!source?.enabled) return false;
       return !contentKinds || contentKinds.has(endpoint.content_kind);
-    });
+    }).map(clone);
   }
+}
+
+function clone<Value>(value: Value): Value {
+  return structuredClone(value);
 }

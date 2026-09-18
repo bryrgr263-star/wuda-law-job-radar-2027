@@ -4,7 +4,10 @@ import type {
   CandidateCredentialId,
   CandidateProfileId,
   CandidateCredentialProvenance,
+  CandidateStateObservationStatus,
   IsoDateTime,
+  NormalizedText,
+  OriginalText,
   StructuredCandidateProfile,
   StructuredEducationCredential
 } from "../domain";
@@ -35,6 +38,70 @@ export interface TrustedCandidateEvidenceBatch {
   readonly evidence: readonly PredicateCandidateEvidence[];
 }
 
+export const CANDIDATE_EVIDENCE_SOURCE_MANIFEST_SCHEMA_VERSION =
+  "candidate-evidence-source-manifest/1.0.0" as const;
+
+export interface CandidateEvidenceSourceManifest {
+  readonly candidate_evidence_source_manifest_id: string;
+  readonly manifest_stream_id: string;
+  readonly candidate_profile_id: CandidateProfileId;
+  readonly evidence_class: "CANDIDATE_ASSERTED" | "DOCUMENT_VERIFIED";
+  readonly scope: "PRODUCTION" | "SYNTHETIC_TEST";
+  readonly revision: number;
+  readonly supersedes_manifest_id: string | null;
+  readonly locator: {
+    readonly kind: "CANDIDATE_CLAIM" | "PRIVATE_OBJECT_STORAGE";
+    readonly value: string;
+  };
+  readonly evidence_object: {
+    readonly bucket_id: string;
+    readonly object_key: string;
+    readonly sha256: string;
+    readonly byte_length: number;
+    readonly content_type: string;
+  } | null;
+  readonly verifier: {
+    readonly identity: string;
+    readonly role: string;
+    readonly method: string;
+    readonly verified_at: IsoDateTime;
+  } | null;
+  readonly actor: string;
+  readonly issued_at: IsoDateTime;
+  readonly provenance_references: readonly string[];
+  readonly schema_version: typeof CANDIDATE_EVIDENCE_SOURCE_MANIFEST_SCHEMA_VERSION;
+  readonly integrity_hash: string;
+}
+
+export type CandidateEvidenceSourceManifestInput = Omit<
+  CandidateEvidenceSourceManifest,
+  "candidate_evidence_source_manifest_id" | "schema_version" | "integrity_hash"
+>;
+
+export interface CandidateEvidenceIssuanceItem {
+  readonly candidate_credential_id?: CandidateCredentialId;
+  readonly value: PredicateCandidateEvidenceValue | null;
+  readonly original_value: OriginalText;
+  readonly normalized_value: NormalizedText;
+  readonly observation_status: CandidateStateObservationStatus;
+  readonly observed_at: IsoDateTime;
+  readonly effective_from?: IsoDateTime;
+  readonly effective_to?: IsoDateTime;
+}
+
+export interface IssueCandidateEvidenceCommand {
+  readonly source_manifest: CandidateEvidenceSourceManifest;
+  readonly evidence: readonly CandidateEvidenceIssuanceItem[];
+}
+
+export interface TrustedCandidateEvidenceSourceVerifier {
+  verify(manifest: CandidateEvidenceSourceManifest): Promise<void>;
+}
+
+export interface CandidateEvidenceIssuanceResult extends TrustedCandidateEvidenceBatch {
+  readonly source_manifest: CandidateEvidenceSourceManifest;
+}
+
 export interface TrustedCandidateEvidenceResolver {
   resolve(candidateEvidenceId: string): PredicateCandidateEvidence | null;
 }
@@ -44,6 +111,7 @@ const trustedCandidateEvidenceResolvers = new WeakSet<object>();
 export class TrustedCandidateEvidenceError extends Error {
   readonly code:
     | "INVALID_PROFILE"
+    | "INVALID_ISSUANCE"
     | "IDENTITY_COLLISION"
     | "UNSUPPORTED_AUTHORITY";
 
@@ -60,6 +128,11 @@ implements TrustedCandidateEvidenceResolver {
     string,
     PredicateCandidateEvidence
   >((artifact) => artifact.predicate_candidate_evidence_id);
+  readonly #manifestRegistry = createCanonicalArtifactRegistryAuthority<
+    string,
+    CandidateEvidenceSourceManifest
+  >((artifact) => artifact.candidate_evidence_source_manifest_id);
+  readonly #manifestVersions = new Map<string, CandidateEvidenceSourceManifest[]>();
 
   constructor() {
     trustedCandidateEvidenceResolvers.add(this);
@@ -77,9 +150,105 @@ implements TrustedCandidateEvidenceResolver {
     return this.#materialize(command, "SYNTHETIC_TEST");
   }
 
+  issue(command: IssueCandidateEvidenceCommand): CandidateEvidenceIssuanceResult {
+    const manifest = assertCandidateEvidenceSourceManifestIntegrity(
+      command.source_manifest
+    );
+    if (command.evidence.length === 0) {
+      throw new TrustedCandidateEvidenceError(
+        "INVALID_ISSUANCE",
+        "Candidate Evidence issuance requires at least one evidence item"
+      );
+    }
+    const candidates = command.evidence.map((item) => {
+      if (item.value?.kind === "EDUCATION_CREDENTIAL"
+          && item.value.credential.provenance !== manifest.evidence_class) {
+        throw new TrustedCandidateEvidenceError(
+          "INVALID_ISSUANCE",
+          "Education credential provenance must match the issuance manifest"
+        );
+      }
+      return assertPredicateCandidateEvidenceIntegrity(
+        createPredicateCandidateEvidence({
+          candidate_profile_id: manifest.candidate_profile_id,
+          ...(item.candidate_credential_id ? {
+            candidate_credential_id: item.candidate_credential_id
+          } : {}),
+          value: structuredClone(item.value),
+          original_value: structuredClone(item.original_value),
+          normalized_value: structuredClone(item.normalized_value),
+          observation_status: item.observation_status,
+          observed_at: item.observed_at,
+          ...(item.effective_from ? { effective_from: item.effective_from } : {}),
+          ...(item.effective_to ? { effective_to: item.effective_to } : {}),
+          provenance: manifest.evidence_class,
+          source_references: [{
+            candidate_state_evidence_id:
+              manifest.candidate_evidence_source_manifest_id as
+                PredicateCandidateEvidenceSourceReference["candidate_state_evidence_id"],
+            evidence_class: manifest.evidence_class,
+            captured_at: manifest.issued_at,
+            issuer: manifest.verifier?.identity ?? manifest.actor
+          }]
+        })
+      );
+    });
+    const sealedManifest = this.#sealManifest(manifest);
+    const evidence = candidates.map((candidate) => {
+      try {
+        return this.#registry.writer.seal(
+          candidate.predicate_candidate_evidence_id,
+          candidate
+        ).artifact;
+      } catch (error) {
+        if (error instanceof CanonicalArtifactRegistryError
+            && error.code === "IDENTITY_COLLISION") {
+          throw new TrustedCandidateEvidenceError(
+            "IDENTITY_COLLISION",
+            `Candidate Evidence identity collision: ${candidate.predicate_candidate_evidence_id}`
+          );
+        }
+        throw error;
+      }
+    });
+    return structuredClone({
+      source_manifest: sealedManifest,
+      candidate_profile_id: manifest.candidate_profile_id,
+      provenance: manifest.evidence_class,
+      evidence_ids: evidence.map((item) => item.predicate_candidate_evidence_id),
+      evidence
+    });
+  }
+
   resolve(candidateEvidenceId: string) {
     const evidence = this.#registry.resolver.resolve(candidateEvidenceId);
     return evidence ? assertPredicateCandidateEvidenceIntegrity(evidence) : null;
+  }
+
+  #sealManifest(manifest: CandidateEvidenceSourceManifest) {
+    const existing = this.#manifestRegistry.resolver.resolve(
+      manifest.candidate_evidence_source_manifest_id
+    );
+    if (existing) return assertCandidateEvidenceSourceManifestIntegrity(existing);
+    const versions = this.#manifestVersions.get(manifest.manifest_stream_id) ?? [];
+    const previous = versions.at(-1) ?? null;
+    if (manifest.revision !== versions.length + 1
+        || manifest.supersedes_manifest_id
+          !== (previous?.candidate_evidence_source_manifest_id ?? null)) {
+      throw new TrustedCandidateEvidenceError(
+        "INVALID_ISSUANCE",
+        "Candidate Evidence manifest revision is not append-only or contiguous"
+      );
+    }
+    const sealed = this.#manifestRegistry.writer.seal(
+      manifest.candidate_evidence_source_manifest_id,
+      manifest
+    ).artifact;
+    this.#manifestVersions.set(manifest.manifest_stream_id, [
+      ...versions,
+      structuredClone(sealed)
+    ]);
+    return sealed;
   }
 
   #materialize(
@@ -112,6 +281,85 @@ implements TrustedCandidateEvidenceResolver {
       evidence: structuredClone(evidence)
     };
   }
+}
+
+export function createCandidateEvidenceSourceManifest(
+  input: CandidateEvidenceSourceManifestInput
+): CandidateEvidenceSourceManifest {
+  const base = {
+    ...structuredClone(input),
+    provenance_references: [...input.provenance_references].sort(),
+    schema_version: CANDIDATE_EVIDENCE_SOURCE_MANIFEST_SCHEMA_VERSION
+  };
+  const integrityHash = `sha256:${sha256(stableSerialize(base))}`;
+  return assertCandidateEvidenceSourceManifestIntegrity({
+    ...base,
+    candidate_evidence_source_manifest_id:
+      `candidate-evidence-source:${integrityHash.slice(7)}`,
+    integrity_hash: integrityHash
+  });
+}
+
+export function assertCandidateEvidenceSourceManifestIntegrity(
+  manifest: CandidateEvidenceSourceManifest
+) {
+  if (manifest.schema_version !== CANDIDATE_EVIDENCE_SOURCE_MANIFEST_SCHEMA_VERSION
+      || !manifest.manifest_stream_id.trim()
+      || !manifest.candidate_profile_id.trim()
+      || !manifest.actor.trim()
+      || !manifest.locator.value.trim()
+      || !Number.isSafeInteger(manifest.revision)
+      || manifest.revision < 1
+      || (manifest.revision === 1) !== (manifest.supersedes_manifest_id === null)) {
+    throw new TrustedCandidateEvidenceError(
+      "INVALID_ISSUANCE",
+      "Candidate Evidence source manifest identity or revision is invalid"
+    );
+  }
+  const documentVerified = manifest.evidence_class === "DOCUMENT_VERIFIED";
+  if (documentVerified !== (manifest.evidence_object !== null)
+      || documentVerified !== (manifest.verifier !== null)
+      || documentVerified !== (manifest.locator.kind === "PRIVATE_OBJECT_STORAGE")) {
+    throw new TrustedCandidateEvidenceError(
+      "INVALID_ISSUANCE",
+      "DOCUMENT_VERIFIED requires one private evidence object and verifier"
+    );
+  }
+  if (manifest.evidence_object) {
+    if (!/^[a-f0-9]{64}$/u.test(manifest.evidence_object.sha256)
+        || manifest.evidence_object.byte_length < 1
+        || !manifest.evidence_object.bucket_id.trim()
+        || !manifest.evidence_object.object_key.trim()
+        || !manifest.evidence_object.content_type.trim()) {
+      throw new TrustedCandidateEvidenceError(
+        "INVALID_ISSUANCE",
+        "Candidate evidence object metadata is incomplete"
+      );
+    }
+  }
+  if (manifest.verifier && (!manifest.verifier.identity.trim()
+      || !manifest.verifier.role.trim()
+      || !manifest.verifier.method.trim())) {
+    throw new TrustedCandidateEvidenceError(
+      "INVALID_ISSUANCE",
+      "Candidate evidence verifier metadata is incomplete"
+    );
+  }
+  const {
+    candidate_evidence_source_manifest_id: ignoredId,
+    integrity_hash: ignoredHash,
+    ...withoutIdentity
+  } = manifest;
+  const expectedHash = `sha256:${sha256(stableSerialize(withoutIdentity))}`;
+  if (manifest.integrity_hash !== expectedHash
+      || manifest.candidate_evidence_source_manifest_id
+        !== `candidate-evidence-source:${expectedHash.slice(7)}`) {
+    throw new TrustedCandidateEvidenceError(
+      "INVALID_ISSUANCE",
+      "Candidate Evidence source manifest integrity mismatch"
+    );
+  }
+  return structuredClone(manifest);
 }
 
 export function assertTrustedCandidateEvidenceResolver(

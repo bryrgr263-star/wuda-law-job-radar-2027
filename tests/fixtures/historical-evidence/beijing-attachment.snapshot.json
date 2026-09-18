@@ -1,0 +1,41 @@
+{
+  "snapshot_id": "p2-04e-observation-snapshot:d6368e80-f6b9-4f18-ad9a-2727a7dd8c8b",
+  "recruitment_endpoint_id": "endpoint-cn-beijing-government-public-institution-recruitment-attachment-xlsx",
+  "request_metadata": {
+    "locator": "https://www.beijing.gov.cn/gongkai/rsxx/sydwzp/202606/P020260625349755441673.xlsx",
+    "method": "GET",
+    "requested_at": "2026-09-03T05:47:22.339Z",
+    "headers": {},
+    "parameters": {}
+  },
+  "response_metadata": {
+    "http_status": 200,
+    "headers": {
+      "accept-ranges": "bytes",
+      "cache-control": "max-age=60",
+      "connection": "keep-alive",
+      "content-length": "12414",
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "date": "Thu, 03 Sep 2026 05:47:22 GMT",
+      "etag": "\"6a3c87af-307e\"",
+      "expires": "Thu, 03 Sep 2026 05:48:22 GMT",
+      "last-modified": "Thu, 25 Jun 2026 01:43:11 GMT",
+      "referrer-policy": "value",
+      "strict-transport-security": "value",
+      "x-cache": "bypass",
+      "x-content-type-options": "nosniff",
+      "x-download-options": "value",
+      "x-permitted-cross-domain-policies": "value",
+      "x-via-jsl": "386db2a,-",
+      "x-xss-protection": "1; mode=block"
+    },
+    "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "content_length": 12414,
+    "transport_error": null
+  },
+  "transport_status": "SUCCESS",
+  "raw_blob_id": "sha256:b8a3c2832ab77782b2215370a72f40c524ab1e8179731fc025aafd6452514766",
+  "content_hash": "b8a3c2832ab77782b2215370a72f40c524ab1e8179731fc025aafd6452514766",
+  "content_length": 12414,
+  "observed_at": "2026-09-03T05:47:22.872Z"
+}

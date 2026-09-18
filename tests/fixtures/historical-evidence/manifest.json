@@ -1,0 +1,138 @@
+{
+  "schema_version": "historical-test-evidence/1.0.0",
+  "boundary": "TEST_ONLY",
+  "production_authority": false,
+  "runtime_source": false,
+  "new_trust_source": false,
+  "privacy_exception": "User approved only already-public official business contact information and original document author metadata. Candidate personal materials, credentials, cookies, tokens and secrets remain prohibited.",
+  "entries": [
+    {
+      "fixture_id": "beijing-detail-html",
+      "historical_role": "Official historical recruitment HTML; attachment discovery and source composition",
+      "repository_relative_path": "fixtures/p2-04d/beijing-public-institution-job-detail.html",
+      "sha256": "8a44dad79da041e1aefb7d9aed442df40f5de844eefe5d1708cb52996f511d8a",
+      "byte_length": 40310,
+      "media_type": "text/html",
+      "origin_reference": "outputs/p2-04d/p2-04d-run-3648affe-5bd5-471c-b557-085bfed0a3be/raw.html",
+      "used_by_tests": [
+        "tests/p2-acq-01/official-html-xlsx-canary.test.ts"
+      ],
+      "packaging_reason": "Complete original bytes required; no crop, conversion, reserialization or regeneration.",
+      "action": "REUSE_EXISTING_TRACKED"
+    },
+    {
+      "fixture_id": "beijing-attachment-xlsx",
+      "historical_role": "Official historical attachment; exact XLSX SHA-256, workbook parsing and three Position/PV/PBOV chains",
+      "repository_relative_path": "fixtures/p2-04e/beijing-public-institution-job-table.xlsx",
+      "sha256": "b8a3c2832ab77782b2215370a72f40c524ab1e8179731fc025aafd6452514766",
+      "byte_length": 12414,
+      "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "origin_reference": "outputs/p2-04e/p2-04e-observation-run-c240b387-9ed7-415a-b7f1-4b53cc95bf6c/raw.xlsx",
+      "used_by_tests": [
+        "tests/p2-acq-01/official-html-xlsx-canary.test.ts"
+      ],
+      "packaging_reason": "Complete original bytes required; no crop, conversion, reserialization or regeneration.",
+      "action": "REUSE_EXISTING_TRACKED"
+    },
+    {
+      "fixture_id": "beijing-attachment-snapshot",
+      "historical_role": "Original acquisition Snapshot binds raw hash, locator, timestamp and identity",
+      "repository_relative_path": "tests/fixtures/historical-evidence/beijing-attachment.snapshot.json",
+      "sha256": "ae2e1ff391236654220e21b373bfb99384c0d46d6104f646fe3450e8994c8f60",
+      "byte_length": 1666,
+      "media_type": "application/json",
+      "origin_reference": "outputs/p2-04e/p2-04e-observation-run-c240b387-9ed7-415a-b7f1-4b53cc95bf6c/snapshot.json",
+      "used_by_tests": [
+        "tests/p2-acq-01/official-html-xlsx-canary.test.ts"
+      ],
+      "packaging_reason": "Complete original bytes required; no crop, conversion, reserialization or regeneration.",
+      "action": "COPY_EXACT"
+    },
+    {
+      "fixture_id": "guizhou-notice-html",
+      "historical_role": "Official 2025 notice; exact SHA-256, requirements, attachment links and composition provenance",
+      "repository_relative_path": "tests/fixtures/historical-evidence/guizhou-notice.html",
+      "sha256": "e517ef5af83b57eea41f953e12117a677e5486cda3b7c521b9888ae5d86b004a",
+      "byte_length": 84811,
+      "media_type": "text/html",
+      "origin_reference": "outputs/p2-legal-02/p2-legal-02-run-514a72f9-0a36-4e8b-9358-73c2ebc88cae/raw.html",
+      "used_by_tests": [
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+        "tests/normalization/trusted-source-occurrence-registry.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts"
+      ],
+      "packaging_reason": "Complete original bytes required; no crop, conversion, reserialization or regeneration.",
+      "action": "COPY_EXACT"
+    },
+    {
+      "fixture_id": "guizhou-notice-snapshot",
+      "historical_role": "Original notice Snapshot; SOV identity, source binding and provenance",
+      "repository_relative_path": "tests/fixtures/historical-evidence/guizhou-notice.snapshot.json",
+      "sha256": "5092a2f889a92dcccec18116f1ab1145bc4ed52f613ab8e33afd14dad1797764",
+      "byte_length": 1012,
+      "media_type": "application/json",
+      "origin_reference": "outputs/p2-legal-02/p2-legal-02-run-514a72f9-0a36-4e8b-9358-73c2ebc88cae/snapshot.json",
+      "used_by_tests": [
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+        "tests/normalization/trusted-source-occurrence-registry.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts"
+      ],
+      "packaging_reason": "Complete original bytes required; no crop, conversion, reserialization or regeneration.",
+      "action": "COPY_EXACT"
+    },
+    {
+      "fixture_id": "guizhou-attachment-xlsx",
+      "historical_role": "Official 2025 job table; exact SHA-256, merged cells, row 4, 0351, identity/PV/PBOV/requirement reconstruction",
+      "repository_relative_path": "tests/fixtures/historical-evidence/guizhou-attachment.xlsx",
+      "sha256": "87b013e13ea78cd1de130553f203024fbd8c274479219b39ae1bd4280fc8f7ec",
+      "byte_length": 13319,
+      "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "origin_reference": "outputs/p2-legal-04/p2-legal-04-run-22ecbdab-0123-421d-994c-97a35cde4dcf/raw.xlsx",
+      "used_by_tests": [
+        "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+        "tests/normalization/trusted-source-occurrence-registry.test.ts",
+        "tests/normalization/position-identity-resolver.test.ts",
+        "tests/normalization/position-version-tracker.test.ts",
+        "tests/canonicalization/position-bound-opportunity-tracker.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts"
+      ],
+      "packaging_reason": "Complete original bytes required; no crop, conversion, reserialization or regeneration.",
+      "action": "COPY_EXACT"
+    },
+    {
+      "fixture_id": "guizhou-attachment-snapshot",
+      "historical_role": "Original attachment Snapshot; identity, authority, raw binding and provenance",
+      "repository_relative_path": "tests/fixtures/historical-evidence/guizhou-attachment.snapshot.json",
+      "sha256": "fca0071222c7d44b05c22d0d5e555d074c0aa70569ca098a8de3db2df856c3e7",
+      "byte_length": 1222,
+      "media_type": "application/json",
+      "origin_reference": "outputs/p2-legal-04/p2-legal-04-run-22ecbdab-0123-421d-994c-97a35cde4dcf/snapshot.json",
+      "used_by_tests": [
+        "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+        "tests/normalization/trusted-source-occurrence-registry.test.ts",
+        "tests/normalization/position-identity-resolver.test.ts",
+        "tests/normalization/position-version-tracker.test.ts",
+        "tests/canonicalization/position-bound-opportunity-tracker.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts"
+      ],
+      "packaging_reason": "Complete original bytes required; no crop, conversion, reserialization or regeneration.",
+      "action": "COPY_EXACT"
+    },
+    {
+      "fixture_id": "guizhou-requirement-composition",
+      "historical_role": "Original historical composition result; all 24 blockers and evidence/provenance audits",
+      "repository_relative_path": "tests/fixtures/historical-evidence/guizhou-requirement-composition.json",
+      "sha256": "a2b5dc702e75dcb944b006eca78b8d15d71855ce73502f9386eec0508f0614ad",
+      "byte_length": 141281,
+      "media_type": "application/json",
+      "origin_reference": "outputs/p2-legal-06/p2-legal-06-job-22828700101/requirement-set-composition.json",
+      "used_by_tests": [
+        "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts"
+      ],
+      "packaging_reason": "Complete original bytes required; no crop, conversion, reserialization or regeneration.",
+      "action": "COPY_EXACT"
+    }
+  ]
+}

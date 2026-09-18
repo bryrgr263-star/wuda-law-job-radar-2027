@@ -17,6 +17,16 @@ import {
   prepareSourceOccurrenceMaterialization,
   validateSourceOccurrenceVersionBinding
 } from "./source-occurrence-materializer";
+import {
+  SOVDiscoverySupportError,
+  SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION,
+  assertSOVDiscoverySupportIntegrity,
+  validatedDiscoverySupport,
+  type DiscoverySupportScope,
+  type SOVDiscoveryEvidence,
+  type SOVDiscoverySupport,
+  type SOVDiscoverySupportCommand
+} from "./source-discovery-support";
 
 export type TrustedSourceOccurrenceRole = "POSITION_BEARING" | "PACKAGE";
 
@@ -62,9 +72,63 @@ implements TrustedSourceOccurrenceVersionResolver {
     SourceOccurrenceVersionId,
     TrustedSourceOccurrenceArtifact
   >((artifact) => artifact.version.source_occurrence_version_id);
+  readonly #supports = createCanonicalArtifactRegistryAuthority<string, SOVDiscoverySupport>((support) => support.support_id);
+  readonly #supportByDiscovery = new Map<string, string>();
+  readonly #supportOptions;
 
-  constructor() {
+  constructor(options?: {
+    readonly scope: DiscoverySupportScope;
+    readonly readDiscovery?: (snapshotId: string, recordId: string) => Promise<SOVDiscoveryEvidence>;
+  }) {
+    this.#supportOptions = options;
     trustedSourceOccurrenceResolvers.add(this);
+  }
+
+  resolveSupport(supportId: string): SOVDiscoverySupport | null {
+    const support = this.#supports.resolver.resolve(supportId);
+    return support ? assertSOVDiscoverySupportIntegrity(support) : null;
+  }
+
+  resolveForDiscovery(input: TrustedSourceOccurrenceMaterializationInput): TrustedSourceOccurrenceArtifact | null {
+    const prepared = prepareSourceOccurrenceMaterialization(input.endpoint, input.extracted_record, input.snapshot);
+    const occurrence = this.#occurrencesByHash.get(prepared.identity_hash);
+    const id = occurrence && this.#versionIdsByOccurrence.get(occurrence.source_occurrence_id)?.at(-1);
+    return id ? this.resolve(id) : null;
+  }
+
+  async processDiscoverySupport(command: SOVDiscoverySupportCommand) {
+    const options = this.#supportOptions;
+    if (!options?.readDiscovery || command.schema_version !== SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION) {
+      throw new SOVDiscoverySupportError("EVIDENCE_BLOCKED", "Root-owned persisted discovery reader and supported contract are required");
+    }
+    const original = this.resolve(command.sov_id);
+    if (!original) throw new SOVDiscoverySupportError("EVIDENCE_BLOCKED", "Support target SOV is missing/orphaned");
+    if (command.source_role !== original.source_role) {
+      throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "Support source role mismatch");
+    }
+    if (this.#versionIdsByOccurrence.get(original.occurrence.source_occurrence_id)?.at(-1) !== command.sov_id) {
+      throw new SOVDiscoverySupportError("STALE_SUPPORT_WRITER", "Support target is not the current owner-issued SOV");
+    }
+    const [first, next] = await Promise.all([
+      options.readDiscovery(original.snapshot.snapshot_id, original.extracted_record.extracted_record_id),
+      options.readDiscovery(command.snapshot_id, command.extracted_record_id)
+    ]);
+    if (next.snapshot.snapshot_id !== command.snapshot_id || next.extracted_record.extracted_record_id !== command.extracted_record_id) {
+      throw new SOVDiscoverySupportError("EVIDENCE_BLOCKED", "Discovery reader returned a different exact event");
+    }
+    const support = validatedDiscoverySupport(original, first, next, options.scope);
+    if (this.#versionIdsByOccurrence.get(original.occurrence.source_occurrence_id)?.at(-1) !== command.sov_id) {
+      throw new SOVDiscoverySupportError("STALE_SUPPORT_WRITER", "SOV advanced while discovery support was being verified");
+    }
+    const discoveryKey = JSON.stringify([options.scope, support.target.source_definition_id, support.target.endpoint_id,
+      support.discovery.snapshot_id, support.discovery.extracted_record_id]);
+    const priorId = this.#supportByDiscovery.get(discoveryKey);
+    if (priorId && priorId !== support.support_id) {
+      throw new SOVDiscoverySupportError("INTEGRITY_FAILURE", "Same discovery cannot support incompatible SOVs");
+    }
+    const sealed = this.#supports.writer.seal(support.support_id, support);
+    this.#supportByDiscovery.set(discoveryKey, support.support_id);
+    return { support_created: sealed.status === "SEALED", support: sealed.artifact };
   }
 
   process(

@@ -321,7 +321,7 @@ test("unparsed, ambiguous, and domain-gap clauses each block completeness", () =
       status: "UNPARSED_CLAUSE"
     },
     {
-      source: fragment({ original: "法律专业", normalized: "法律专业" }),
+      source: fragment({ original: "年龄不超过35周岁", normalized: "年龄不超过35周岁" }),
       status: "AMBIGUOUS"
     },
     {
@@ -338,6 +338,150 @@ test("unparsed, ambiguous, and domain-gap clauses each block completeness", () =
     }));
     assert.equal(parsed.complete_requirement_set, null);
   }
+});
+
+test("numbered clauses preserve original evidence and clause-local offsets", () => {
+  const source = fragment({
+    original: "1.学历要求：本科；（二）法律专业；3）2027届",
+    normalized: "1.学历要求:本科;(二)法律专业;3)2027届",
+    locator: {
+      kind: "HTML",
+      selector: "article.requirements",
+      field_path: "requirements",
+      start_offset: 100
+    }
+  });
+  const parsed = new DeterministicRequirementParser().parse(input([source]));
+
+  assert.equal(parsed.completeness.status, "COMPLETE");
+  assert.deepEqual(parsed.facts.map((fact) => fact.dimension), [
+    "EDUCATION_LEVEL", "MAJOR", "GRADUATION_YEAR"
+  ]);
+  assert.equal(parsed.evidence[0]?.evidence_text.text, "1.学历要求：本科");
+  assert.equal(parsed.evidence[0]?.locator.start_offset, 100);
+  assert.equal(parsed.observations[1]?.original_clause?.text, "（二）法律专业");
+  assert.equal(parsed.observations[1]?.clause_locator?.start_offset, 110);
+});
+
+test("real 2027 internship clause decomposes existing typed semantics without hiding prestige review", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "1.国内外知名院校法学专业2027年应届在校本科生或研究生",
+    normalized: "1.国内外知名院校法学专业2027年应届在校本科生或研究生"
+  })]));
+  const dimensions = parsed.facts.map((fact) => fact.dimension);
+
+  assert.deepEqual(dimensions, [
+    "MAJOR", "GRADUATION_YEAR", "CANDIDATE_COHORT",
+    "EDUCATION_LEVEL", "EDUCATION_LEVEL"
+  ]);
+  assert.deepEqual(parsed.facts.filter((fact) => {
+    return fact.dimension === "EDUCATION_LEVEL";
+  }).map((fact) => fact.logic_group.operator), ["OR", "OR"]);
+  assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
+  assert.ok(parsed.observations.some((observation) => {
+    return observation.status === "DOMAIN_GAP_OBSERVED"
+      && observation.original_clause?.text.includes("知名院校");
+  }));
+});
+
+test("supported 2027 internship semantics can complete without a prestige qualifier", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "法学专业2027年应届在校本科生或研究生",
+    normalized: "法学专业2027年应届在校本科生或研究生"
+  })]));
+
+  assert.equal(parsed.completeness.status, "COMPLETE");
+  assert.equal(parsed.facts.length, 5);
+});
+
+test("2028 and later is a typed graduation lower bound rather than a temporary string", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "法学专业2028届及之后的在校本科生或研究生",
+    normalized: "法学专业2028届及之后的在校本科生或研究生"
+  })]));
+  const graduation = parsed.facts.find((fact) => fact.dimension === "GRADUATION_YEAR");
+
+  assert.equal(graduation?.operator, "AT_LEAST");
+  assert.deepEqual(graduation?.value, { kind: "INTEGER", value: 2028, unit: "year" });
+  assert.equal(parsed.completeness.status, "COMPLETE");
+});
+
+test("lawyer experience range and practice certificate remain distinct typed facts", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "2.拥有3-5年律师工作经验，并持有律师执业证",
+    normalized: "2.拥有3-5年律师工作经验,并持有律师执业证"
+  })]));
+  const experience = parsed.facts.find((fact) => fact.dimension === "WORK_EXPERIENCE");
+  const qualification = parsed.facts.find((fact) => {
+    return fact.dimension === "PROFESSIONAL_QUALIFICATION";
+  });
+
+  assert.equal(experience?.value.kind, "WORK_EXPERIENCE");
+  if (experience?.value.kind === "WORK_EXPERIENCE") {
+    assert.equal(experience.value.minimum_years, 3);
+    assert.equal(experience.value.maximum_years, 5);
+  }
+  assert.equal(qualification?.value.kind, "PROFESSIONAL_QUALIFICATION");
+  if (qualification?.value.kind === "PROFESSIONAL_QUALIFICATION") {
+    assert.equal(qualification.value.qualification_type,
+      "LAWYER_PRACTICE_CERTIFICATE");
+    assert.notEqual(qualification.value.qualification_type,
+      "LEGAL_PROFESSIONAL_QUALIFICATION");
+  }
+  assert.equal(parsed.completeness.status, "COMPLETE");
+});
+
+test("lawyer bachelor and master law education keeps both education scopes", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "1.拥有国内外知名院校的法学专业本硕学历",
+    normalized: "1.拥有国内外知名院校的法学专业本硕学历"
+  })]));
+  const majorFacts = parsed.facts.filter((fact) => fact.dimension === "MAJOR");
+
+  assert.deepEqual(majorFacts.map((fact) => fact.subject_scope), [
+    "BACHELOR", "MASTER"
+  ]);
+  assert.ok(majorFacts.every((fact) => {
+    return fact.value.kind === "CODE" && fact.value.code === "LAW_STUDIES";
+  }));
+  assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
+  assert.ok(parsed.observations.some((observation) => {
+    return observation.status === "DOMAIN_GAP_OBSERVED"
+      && observation.original_clause?.text.includes("知名院校");
+  }));
+});
+
+test("legal-thinking and subjective criteria never become MAJOR facts", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "3.在校期间成绩优秀，具有极强的法律思维和运用能力",
+    normalized: "3.在校期间成绩优秀,具有极强的法律思维和运用能力"
+  })]));
+
+  assert.equal(parsed.facts.some((fact) => fact.dimension === "MAJOR"), false);
+  assert.equal(parsed.observations[0]?.status, "DOMAIN_GAP_OBSERVED");
+  assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
+});
+
+test("specialized legal experience remains review without a fabricated RequirementFact", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "5.具有商事诉讼/仲裁案件出庭并担任主要代理人的经验，具备独立出庭代理能力",
+    normalized: "5.具有商事诉讼/仲裁案件出庭并担任主要代理人的经验,具备独立出庭代理能力"
+  })]));
+
+  assert.equal(parsed.facts.length, 0);
+  assert.equal(parsed.observations[0]?.status, "DOMAIN_GAP_OBSERVED");
+  assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
+});
+
+test("internship availability remains review without a fabricated RequirementFact", () => {
+  const parsed = new DeterministicRequirementParser().parse(input([fragment({
+    original: "6.每周实习至少4天，且能完整实习3个月或以上",
+    normalized: "6.每周实习至少4天,且能完整实习3个月或以上"
+  })]));
+
+  assert.equal(parsed.facts.length, 0);
+  assert.equal(parsed.observations[0]?.status, "DOMAIN_GAP_OBSERVED");
+  assert.equal(parsed.completeness.status, "REVIEW_REQUIRED");
 });
 
 test("missing expected source and attachment blockers produce INCOMPLETE", () => {

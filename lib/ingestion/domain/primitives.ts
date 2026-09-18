@@ -107,6 +107,8 @@ export type LegalEmploymentRelevanceAssessmentId =
   BrandedString<"LegalEmploymentRelevanceAssessmentId">;
 export type LegalEmploymentRelevanceFindingId =
   BrandedString<"LegalEmploymentRelevanceFindingId">;
+export type PresentationDecisionId = BrandedString<"PresentationDecisionId">;
+export type PresentationReadModelId = BrandedString<"PresentationReadModelId">;
 
 export type IdentityHash = BrandedString<"IdentityHash">;
 export type SemanticHash = BrandedString<"SemanticHash">;

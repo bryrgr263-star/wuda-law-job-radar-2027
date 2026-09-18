@@ -1,0 +1,987 @@
+{
+  "schema_version": "consolidation-staging-audit/1.0.0",
+  "branch": "codex/ingestion-foundation",
+  "parent_sha": "7de0554d1fb23db8453376099f165fd4d0af33ee",
+  "fully_tested_export_tree": "374364de9379f3354a65f925ca7220ec946e092f",
+  "executable_delta_since_tested_export": [],
+  "final_changes_beyond_tested_export": "Documentation only; executable code, tests, fixture bytes, attributes and lockfile are unchanged.",
+  "scope": "Versionization of existing approved成果; no Scheduler/Actions/Web/continuous authorization/deployment",
+  "original_dirty_entries": 134,
+  "staged_total": 156,
+  "categories": {
+    "NEW_INFRASTRUCTURE": 9,
+    "NEW_SOURCE": 61,
+    "DOCS": 15,
+    "NEW_FIXTURES": 9,
+    "TRACKED_MODIFIED": 27,
+    "NEW_TESTS_AND_HELPERS": 35
+  },
+  "privacy_exception": "Already-public official business contact information and original document author metadata only; no private candidate materials or credentials are packaged.",
+  "new_binary_fixtures": [
+    {
+      "path": "tests/fixtures/historical-evidence/guizhou-attachment.xlsx",
+      "bytes": 13319,
+      "sha256": "87b013e13ea78cd1de130553f203024fbd8c274479219b39ae1bd4280fc8f7ec",
+      "reason": "Exact original workbook required by seven existing historical tests."
+    }
+  ],
+  "staged_audit": {
+    "secret_literal_scan": "NO_MATCHES",
+    "forbidden_runtime_cache_state_paths": "NONE",
+    "protected_old_production_diff": "ZERO",
+    "production_import_to_test_fixtures": "ZERO",
+    "historical_runtime_to_old_outputs": "ZERO",
+    "accidental_large_binary": "NONE"
+  },
+  "verification": {
+    "total_tests": 990,
+    "pass": 989,
+    "fail": 1,
+    "exit_code": 1,
+    "baseline_failure": "tests/normalization/source-occurrence-materializer-parity.test.ts:434 / assertion439",
+    "new_regression": 0,
+    "typescript": "PASS",
+    "historical_and_guard_group": "153/153 PASS",
+    "p1": "170/170 PASS",
+    "sov_presentation_architecture_network_group": "59/59 PASS",
+    "fresh_clone": "MUST BE VERIFIED AFTER CONDITIONAL COMMIT; not preclaimed here"
+  },
+  "entries": [
+    {
+      "status": "A",
+      "path": ".gitattributes",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "app/api/presentation/v1/[...segments]/route.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "docs/authoritative-current-presentation-identity-v2-design.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/authoritative-current-presentation-identity-v2-verification.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/fresh-clone-historical-evidence-portability.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/p2-legal-08b-architecture-alignment-requirementset-migration.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/p2-legal-08b-eligibility-business-rules.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/production-persistence-design.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/production-persistence-phase-1-recovery.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/scheduler-prerequisite-identity-probe.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/versioned-executability-baseline-audit.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/versioned-executability-baseline-final-staging.json",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/versioned-executability-baseline-inventory.json",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/versioned-executability-baseline-verification.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/zero-cost-git-persistence-layout.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/zero-cost-git-raw-boundary.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "docs/zero-cost-production-composition-root.md",
+      "category": "DOCS",
+      "boundary": "DOCUMENTATION"
+    },
+    {
+      "status": "A",
+      "path": "fixtures/p2-04/ntsc-talent-list.synthetic.html",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/domain/index.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/ingestion/domain/presentation.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/domain/primitives.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/domain/requirements.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/normalization/index.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/ingestion/normalization/source-discovery-support.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/normalization/trusted-source-occurrence-registry.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/persistence/repositories.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/persistence/sqlite-shadow-persistence.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "SHADOW_REFERENCE"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/pipeline/approved-requirement-projector.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/pipeline/index.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/ingestion/pipeline/presentation-decision.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/ingestion/pipeline/presentation-persistence.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/ingestion/pipeline/presentation-read-model.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/ingestion/pipeline/presentation-semantic-projection.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/pipeline/trusted-artifact-chain.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/pipeline/trusted-candidate-evidence.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/ingestion/pipeline/trusted-chain-restoration.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/registry/source-registry.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "lib/ingestion/requirements/deterministic-requirement-parser.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-04/beijing-first-live-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-04/index.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-04/ntsc-official-html-adapter.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-04/ntsc-offline-composition.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-04/run-beijing-first-live-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-acq-01/approved-official-canary-transport.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-acq-01/beijing-html-xlsx-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-acq-01/index.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-01/guizhou-legal-canary-admission-preflight.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-02/guizhou-notice-observation-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-02/run-guizhou-notice-observation-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-03/guizhou-attachment-admission-preflight.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-04/guizhou-attachment-observation-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-04/run-guizhou-attachment-observation-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-05/guizhou-legal-xlsx-requirement-adapter.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-05/run-guizhou-legal-xlsx-requirement-extraction.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-06/guizhou-legal-requirement-set-composer.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-06/run-guizhou-legal-requirement-set-composition.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-07/guizhou-requirement-blocker-audit.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-07/run-guizhou-requirement-blocker-audit.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-08b/index.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/p2-legal-08b/target-source-composition.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-2027-haier/haier-2027-source.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-2027-haier/haier-2027-trusted-run.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-2027-haier/index.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-2027-haier/run-haier-2027-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-2027-zhenghan/index.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-2027-zhenghan/run-zhenghan-2027-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-2027-zhenghan/zhenghan-2027-source.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-2027-zhenghan/zhenghan-2027-trusted-run.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-legal-canary/run-shenzhen-bankruptcy-notice-reobservation-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-legal-canary/run-shenzhen-bankruptcy-observation-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/live-canary/real-legal-canary/shenzhen-bankruptcy-observation-canary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "CANARY_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/presentation-read-api/api.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/presentation-read-api/index.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/presentation-read-api/runtime.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/presentation-read-api/shadow-runtime.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "SHADOW_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/candidate-evidence-object-boundary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/contracts.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/git-append-only-execution-store.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/git-raw-object-persistence.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/git-raw-sqlite-index.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/git-source-registry-persistence.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/index.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/postgres-js-executor.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/postgres-presentation-read-repository.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/postgres-production-persistence.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/production-journal.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/raw-object-boundary.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/source-owner-rehydration.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/supabase-private-raw-storage.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "lib/production-persistence/zero-cost-production-composition-root.ts",
+      "category": "NEW_SOURCE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "package.json",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "M",
+      "path": "pnpm-lock.yaml",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "production/persistence/migrations/001_trusted_chain_foundation.up.sql",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "production/persistence/migrations/002_source_registry_admission.up.sql",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "production/persistence/migrations/003_raw_acquisition_source_facts.up.sql",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "production/persistence/migrations/004_artifact_ledger.up.sql",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "production/persistence/migrations/005_atomic_command_journal.up.sql",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "production/persistence/migrations/006_candidate_evidence_presentation_reader.up.sql",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "EXISTING_BASELINE_BOUNDARY"
+    },
+    {
+      "status": "A",
+      "path": "shadow/migrations/003_presentation_read_model.sql",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "SHADOW_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "shadow/migrations/004_presentation_identity_v2.sql",
+      "category": "NEW_INFRASTRUCTURE",
+      "boundary": "SHADOW_REFERENCE"
+    },
+    {
+      "status": "A",
+      "path": "tests/architecture/historical-evidence-boundary.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/architecture/ingestion-boundary.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/canonicalization/position-bound-opportunity-tracker.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/fixtures/historical-evidence/beijing-attachment.snapshot.json",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/fixtures/historical-evidence/guizhou-attachment.snapshot.json",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/fixtures/historical-evidence/guizhou-attachment.xlsx",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/fixtures/historical-evidence/guizhou-notice.html",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/fixtures/historical-evidence/guizhou-notice.snapshot.json",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/fixtures/historical-evidence/guizhou-requirement-composition.json",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/fixtures/historical-evidence/manifest.json",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/fixtures/historical-evidence/README.md",
+      "category": "NEW_FIXTURES",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/helpers/historical-evidence-read-guard.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/helpers/historical-evidence.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/helpers/historical-evidence.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/integration/phase-1-pipeline.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/normalization/position-identity-resolver.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/normalization/position-version-tracker.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/normalization/source-discovery-support.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/normalization/source-occurrence-materializer-parity.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/normalization/trusted-source-occurrence-registry.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-04/beijing-first-live-canary.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-04/ntsc-official-html-adapter.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-acq-01/official-html-xlsx-canary.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-legal-01/guizhou-legal-canary-admission-preflight.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-legal-03/guizhou-attachment-admission-preflight.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/p2-legal-08b/target-source-composition.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/persistence/presentation-fixture.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/persistence/presentation-shadow.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/persistence/shadow-migration.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/persistence/shadow-test-database.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/pipeline/approved-requirement-projection-coverage.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/pipeline/position-bound-phase-fixture.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/pipeline/presentation-decision.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/pipeline/trusted-candidate-evidence.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/pipeline/trusted-chain-restoration.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/presentation-read-api/presentation-api.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/architecture-boundary.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/git-append-only-execution-store.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/git-raw-object-persistence.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/journal-contract.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/migration-005-hardening.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/migration-security.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/phase-1-contracts.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/phase-3-contracts.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/zero-cost-production-architecture.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/production-persistence/zero-cost-production-composition-root.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/real-2027-haier/haier-2027-canary.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/real-2027-zhenghan/zhenghan-2027-source.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "A",
+      "path": "tests/real-legal-canary/shenzhen-bankruptcy-observation-canary.test.ts",
+      "category": "NEW_TESTS_AND_HELPERS",
+      "boundary": "TEST_ONLY"
+    },
+    {
+      "status": "M",
+      "path": "tests/requirements/requirement-parser.test.ts",
+      "category": "TRACKED_MODIFIED",
+      "boundary": "TEST_ONLY"
+    }
+  ]
+}

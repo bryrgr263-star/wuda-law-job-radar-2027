@@ -1,10 +1,8 @@
 import "../helpers/network-guard";
+import { readHistoricalEvidenceBytes, readHistoricalEvidenceJson } from "../helpers/historical-evidence";
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
 
 import {
   InMemoryTrustedSourceOccurrenceTracker,
@@ -26,7 +24,6 @@ import { GUIZHOU_LEGAL_CANARY_SOURCE_DEFINITION_ID } from "../../lib/live-canary
 import { GUIZHOU_ATTACHMENT_EXPECTED_MIME } from "../../lib/live-canary/p2-legal-04/guizhou-attachment-observation-canary";
 import type { RawBlob } from "../../lib/ingestion";
 
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const archived = archivedEvidence();
 const announcementRecord = createP2Legal08bAnnouncementRecord(
   archived.noticeBytes,
@@ -141,25 +138,11 @@ function targetExtractedRecord() {
 }
 
 function archivedEvidence() {
-  const noticeDirectory = path.join(
-    repositoryRoot,
-    "outputs/p2-legal-02/p2-legal-02-run-514a72f9-0a36-4e8b-9358-73c2ebc88cae"
-  );
-  const attachmentDirectory = path.join(
-    repositoryRoot,
-    "outputs/p2-legal-04/p2-legal-04-run-22ecbdab-0123-421d-994c-97a35cde4dcf"
-  );
   return {
-    noticeBytes: new Uint8Array(readFileSync(path.join(noticeDirectory, "raw.html"))),
-    noticeSnapshot: JSON.parse(readFileSync(
-      path.join(noticeDirectory, "snapshot.json"),
-      "utf8"
-    )) as Snapshot,
-    attachmentBytes: new Uint8Array(readFileSync(path.join(attachmentDirectory, "raw.xlsx"))),
-    attachmentSnapshot: JSON.parse(readFileSync(
-      path.join(attachmentDirectory, "snapshot.json"),
-      "utf8"
-    )) as Snapshot
+    noticeBytes: new Uint8Array(readHistoricalEvidenceBytes("guizhou-notice-html")),
+    noticeSnapshot: readHistoricalEvidenceJson<Snapshot>("guizhou-notice-snapshot"),
+    attachmentBytes: new Uint8Array(readHistoricalEvidenceBytes("guizhou-attachment-xlsx")),
+    attachmentSnapshot: readHistoricalEvidenceJson<Snapshot>("guizhou-attachment-snapshot")
   };
 }
 

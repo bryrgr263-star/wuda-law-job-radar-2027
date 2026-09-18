@@ -126,6 +126,12 @@ export function projectApprovedRequirements(input: {
       observations.push(observation);
       continue;
     }
+    if (observation.clause_role === "PREFERRED"
+        || observation.clause_role === "INFORMATIONAL"
+        || observation.clause_role === "UNKNOWN") {
+      observations.push({ ...observation, requirement_fact_ids: [] });
+      continue;
+    }
     projected.push(projectUnresolvedCondition(input, context, observation));
     observations.push({ ...observation, requirement_fact_ids: [] });
   }
@@ -418,7 +424,7 @@ function projectResolvedCondition(
     context_binding_ids: [context.binding.requirement_context_binding_id],
     source_reference_ids: [context.sourceReference.requirement_source_reference_id],
     evidence_fragment_ids: observation.evidence_fragment_ids,
-    source_locator: structuredClone(context.surface.locator),
+    source_locator: observationLocator(observation, context),
     source_order: sourceOrder(observation),
     parser_version: CR12_STRUCTURED_REQUIREMENT_PARSER_VERSION,
     resolver_version: input.projector_version,
@@ -440,14 +446,18 @@ function projectUnresolvedCondition(
   context: SurfaceProjectionContext,
   observation: RequirementObservation
 ): ProjectedCondition {
+  if (observation.clause_role !== "MANDATORY") {
+    throw new Error("Only mandatory unresolved observations may become CR#12 conditions");
+  }
   const suffix = sha256(`${context.surface.source_surface_id}\0${observation.requirement_observation_id}`);
   const credentialApplicability: CandidateCredentialApplicability = {
     candidate_credential_applicability_id:
       branded<CandidateCredentialApplicabilityId>(`credential-applicability:${suffix}`),
     mode: "UNRESOLVED",
-    raw_scope: context.fragment.observed_value_state === "TEXT"
-      ? context.fragment.original_text
-      : undefined,
+    raw_scope: observation.original_clause
+      ?? (context.fragment.observed_value_state === "TEXT"
+        ? context.fragment.original_text
+        : undefined),
     evidence_fragment_ids: observation.evidence_fragment_ids,
     certainty: "UNRESOLVED",
     parser_version: CR12_STRUCTURED_REQUIREMENT_PARSER_VERSION
@@ -456,9 +466,10 @@ function projectUnresolvedCondition(
     candidate_state_applicability_id:
       branded<CandidateStateApplicabilityId>(`state-applicability:${suffix}`),
     mode: "UNRESOLVED",
-    raw_scope: context.fragment.observed_value_state === "TEXT"
-      ? context.fragment.original_text
-      : undefined,
+    raw_scope: observation.original_clause
+      ?? (context.fragment.observed_value_state === "TEXT"
+        ? context.fragment.original_text
+        : undefined),
     evidence_fragment_ids: observation.evidence_fragment_ids,
     certainty: "UNRESOLVED",
     parser_version: CR12_STRUCTURED_REQUIREMENT_PARSER_VERSION
@@ -467,7 +478,7 @@ function projectUnresolvedCondition(
     condition: {
       requirement_condition_id: branded<RequirementConditionId>(`condition:${suffix}`),
       opportunity_version_id: observation.opportunity_version_id,
-      modality: observation.clause_role === "PREFERRED" ? "PREFERRED" : "MANDATORY",
+      modality: "MANDATORY",
       resolution_state: "UNRESOLVED",
       representation_kind: "UNRESOLVED",
       blocking_observation_ids: [observation.requirement_observation_id],
@@ -478,7 +489,7 @@ function projectUnresolvedCondition(
       context_binding_ids: [context.binding.requirement_context_binding_id],
       source_reference_ids: [context.sourceReference.requirement_source_reference_id],
       evidence_fragment_ids: observation.evidence_fragment_ids,
-      source_locator: structuredClone(context.surface.locator),
+      source_locator: observationLocator(observation, context),
       source_order: sourceOrder(observation),
       parser_version: CR12_STRUCTURED_REQUIREMENT_PARSER_VERSION,
       resolver_version: input.projector_version,
@@ -815,6 +826,13 @@ function requireResolvedTree(result: Cr12LogicExpressionResult) {
 
 function sourceOrder(observation: RequirementObservation) {
   return Number.parseInt(sha256(observation.requirement_observation_id).slice(0, 8), 16);
+}
+
+function observationLocator(
+  observation: RequirementObservation,
+  context: SurfaceProjectionContext
+) {
+  return structuredClone(observation.clause_locator ?? context.surface.locator);
 }
 
 function normalized(text: string, version: string) {

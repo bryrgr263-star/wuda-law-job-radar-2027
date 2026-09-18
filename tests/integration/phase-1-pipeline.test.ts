@@ -10,7 +10,6 @@ import {
   ConservativeCanonicalizer,
   DeterministicEligibilityEngine,
   DeterministicRequirementParser,
-  EligibilityInputError,
   FixtureAdapter,
   FixtureTransport,
   InMemoryRawBlobRepository,
@@ -328,7 +327,7 @@ function track(
   return records.map((record) => tracker.process(endpoint, record));
 }
 
-test("one Fixture Source remains NOT_ASSESSED when Requirement completeness blocks", async () => {
+test("one Fixture Source reaches Eligibility when explicit requirements are complete", async () => {
   const registry = createRegistry([fixtures.html]);
   const endpoint = registry.listCollectableEndpoints()[0];
   const collection = await collect(endpoint);
@@ -384,25 +383,17 @@ test("one Fixture Source remains NOT_ASSESSED when Requirement completeness bloc
   assert.equal(requirements.facts.length, requirements.evidence.length);
   assert.equal(requirements.evidence[0].snapshot_id, collection.snapshots[0].snapshot_id);
   assert.match(requirements.evidence[0].evidence_text.text, /法律硕士/);
-  assert.equal(requirements.completeness.status, "REVIEW_REQUIRED");
-  assert.equal(requirements.complete_requirement_set, null);
+  assert.equal(requirements.completeness.status, "COMPLETE");
+  assert.notEqual(requirements.complete_requirement_set, null);
 
   const profile = candidate();
-  let assessmentCreated = false;
-  assert.throws(() => {
-    const assessment = new DeterministicEligibilityEngine().evaluate({
-      opportunity_version: canonicalized.opportunity_version,
-      // @ts-expect-error A review-required set cannot enter Eligibility.
-      complete_requirement_set: requirements.requirement_set,
-      candidate_profile: profile,
-      assessed_at: observedAt
-    });
-    assessmentCreated = assessment !== undefined;
-  }, (error) => {
-    return error instanceof EligibilityInputError
-      && error.code === "REQUIREMENT_SET_INCOMPLETE";
+  const assessment = new DeterministicEligibilityEngine().evaluate({
+    opportunity_version: canonicalized.opportunity_version,
+    complete_requirement_set: requirements.complete_requirement_set!,
+    candidate_profile: profile,
+    assessed_at: observedAt
   });
-  assert.equal(assessmentCreated, false);
+  assert.equal(assessment.result, "ELIGIBLE");
 
   const database = createMigratedShadowDatabase();
   const persistence = new SqliteShadowPersistence(database);

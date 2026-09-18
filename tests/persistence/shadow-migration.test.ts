@@ -17,6 +17,11 @@ const expectedBusinessTables = [
   "shadow_opportunity_version_sources",
   "shadow_opportunity_versions",
   "shadow_opportunity_candidates",
+  "shadow_presentation_decisions",
+  "shadow_presentation_read_models",
+  "shadow_presentation_v2_decisions",
+  "shadow_presentation_v2_migration_audits",
+  "shadow_presentation_v2_read_models",
   "shadow_organizations",
   "shadow_recruitment_endpoints",
   "shadow_requirement_evidence",
@@ -51,7 +56,9 @@ test("shadow migration is idempotent and records its isolated migration id", () 
 
   assert.deepEqual(migrations, [
     "001_shadow_persistence",
-    "002_opportunity_recall"
+    "002_opportunity_recall",
+    "003_presentation_read_model",
+    "004_presentation_identity_v2"
   ]);
   database.close();
 });

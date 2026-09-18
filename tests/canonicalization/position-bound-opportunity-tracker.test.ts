@@ -1,11 +1,9 @@
 import "../helpers/network-guard";
+import { readHistoricalEvidenceBytes, readHistoricalEvidenceJson } from "../helpers/historical-evidence";
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
 
 import {
   InMemoryPositionBoundOpportunityTracker,
@@ -54,7 +52,6 @@ import {
   createGuizhouLegalRequirementEndpoint
 } from "../../lib/live-canary/p2-legal-05/guizhou-legal-xlsx-requirement-adapter";
 
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const baseObservedAt = "2026-09-08T12:00:00+08:00";
 
 type PositionClaim =
@@ -1089,18 +1086,8 @@ test("Phase E materialization remains offline", async () => {
 });
 
 function targetSource(): PositionIdentityResolutionInput {
-  const executionIndex = JSON.parse(readFileSync(path.join(
-    repositoryRoot,
-    "outputs/p2-legal-04/attachment-observation-canary-execution.json"
-  ), "utf8")) as {
-    readonly report: { readonly raw: { readonly local_artifact: string } };
-  };
-  const rawPath = executionIndex.report.raw.local_artifact;
-  const rawBytes = new Uint8Array(readFileSync(rawPath));
-  const targetSnapshot = JSON.parse(readFileSync(
-    path.join(path.dirname(rawPath), "snapshot.json"),
-    "utf8"
-  )) as Snapshot;
+  const rawBytes = new Uint8Array(readHistoricalEvidenceBytes("guizhou-attachment-xlsx"));
+  const targetSnapshot = readHistoricalEvidenceJson<Snapshot>("guizhou-attachment-snapshot");
   const hash = branded<RawContentSha256>(sha256Bytes(rawBytes));
   const rawBlob: RawBlob = {
     raw_blob_id: branded<RawBlobId>(`sha256:${hash}`),

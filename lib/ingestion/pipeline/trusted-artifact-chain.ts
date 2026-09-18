@@ -37,6 +37,8 @@ import {
 import {
   InMemoryTrustedCandidateEvidenceTracker,
   type CandidateProfileEvidenceMaterializationCommand,
+  type CandidateEvidenceIssuanceResult,
+  type IssueCandidateEvidenceCommand,
   type TrustedCandidateEvidenceBatch
 } from "./trusted-candidate-evidence";
 import {
@@ -53,6 +55,19 @@ export interface TrustedPredicateResolutionResolver {
 
 export interface TrustedEligibilityAssessmentResolver {
   resolve(eligibilityAssessmentId: string): PositionBoundEligibilityAssessment | null;
+}
+
+const trustedEligibilityAssessmentResolvers = new WeakSet<object>();
+
+export function assertTrustedEligibilityAssessmentResolver(
+  resolver: TrustedEligibilityAssessmentResolver
+) {
+  if (!trustedEligibilityAssessmentResolvers.has(resolver as object)) {
+    throw new Error(
+      "Eligibility assessment resolver must be composition-root controlled"
+    );
+  }
+  return resolver;
 }
 
 export interface TrustedSourceCompositionCommand {
@@ -78,6 +93,7 @@ export interface TrustedEligibilityAssessmentCommand
 
 export interface TrustedArtifactChain {
   readonly candidate_evidence: {
+    issue(command: IssueCandidateEvidenceCommand): CandidateEvidenceIssuanceResult;
     materialize_claimed(command: CandidateProfileEvidenceMaterializationCommand):
       TrustedCandidateEvidenceBatch;
     materialize_synthetic_fixture(
@@ -90,6 +106,7 @@ export interface TrustedArtifactChain {
       import("../domain").SourceCompositionResult;
     resolve(id: SourceCompositionResultId): import("../domain").SourceCompositionResult | null;
   };
+  readonly source_composition_resolver: import("./position-bound-source-composition").TrustedSourceCompositionResolver;
   readonly requirement_projections: {
     materialize(sourceCompositionId: SourceCompositionResultId): RequirementProjectionArtifact;
     resolve(id: string): RequirementProjectionArtifact | null;
@@ -99,6 +116,7 @@ export interface TrustedArtifactChain {
       PositionBoundRequirementSetMaterializationResult;
     resolve(id: string): PositionBoundRequirementSetVersion | null;
   };
+  readonly requirement_set_resolver: import("./position-bound-requirement-set").TrustedRequirementSetVersionResolver;
   readonly predicate_resolutions: {
     materialize(command: TrustedPredicateResolutionCommand):
       PositionBoundPredicateResolutionResult;
@@ -175,9 +193,13 @@ export function createTrustedArtifactChain(
         : null;
     }
   });
+  trustedEligibilityAssessmentResolvers.add(assessmentResolver as object);
 
   const chain: TrustedArtifactChain = {
     candidate_evidence: Object.freeze({
+      issue(command: IssueCandidateEvidenceCommand) {
+        return candidateEvidence.issue(command);
+      },
       materialize_claimed(command: CandidateProfileEvidenceMaterializationCommand) {
         return candidateEvidence.materializeClaimedProfile(command);
       },
@@ -198,6 +220,7 @@ export function createTrustedArtifactChain(
         return sourceCompositions.resolve(id);
       }
     }),
+    source_composition_resolver: sourceCompositions,
     requirement_projections: Object.freeze({
       materialize(sourceCompositionId: SourceCompositionResultId) {
         return projections.process(sourceCompositionId);
@@ -235,6 +258,7 @@ export function createTrustedArtifactChain(
         return requirementSets.resolve(id);
       }
     }),
+    requirement_set_resolver: requirementSets,
     predicate_resolutions: Object.freeze({
       materialize(command: TrustedPredicateResolutionCommand) {
         const graph = trustedPbovResolver.resolve(command.opportunity_version_id);
@@ -346,6 +370,9 @@ export function createTrustedArtifactChain(
       }
     })
   };
+  trustedEligibilityAssessmentResolvers.add(
+    chain.eligibility_assessments as object
+  );
   return deepFreeze(chain);
 }
 

@@ -1,0 +1,2820 @@
+{
+  "identity": {
+    "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+    "source_definition_id": "source-cn-guizhou-rst-public-institution-recruitment",
+    "job_code": "22828700101",
+    "title": "助理研究员1",
+    "organization": "贵州省法治研究服务保障中心"
+  },
+  "requirement_set": {
+    "requirement_set_id": "requirement-set:efe9fa79e9acc91014757ad9a7314d500b5eadab172d7702b5c8b702277663c1",
+    "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+    "evidence_fragments": [
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "O4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[O4].job_note"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "需到男犯监狱、男性戒毒场所开展调研工作。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "需到男犯监狱、男性戒毒场所开展调研工作。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:09d42afc81781b9bab73af6492061fb8494c0466139143158103962eeda2ed4e",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(12)",
+          "field_path": "announcement.requirements.political-stance-and-beliefs"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "2.具有正确的政治立场、政治态度、理想信念和思想品德。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "2.具有正确的政治立场、政治态度、理想信念和思想品德。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:2230223b186651ecef6eb642f14b6ccf146d4b9499496107e4a3936f55dc7099",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(92)",
+          "field_path": "announcement.requirements.active-duty-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "4.现役军人；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "4.现役军人;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:254c0b3a2b45fb5ad0b2f42f17f5936638441d43051dfdeb68d95b034181ce08",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(90)",
+          "field_path": "announcement.requirements.directed-graduate-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "2.定向到具体行业或单位的当年度毕业生；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "2.定向到具体行业或单位的当年度毕业生;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:2bcb206adfddfaf22a7b10083e9f1a59ae8a37d9e9424c990c600ccc0b19770e",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(13)",
+          "field_path": "announcement.requirements.conduct-and-integrity"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "3.遵纪守法，诚实守信，品行端正、人格健全。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "3.遵纪守法,诚实守信,品行端正、人格健全。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:2e7d08bcb0a38967d436238c6f2ed9668b42b2676791d89577fd68577c5402e1",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "M4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[M4].bachelor_segment"
+        },
+        "academic_program_directory": {
+          "directory_namespace": "普通高等学校本科专业目录",
+          "directory_version": "2024年"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "法学类",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "法学类",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:3f554cbb4e54ea8695d4aa12eaa2e975d32820c234805fad7ec92f395928c654",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(98)",
+          "field_path": "announcement.requirements.recruitment-integrity-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "10.在事业单位公开招聘中被认定有舞弊等严重违反聘用纪律行为的人员，以及在各级各类事业单位公开招聘中因违反《事业单位公开招聘违纪违规行为处理规定》被记入事业单位公开招聘应聘人员诚信档案的人员;",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "10.在事业单位公开招聘中被认定有舞弊等严重违反聘用纪律行为的人员,以及在各级各类事业单位公开招聘中因违反《事业单位公开招聘违纪违规行为处理规定》被记入事业单位公开招聘应聘人员诚信档案的人员;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:491fb93aebe850b5fa8f6decca26cd9074094a905f228efbedf7ca924697e99a",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(94)",
+          "field_path": "announcement.requirements.dismissed-public-office-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "6.被开除公职的人员；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "6.被开除公职的人员;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:5328746949d5f93f80eb490e254647521d4f2d9d1e31ff01f39f820417f6bd6b",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(14)",
+          "field_path": "announcement.requirements.willingness-and-responsibility"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "4.安心应聘岗位工作，有较强的事业心和责任感。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "4.安心应聘岗位工作,有较强的事业心和责任感。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:560dc86157bb2cd5c9007b20cb7c6b6b6c2010c15a72bca85472c79141a377f4",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(99)",
+          "field_path": "announcement.requirements.serious-dishonesty-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "11.人民法院认定为失信被执行人的或经有关政府行政主管部门认定存在严重违法失信行为的人员；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "11.人民法院认定为失信被执行人的或经有关政府行政主管部门认定存在严重违法失信行为的人员;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:5e6c76e7c9f2678b50c6711ab755897c765e0a7b100b3575f31dda8b804081f8",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(96)",
+          "field_path": "announcement.requirements.qualification-proof-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "8.截止考察环节未能提交招聘岗位所需资格条件的相关证明材料的人员；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "8.截止考察环节未能提交招聘岗位所需资格条件的相关证明材料的人员;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:68d936ab7a34454a982ff1f10a81403432d0caa4fed0fca4e3bc324c3a7b908e",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(15)",
+          "field_path": "announcement.requirements.knowledge-and-work-ability"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "5.具有胜任应聘岗位需要的相关专业知识（含科学素质）和工作能力。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "5.具有胜任应聘岗位需要的相关专业知识(含科学素质)和工作能力。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:8c053ff798f35a0b58884d0bdcd2692c4038cf4212fc35e87ad3fa43f5918bcc",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(95)",
+          "field_path": "announcement.requirements.disciplinary-and-performance-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "7.曾因贪污、行贿受贿、泄露国家机密等原因受到过党纪、政纪处分或近三年在机关、事业单位年度考核中曾被确定为“不称职”、“不合格”的人员；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "7.曾因贪污、行贿受贿、泄露国家机密等原因受到过党纪、政纪处分或近三年在机关、事业单位年度考核中曾被确定为“不称职”、“不合格”的人员;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:8e5d585b2ffa41965b341b7d882c33b39551dbc3c2a196633ca85f2644c97332",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "N4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[N4].other_qualification_full"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "1.限男性；\n2.具有A类法律职业资格证书。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "1.限男性;\n2.具有A类法律职业资格证书。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:915ad61437701f66a4e789a1a964f3861723f079c140249e6b059acc619949ce",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "N4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[N4].gender_clause"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "限男性",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "限男性",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:9282a1e7741c39ee054943b583545488c8c5690e487fdbfd5deb30eab58b61e2",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(93)",
+          "field_path": "announcement.requirements.criminal-punishment-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "5.曾因犯罪受过刑事处罚或受过劳动教养的人员；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "5.曾因犯罪受过刑事处罚或受过劳动教养的人员;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:9a4e78bea1f346c340e0797d4d0e7b63c6855103125d8ed9dc753133c235647a",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(11)",
+          "field_path": "announcement.requirements.nationality-and-constitutional-support"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "1.具有中华人民共和国国籍，拥护中华人民共和国宪法，具有良好的思想政治素质。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "1.具有中华人民共和国国籍,拥护中华人民共和国宪法,具有良好的思想政治素质。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:a5e86ccac4be2a8891054f8449cef79f59f9aa1fb9d3596b35809562a04fa2aa",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "N4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[N4].legal_professional_qualification_clause"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "具有A类法律职业资格证书",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "具有A类法律职业资格证书",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:bcd7a45d1dfd09abe9e13d901bc0d7fb1b656c53b8276b0d3ce5726d05f34eb1",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(16)",
+          "field_path": "announcement.requirements.tiered-age-rule"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "6.年龄在18周岁以上（2007年2月17日以前出生），35周岁以下（1989年2月21日以后出生）。硕士研究生年龄放宽到40周岁（1984年2月21日以后出生），具有博士学位或高级专业技术职务的年龄放宽到45周岁（1979年2月21日以后出生）。以上日期均含当日。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "6.年龄在18周岁以上(2007年2月17日以前出生),35周岁以下(1989年2月21日以后出生)。硕士研究生年龄放宽到40周岁(1984年2月21日以后出生),具有博士学位或高级专业技术职务的年龄放宽到45周岁(1979年2月21日以后出生)。以上日期均含当日。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:bf7e2907636a8ae399764281df07a2f2c230c140222f30c4f2474e316601ca51",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "K4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[K4].education"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "本科及以上",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "本科及以上",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "A6:O6",
+          "field_path": "workbook.sheet[\"Sheet1\"].range[A6:O6].catalog_note"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "备注：参考目录为《普通高等学校本科专业目录（2024年）》《研究生教育学科专业目录（2022年）》《学位授予单位（不含军队单位）自主设置二级学科名单》等。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "备注:参考目录为《普通高等学校本科专业目录(2024年)》《研究生教育学科专业目录(2022年)》《学位授予单位(不含军队单位)自主设置二级学科名单》等。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:c93b8ee06d20c6bd95663fa229e31ebb87e7423d40bf7b53c4541d38ffc6ef99",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(17)",
+          "field_path": "announcement.requirements.health-and-physical-condition"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "7.身体健康，符合应聘岗位要求的身体条件。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "7.身体健康,符合应聘岗位要求的身体条件。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "M4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[M4].scope_relationship"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "本科：法学类\n研究生：法学（0301）；法律（0351）",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "本科:法学类\n研究生:法学(0301);法律(0351)",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:e490964e13389a1882b17608b86d8d867134e5c22d2b36b272ff493a9feb13c5",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(19)",
+          "field_path": "announcement.requirements.in-service-probation-exclusion"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "尚在试用期或服务期内的省内事业单位在编工作人员，不在本次公开招聘对象范围。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "尚在试用期或服务期内的省内事业单位在编工作人员,不在本次公开招聘对象范围。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:ee1153ffe87dc5299cbc98e112f1d48f7d5505426843b6ee4473fe84dfea1cc1",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(31)",
+          "field_path": "announcement.requirements.professional-catalog-similarity-exception"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "特别提示：（1）报名应聘人员填报的专业名称必须与毕业证和学位证完全一致，如专业名称后面带括号或其他说明的也必须如实填报。（2）留学归国、高校自设学科等应聘人员所学学科专业与资格条件要求的学科专业相近但不在选定参考目录，且所学专业课程、研究方向与岗位所需专业相近率达到70%，可纳入报考范围；岗位专业要求为二级学科的，对属于该二级学科专业研究方向且课程相同率达到70%以上的一级学科，可纳入报考范围。符合本条款规定的报考人员，在报名表中“是否符合专业比对条件栏”应如实填写，并提供本人亲笔签字按手印的《符合专业比对条件报考人员承诺书》（附件4）发送到邮箱2813008434@qq.com。资格复审环节由报考人员本人如实提供比对专业名称及课程的有效证明材料，招聘单位将根据报考人员提供的证明材料组织专家结合岗位专业要求开展论证。不如实提供有效证明材料的责任由报考人员本人承担。招聘单位将根据专家论证结果进行资格复审，若专家论证结果为达不到本条款要求的，不得进入下一环节。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "特别提示:(1)报名应聘人员填报的专业名称必须与毕业证和学位证完全一致,如专业名称后面带括号或其他说明的也必须如实填报。(2)留学归国、高校自设学科等应聘人员所学学科专业与资格条件要求的学科专业相近但不在选定参考目录,且所学专业课程、研究方向与岗位所需专业相近率达到70%,可纳入报考范围;岗位专业要求为二级学科的,对属于该二级学科专业研究方向且课程相同率达到70%以上的一级学科,可纳入报考范围。符合本条款规定的报考人员,在报名表中“是否符合专业比对条件栏”应如实填写,并提供本人亲笔签字按手印的《符合专业比对条件报考人员承诺书》(附件4)发送到邮箱2813008434@qq.com。资格复审环节由报考人员本人如实提供比对专业名称及课程的有效证明材料,招聘单位将根据报考人员提供的证明材料组织专家结合岗位专业要求开展论证。不如实提供有效证明材料的责任由报考人员本人承担。招聘单位将根据专家论证结果进行资格复审,若专家论证结果为达不到本条款要求的,不得进入下一环节。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:f05f7d4d072d1e426c3c0d8cfb536eb2209e229a7651e41fbe6faa2c84a8fa63",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(91)",
+          "field_path": "announcement.requirements.non-2025-current-student-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "3.在读的非2025届应届大中专及以上毕业生；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "3.在读的非2025届应届大中专及以上毕业生;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:f8a0193ca2cacf18b0211120b9d5cef4e9b97f606443f79245459094c2ec8e6d",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(89)",
+          "field_path": "announcement.requirements.political-line-disqualification"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "1.不能坚持党的基本路线，在重大政治问题上不能与党中央保持一致的人员；",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "1.不能坚持党的基本路线,在重大政治问题上不能与党中央保持一致的人员;",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:f937fc13686d944d6ded194c22d8b6d03fde2731c70b0cae96cb55256d6758e4",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "L4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[L4].degree"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "学士及以上",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "学士及以上",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54",
+        "extracted_record_id": "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "M4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[M4].graduate_segment"
+        },
+        "academic_program_directory": {
+          "directory_namespace": "研究生教育学科专业目录",
+          "directory_version": "2022年"
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "法学（0301）；法律（0351）",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "法学(0301);法律(0351)",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      },
+      {
+        "requirement_evidence_fragment_id": "requirement-evidence-fragment:fc6ab2535e689cc1ffad605889298694e0c2aaa769c470e608438138217a0957",
+        "extracted_record_id": "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048",
+        "snapshot_id": "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "locator": {
+          "kind": "HTML",
+          "selector": ".Article_zw #Zoom .trs_editor_view > p:nth-of-type(100)",
+          "field_path": "announcement.requirements.open-ended-legal-prohibition"
+        },
+        "extractor_name": "GuizhouOfficialNoticeRequirementSurfaceExtractor",
+        "extractor_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+        "observed_value_state": "TEXT",
+        "original_text": {
+          "text": "12.有法律、法规规定不得聘用的人员。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "12.有法律、法规规定不得聘用的人员。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        }
+      }
+    ],
+    "observations": [
+      {
+        "requirement_observation_id": "requirement-observation:26fd4cbf06f4d6c7b169de4ea8df3afb9ace95ab0feffd86fadd637dd614fd0f",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:9a4e78bea1f346c340e0797d4d0e7b63c6855103125d8ed9dc753133c235647a"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:e0d1f89fba66392b1575410739447d3f9b7612b1e62eb5eb26fb8a805825e29f",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:09d42afc81781b9bab73af6492061fb8494c0466139143158103962eeda2ed4e"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:170e805d52f2696badbbb110104abd6a89c9e17dc4c811c0f1408e95f6957aba",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:2bcb206adfddfaf22a7b10083e9f1a59ae8a37d9e9424c990c600ccc0b19770e"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:708973872ea84df743938f5be666559bbd373a5ba57e54e1bb0de10394fd7ebf",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "UNPARSED_CLAUSE",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:5328746949d5f93f80eb490e254647521d4f2d9d1e31ff01f39f820417f6bd6b"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:8c7cb9298ed94836805000c69e22b7e9e3bcf48cf0aa0b2ef2e86713c000c676",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "UNPARSED_CLAUSE",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:68d936ab7a34454a982ff1f10a81403432d0caa4fed0fca4e3bc324c3a7b908e"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:bad3c0a215bcdc429ba3426851d760f7e49e002a7482391093e7d2b3fe15058d",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "AMBIGUOUS",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "AGE",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:bcd7a45d1dfd09abe9e13d901bc0d7fb1b656c53b8276b0d3ce5726d05f34eb1"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:80531dbd2a7c5948fa5d5ee77121eea5a2748f7ac689e8977aa4fedc5d3eb4c2",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:c93b8ee06d20c6bd95663fa229e31ebb87e7423d40bf7b53c4541d38ffc6ef99"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:5621638a3e503e31c6f3887fb88dd9b1a8ecdfcec63eff5517e69917806ae2f8",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "CANDIDATE_COHORT",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:e490964e13389a1882b17608b86d8d867134e5c22d2b36b272ff493a9feb13c5"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:c70f490d47411c1c712dcbf00c800c15bf0a507ccecb70f0740619fbbaa61929",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "AMBIGUOUS",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "MAJOR",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:ee1153ffe87dc5299cbc98e112f1d48f7d5505426843b6ee4473fe84dfea1cc1"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:6fc14d16d4482cb3abe900e8e6cc073cdab09ce8beca0800210f01c0b86f7288",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:f8a0193ca2cacf18b0211120b9d5cef4e9b97f606443f79245459094c2ec8e6d"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:00c69c7062b728429e8ddf3494e4bcace0297107657fbf2a0c6168319c2c75e5",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "CANDIDATE_COHORT",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:254c0b3a2b45fb5ad0b2f42f17f5936638441d43051dfdeb68d95b034181ce08"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:bb0c70b4f7c74d622494ad2c173a8ed4fc8ba88a3b6e4c680ff9e139a1b92c1d",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "AMBIGUOUS",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "CANDIDATE_COHORT",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:f05f7d4d072d1e426c3c0d8cfb536eb2209e229a7651e41fbe6faa2c84a8fa63"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:78db50e128b325a2d667509a01885f22ec373064bc43dbbf161d997a56eda318",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:2230223b186651ecef6eb642f14b6ccf146d4b9499496107e4a3936f55dc7099"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:c6e55f5b849bee617ebf427a22d672dfc7a63502d1f0377cd33792201b7bd89d",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:9282a1e7741c39ee054943b583545488c8c5690e487fdbfd5deb30eab58b61e2"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:ffa6c9b1c4aeaaf35d2d227fe24b33600f7cf2b730c7f06f7a44f2ed1d840c1e",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:491fb93aebe850b5fa8f6decca26cd9074094a905f228efbedf7ca924697e99a"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:11e47fb6daf038d42e37299d4b16984d28dc0cec9d1bdbdb75f4f18b1c32b6ac",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:8c053ff798f35a0b58884d0bdcd2692c4038cf4212fc35e87ad3fa43f5918bcc"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:800220bc36b5866653f1f0631c835e8361765b93d159ccbed3e61720c020c402",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:5e6c76e7c9f2678b50c6711ab755897c765e0a7b100b3575f31dda8b804081f8"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:cf87acd5309fec9c5b367b698396990c36db2e9d55badbd88b9e45bdb48b89ed",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:3f554cbb4e54ea8695d4aa12eaa2e975d32820c234805fad7ec92f395928c654"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:dc572ee23b489d2cf3191437c0aa868af373a0f02a8d5dca7a716f9f68630bae",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:560dc86157bb2cd5c9007b20cb7c6b6b6c2010c15a72bca85472c79141a377f4"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:414a3f5236e64efcdac417103bd58c2fd38a265e1775073e915805ef38dd206a",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "UNPARSED_CLAUSE",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:fc6ab2535e689cc1ffad605889298694e0c2aaa769c470e608438138217a0957"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:37310ff3a8c24abecdeea180c2be8a0fb0e8d113e3f3905bcd562c22ab587ab6",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "CONFIRMED_REQUIREMENT",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "EDUCATION_LEVEL",
+        "requirement_fact_ids": [
+          "requirement-fact:148752a786f4fe90a77656f14d96d95c4c80ae8c0c3d278f19214e9dc2b5b851"
+        ],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:bf7e2907636a8ae399764281df07a2f2c230c140222f30c4f2474e316601ca51"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:de2962d54003fb1775b3af5474582de51616843c2e2e2be628cbe41f2729ffe4",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "CONFIRMED_REQUIREMENT",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "ACADEMIC_DEGREE",
+        "requirement_fact_ids": [
+          "requirement-fact:8fa4c16c14a2c2f777bdb6bc1c306c84207a463bac0f0c4bead95ee05fa62dad"
+        ],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:f937fc13686d944d6ded194c22d8b6d03fde2731c70b0cae96cb55256d6758e4"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:0cd60d0c71be4a143e1c8a3e51d6e1326fe08ee37a6e08ec3999bd415e9a2f33",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "CONFIRMED_REQUIREMENT",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "MAJOR",
+        "requirement_fact_ids": [
+          "requirement-fact:7286fe4a637c4a49324bb5a28a5f35f308c226c913b9affb5439d605ad915ae4"
+        ],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:2e7d08bcb0a38967d436238c6f2ed9668b42b2676791d89577fd68577c5402e1"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:39296441117ed48849129e8daa704961286adf403d33f0b070812d8a5781492b",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "CONFIRMED_REQUIREMENT",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "MAJOR",
+        "requirement_fact_ids": [
+          "requirement-fact:5799a00570241478d0d4af22d32a863872948872555ce0e0c8921cf50de62ada",
+          "requirement-fact:eac8950b1f692e114fdec730a3c043a97813e0e21b50db2509f6ad13ff73dd97"
+        ],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54",
+          "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:cf2fc00d1b7a6f2954ee065624ea130feeaf3d24da4fba848e0706413da2ddbe",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "AMBIGUOUS",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "MAJOR",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:8a4caab5ac810e21e693914a00129a22d7a86eb218e01716b54c92ffb22cf973",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "AMBIGUOUS",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "MAJOR",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54",
+          "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:e74983c4d95fe5dfe8608227e321f34e097a38e7b68ae6b317b5623eb43387a1",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "DOMAIN_GAP_OBSERVED",
+        "clause_role": "MANDATORY",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:915ad61437701f66a4e789a1a964f3861723f079c140249e6b059acc619949ce"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:5f3e3333bbab6ac62f97e04040ec2e4c0293d8d860295514b3440d5152187153",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "CONFIRMED_REQUIREMENT",
+        "clause_role": "MANDATORY",
+        "dimension_hint": "PROFESSIONAL_QUALIFICATION",
+        "requirement_fact_ids": [
+          "requirement-fact:9c12cc0fda54f732f148dbff7e745e0c52d4dc4c52524dc136b50a7dc2108d97"
+        ],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:a5e86ccac4be2a8891054f8449cef79f59f9aa1fb9d3596b35809562a04fa2aa"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_observation_id": "requirement-observation:66b256d2a9f1d2a2159c11ed733cb23ac3c03c6c9b66aa07f80ea58139e175d7",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "status": "UNPARSED_CLAUSE",
+        "clause_role": "UNKNOWN",
+        "requirement_fact_ids": [],
+        "evidence_fragment_ids": [
+          "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+        ],
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      }
+    ],
+    "facts": [
+      {
+        "requirement_fact_id": "requirement-fact:148752a786f4fe90a77656f14d96d95c4c80ae8c0c3d278f19214e9dc2b5b851",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "dimension": "EDUCATION_LEVEL",
+        "operator": "AT_LEAST",
+        "value": {
+          "kind": "CODE",
+          "code": "BACHELOR"
+        },
+        "subject_scope": "CANDIDATE",
+        "logic_group": {
+          "logic_group_id": "logic-group:3e885efffcb72d3c0f0b68daf32a84cb9f72459b0c62a7f559e3870314ad01b1",
+          "operator": "AND"
+        },
+        "polarity": "POSITIVE",
+        "certainty": "EXPLICIT",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_fact_id": "requirement-fact:5799a00570241478d0d4af22d32a863872948872555ce0e0c8921cf50de62ada",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "dimension": "MAJOR",
+        "operator": "EQUALS",
+        "value": {
+          "kind": "PROGRAM_REFERENCE",
+          "reference": {
+            "directory_namespace": "研究生教育学科专业目录",
+            "directory_version": "2022年",
+            "program_code": "0301",
+            "program_label": {
+              "text": "法学",
+              "unicode_form": "NFKC",
+              "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+              "operations": [
+                "UNICODE_NORMALIZATION",
+                "WIDTH_FOLDING",
+                "WHITESPACE_FOLDING"
+              ]
+            }
+          }
+        },
+        "subject_scope": "GRADUATE",
+        "logic_group": {
+          "logic_group_id": "logic-group:1ad3fd2b8bd7b56cdf2689de3e96335aaf658afcaea6308860ad70f42750837b",
+          "operator": "OR"
+        },
+        "polarity": "POSITIVE",
+        "certainty": "EXPLICIT",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_fact_id": "requirement-fact:7286fe4a637c4a49324bb5a28a5f35f308c226c913b9affb5439d605ad915ae4",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "dimension": "MAJOR",
+        "operator": "EQUALS",
+        "value": {
+          "kind": "TEXT",
+          "value": {
+            "text": "法学类",
+            "unicode_form": "NFKC",
+            "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+            "operations": [
+              "UNICODE_NORMALIZATION",
+              "WIDTH_FOLDING",
+              "WHITESPACE_FOLDING"
+            ]
+          }
+        },
+        "subject_scope": "BACHELOR",
+        "logic_group": {
+          "logic_group_id": "logic-group:199cc7c110b9073ad93a8d31e526cdef32bafd04102c91142be9005db6fc9056",
+          "operator": "AND"
+        },
+        "polarity": "POSITIVE",
+        "certainty": "EXPLICIT",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_fact_id": "requirement-fact:8fa4c16c14a2c2f777bdb6bc1c306c84207a463bac0f0c4bead95ee05fa62dad",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "dimension": "ACADEMIC_DEGREE",
+        "operator": "AT_LEAST",
+        "value": {
+          "kind": "CODE",
+          "code": "BACHELOR_DEGREE"
+        },
+        "subject_scope": "CANDIDATE",
+        "logic_group": {
+          "logic_group_id": "logic-group:4b12022c5760fb2a28ee0e376514e0bdd8cedfa44859313fbeaaaa503c6fc9ba",
+          "operator": "AND"
+        },
+        "polarity": "POSITIVE",
+        "certainty": "EXPLICIT",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_fact_id": "requirement-fact:9c12cc0fda54f732f148dbff7e745e0c52d4dc4c52524dc136b50a7dc2108d97",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "dimension": "PROFESSIONAL_QUALIFICATION",
+        "operator": "EXISTS",
+        "value": {
+          "kind": "CODE",
+          "code": "LEGAL_PROFESSIONAL_QUALIFICATION_A"
+        },
+        "subject_scope": "CANDIDATE",
+        "logic_group": {
+          "logic_group_id": "logic-group:e76ee9db005344fe3114fda4a0692ab47eb084431829f1914f0da00f912cdd55",
+          "operator": "AND"
+        },
+        "polarity": "POSITIVE",
+        "certainty": "EXPLICIT",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_fact_id": "requirement-fact:eac8950b1f692e114fdec730a3c043a97813e0e21b50db2509f6ad13ff73dd97",
+        "opportunity_version_id": "opportunity-version:a8f4819fd5cddc344010fb2391cac0e6c9a305f0f4988d10ffa48be5cefb9ae9",
+        "dimension": "MAJOR",
+        "operator": "EQUALS",
+        "value": {
+          "kind": "PROGRAM_REFERENCE",
+          "reference": {
+            "directory_namespace": "研究生教育学科专业目录",
+            "directory_version": "2022年",
+            "program_code": "0351",
+            "program_label": {
+              "text": "法律",
+              "unicode_form": "NFKC",
+              "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+              "operations": [
+                "UNICODE_NORMALIZATION",
+                "WIDTH_FOLDING",
+                "WHITESPACE_FOLDING"
+              ]
+            }
+          }
+        },
+        "subject_scope": "GRADUATE",
+        "logic_group": {
+          "logic_group_id": "logic-group:1ad3fd2b8bd7b56cdf2689de3e96335aaf658afcaea6308860ad70f42750837b",
+          "operator": "OR"
+        },
+        "polarity": "POSITIVE",
+        "certainty": "EXPLICIT",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      }
+    ],
+    "evidence": [
+      {
+        "requirement_evidence_id": "requirement-evidence:0ed69b97c1d1e5b056383cb58b68948b12dd9021e021cbf8e5103c1809d3ca62",
+        "requirement_fact_id": "requirement-fact:7286fe4a637c4a49324bb5a28a5f35f308c226c913b9affb5439d605ad915ae4",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "M4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[M4].bachelor_segment"
+        },
+        "evidence_text": {
+          "text": "法学类",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "法学类",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_evidence_id": "requirement-evidence:1866774a7b61f669b77a5c403fc6b3f9550e985495a9a56ffb9e0a43ea2760fe",
+        "requirement_fact_id": "requirement-fact:5799a00570241478d0d4af22d32a863872948872555ce0e0c8921cf50de62ada",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "M4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[M4].graduate_segment"
+        },
+        "evidence_text": {
+          "text": "法学（0301）；法律（0351）",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "法学(0301);法律(0351)",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_evidence_id": "requirement-evidence:3ed998b8fd24d837b3fa54c7bcada557226ef9505b6c797bd057e48ec0a5188d",
+        "requirement_fact_id": "requirement-fact:148752a786f4fe90a77656f14d96d95c4c80ae8c0c3d278f19214e9dc2b5b851",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "K4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[K4].education"
+        },
+        "evidence_text": {
+          "text": "本科及以上",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "本科及以上",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_evidence_id": "requirement-evidence:5a8497b9f92080eb25f4e20540cdf4bd20913e02429255ebfe8b53c349fe54ed",
+        "requirement_fact_id": "requirement-fact:eac8950b1f692e114fdec730a3c043a97813e0e21b50db2509f6ad13ff73dd97",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "A6:O6",
+          "field_path": "workbook.sheet[\"Sheet1\"].range[A6:O6].catalog_note"
+        },
+        "evidence_text": {
+          "text": "备注：参考目录为《普通高等学校本科专业目录（2024年）》《研究生教育学科专业目录（2022年）》《学位授予单位（不含军队单位）自主设置二级学科名单》等。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "备注:参考目录为《普通高等学校本科专业目录(2024年)》《研究生教育学科专业目录(2022年)》《学位授予单位(不含军队单位)自主设置二级学科名单》等。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_evidence_id": "requirement-evidence:6a672b5d1a9526593a58944602452aeeafce4c1d074293a0c216b759bf322edb",
+        "requirement_fact_id": "requirement-fact:8fa4c16c14a2c2f777bdb6bc1c306c84207a463bac0f0c4bead95ee05fa62dad",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "L4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[L4].degree"
+        },
+        "evidence_text": {
+          "text": "学士及以上",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "学士及以上",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_evidence_id": "requirement-evidence:c63a5a4c50d4b4e04dd9a673181d50d3d23b8c9408503a00af3d0a7203c1b1a0",
+        "requirement_fact_id": "requirement-fact:5799a00570241478d0d4af22d32a863872948872555ce0e0c8921cf50de62ada",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "A6:O6",
+          "field_path": "workbook.sheet[\"Sheet1\"].range[A6:O6].catalog_note"
+        },
+        "evidence_text": {
+          "text": "备注：参考目录为《普通高等学校本科专业目录（2024年）》《研究生教育学科专业目录（2022年）》《学位授予单位（不含军队单位）自主设置二级学科名单》等。",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "备注:参考目录为《普通高等学校本科专业目录(2024年)》《研究生教育学科专业目录(2022年)》《学位授予单位(不含军队单位)自主设置二级学科名单》等。",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_evidence_id": "requirement-evidence:cac70661186cc1e9996a688a748ac337431ddd2317e2808187cc5865f18881a8",
+        "requirement_fact_id": "requirement-fact:9c12cc0fda54f732f148dbff7e745e0c52d4dc4c52524dc136b50a7dc2108d97",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "N4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[N4].legal_professional_qualification_clause"
+        },
+        "evidence_text": {
+          "text": "具有A类法律职业资格证书",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "具有A类法律职业资格证书",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      },
+      {
+        "requirement_evidence_id": "requirement-evidence:f0438e5db0b95711e9d6d3e628f3951693f4f59efb2c138e3880c2752daf39d7",
+        "requirement_fact_id": "requirement-fact:eac8950b1f692e114fdec730a3c043a97813e0e21b50db2509f6ad13ff73dd97",
+        "snapshot_id": "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9",
+        "locator": {
+          "kind": "SPREADSHEET",
+          "sheet": "Sheet1",
+          "cell_or_range": "M4",
+          "field_path": "workbook.sheet[\"Sheet1\"].cell[M4].graduate_segment"
+        },
+        "evidence_text": {
+          "text": "法学（0301）；法律（0351）",
+          "encoding": "UTF-8"
+        },
+        "normalized_text": {
+          "text": "法学(0301);法律(0351)",
+          "unicode_form": "NFKC",
+          "normalizer_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0/text-normalizer",
+          "operations": [
+            "UNICODE_NORMALIZATION",
+            "WIDTH_FOLDING",
+            "WHITESPACE_FOLDING"
+          ]
+        },
+        "extractor_name": "GuizhouLegalXlsxRequirementObservationAdapter",
+        "extractor_version": "p2-legal-05-offline-xlsx-requirement-observation/1.0.0",
+        "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+      }
+    ],
+    "parser_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+    "completeness": {
+      "requirement_set_id": "requirement-set:efe9fa79e9acc91014757ad9a7314d500b5eadab172d7702b5c8b702277663c1",
+      "requirement_set_content_hash": "efe9fa79e9acc91014757ad9a7314d500b5eadab172d7702b5c8b702277663c1",
+      "covered_extracted_record_ids": [
+        "extracted:582390b5214a33f10ba73bab9abcc90ee36e367bc90db3f30a6ae1f4bc79bdb7",
+        "extracted:cb2d2c899725b114ed8c0d902e94a991fcded8a43241bcbca69d25f4002ab048"
+      ],
+      "covered_snapshot_ids": [
+        "p2-legal-02-snapshot:3585d0e1-93a1-4dbd-a451-946acdaa9ee5",
+        "p2-legal-04-snapshot:194cfc4e-18ec-4f79-9a61-0551bafbcfa9"
+      ],
+      "observation_ids": [
+        "requirement-observation:00c69c7062b728429e8ddf3494e4bcace0297107657fbf2a0c6168319c2c75e5",
+        "requirement-observation:0cd60d0c71be4a143e1c8a3e51d6e1326fe08ee37a6e08ec3999bd415e9a2f33",
+        "requirement-observation:11e47fb6daf038d42e37299d4b16984d28dc0cec9d1bdbdb75f4f18b1c32b6ac",
+        "requirement-observation:170e805d52f2696badbbb110104abd6a89c9e17dc4c811c0f1408e95f6957aba",
+        "requirement-observation:26fd4cbf06f4d6c7b169de4ea8df3afb9ace95ab0feffd86fadd637dd614fd0f",
+        "requirement-observation:37310ff3a8c24abecdeea180c2be8a0fb0e8d113e3f3905bcd562c22ab587ab6",
+        "requirement-observation:39296441117ed48849129e8daa704961286adf403d33f0b070812d8a5781492b",
+        "requirement-observation:414a3f5236e64efcdac417103bd58c2fd38a265e1775073e915805ef38dd206a",
+        "requirement-observation:5621638a3e503e31c6f3887fb88dd9b1a8ecdfcec63eff5517e69917806ae2f8",
+        "requirement-observation:5f3e3333bbab6ac62f97e04040ec2e4c0293d8d860295514b3440d5152187153",
+        "requirement-observation:66b256d2a9f1d2a2159c11ed733cb23ac3c03c6c9b66aa07f80ea58139e175d7",
+        "requirement-observation:6fc14d16d4482cb3abe900e8e6cc073cdab09ce8beca0800210f01c0b86f7288",
+        "requirement-observation:708973872ea84df743938f5be666559bbd373a5ba57e54e1bb0de10394fd7ebf",
+        "requirement-observation:78db50e128b325a2d667509a01885f22ec373064bc43dbbf161d997a56eda318",
+        "requirement-observation:800220bc36b5866653f1f0631c835e8361765b93d159ccbed3e61720c020c402",
+        "requirement-observation:80531dbd2a7c5948fa5d5ee77121eea5a2748f7ac689e8977aa4fedc5d3eb4c2",
+        "requirement-observation:8a4caab5ac810e21e693914a00129a22d7a86eb218e01716b54c92ffb22cf973",
+        "requirement-observation:8c7cb9298ed94836805000c69e22b7e9e3bcf48cf0aa0b2ef2e86713c000c676",
+        "requirement-observation:bad3c0a215bcdc429ba3426851d760f7e49e002a7482391093e7d2b3fe15058d",
+        "requirement-observation:bb0c70b4f7c74d622494ad2c173a8ed4fc8ba88a3b6e4c680ff9e139a1b92c1d",
+        "requirement-observation:c6e55f5b849bee617ebf427a22d672dfc7a63502d1f0377cd33792201b7bd89d",
+        "requirement-observation:c70f490d47411c1c712dcbf00c800c15bf0a507ccecb70f0740619fbbaa61929",
+        "requirement-observation:cf2fc00d1b7a6f2954ee065624ea130feeaf3d24da4fba848e0706413da2ddbe",
+        "requirement-observation:cf87acd5309fec9c5b367b698396990c36db2e9d55badbd88b9e45bdb48b89ed",
+        "requirement-observation:dc572ee23b489d2cf3191437c0aa868af373a0f02a8d5dca7a716f9f68630bae",
+        "requirement-observation:de2962d54003fb1775b3af5474582de51616843c2e2e2be628cbe41f2729ffe4",
+        "requirement-observation:e0d1f89fba66392b1575410739447d3f9b7612b1e62eb5eb26fb8a805825e29f",
+        "requirement-observation:e74983c4d95fe5dfe8608227e321f34e097a38e7b68ae6b317b5623eb43387a1",
+        "requirement-observation:ffa6c9b1c4aeaaf35d2d227fe24b33600f7cf2b730c7f06f7a44f2ed1d840c1e"
+      ],
+      "fact_ids": [
+        "requirement-fact:148752a786f4fe90a77656f14d96d95c4c80ae8c0c3d278f19214e9dc2b5b851",
+        "requirement-fact:5799a00570241478d0d4af22d32a863872948872555ce0e0c8921cf50de62ada",
+        "requirement-fact:7286fe4a637c4a49324bb5a28a5f35f308c226c913b9affb5439d605ad915ae4",
+        "requirement-fact:8fa4c16c14a2c2f777bdb6bc1c306c84207a463bac0f0c4bead95ee05fa62dad",
+        "requirement-fact:9c12cc0fda54f732f148dbff7e745e0c52d4dc4c52524dc136b50a7dc2108d97",
+        "requirement-fact:eac8950b1f692e114fdec730a3c043a97813e0e21b50db2509f6ad13ff73dd97"
+      ],
+      "evidence_ids": [
+        "requirement-evidence:0ed69b97c1d1e5b056383cb58b68948b12dd9021e021cbf8e5103c1809d3ca62",
+        "requirement-evidence:1866774a7b61f669b77a5c403fc6b3f9550e985495a9a56ffb9e0a43ea2760fe",
+        "requirement-evidence:3ed998b8fd24d837b3fa54c7bcada557226ef9505b6c797bd057e48ec0a5188d",
+        "requirement-evidence:5a8497b9f92080eb25f4e20540cdf4bd20913e02429255ebfe8b53c349fe54ed",
+        "requirement-evidence:6a672b5d1a9526593a58944602452aeeafce4c1d074293a0c216b759bf322edb",
+        "requirement-evidence:c63a5a4c50d4b4e04dd9a673181d50d3d23b8c9408503a00af3d0a7203c1b1a0",
+        "requirement-evidence:cac70661186cc1e9996a688a748ac337431ddd2317e2808187cc5865f18881a8",
+        "requirement-evidence:f0438e5db0b95711e9d6d3e628f3951693f4f59efb2c138e3880c2752daf39d7"
+      ],
+      "gate_version": "p2-legal-06-multi-source-requirement-composer/1.0.0",
+      "status": "REVIEW_REQUIRED",
+      "blockers": [
+        {
+          "code": "AMBIGUOUS",
+          "observation_ids": [
+            "requirement-observation:bad3c0a215bcdc429ba3426851d760f7e49e002a7482391093e7d2b3fe15058d"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:bcd7a45d1dfd09abe9e13d901bc0d7fb1b656c53b8276b0d3ce5726d05f34eb1"
+          ],
+          "description": "A mandatory source clause has unresolved semantics"
+        },
+        {
+          "code": "AMBIGUOUS",
+          "observation_ids": [
+            "requirement-observation:cf2fc00d1b7a6f2954ee065624ea130feeaf3d24da4fba848e0706413da2ddbe"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a"
+          ],
+          "description": "A mandatory source clause has unresolved semantics"
+        },
+        {
+          "code": "AMBIGUOUS",
+          "observation_ids": [
+            "requirement-observation:c70f490d47411c1c712dcbf00c800c15bf0a507ccecb70f0740619fbbaa61929"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:ee1153ffe87dc5299cbc98e112f1d48f7d5505426843b6ee4473fe84dfea1cc1"
+          ],
+          "description": "A mandatory source clause has unresolved semantics"
+        },
+        {
+          "code": "AMBIGUOUS",
+          "observation_ids": [
+            "requirement-observation:bb0c70b4f7c74d622494ad2c173a8ed4fc8ba88a3b6e4c680ff9e139a1b92c1d"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:f05f7d4d072d1e426c3c0d8cfb536eb2209e229a7651e41fbe6faa2c84a8fa63"
+          ],
+          "description": "A mandatory source clause has unresolved semantics"
+        },
+        {
+          "code": "AMBIGUOUS",
+          "observation_ids": [
+            "requirement-observation:8a4caab5ac810e21e693914a00129a22d7a86eb218e01716b54c92ffb22cf973"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54",
+            "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940"
+          ],
+          "description": "A mandatory source clause has unresolved semantics"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:e0d1f89fba66392b1575410739447d3f9b7612b1e62eb5eb26fb8a805825e29f"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:09d42afc81781b9bab73af6492061fb8494c0466139143158103962eeda2ed4e"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:78db50e128b325a2d667509a01885f22ec373064bc43dbbf161d997a56eda318"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:2230223b186651ecef6eb642f14b6ccf146d4b9499496107e4a3936f55dc7099"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:00c69c7062b728429e8ddf3494e4bcace0297107657fbf2a0c6168319c2c75e5"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:254c0b3a2b45fb5ad0b2f42f17f5936638441d43051dfdeb68d95b034181ce08"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:170e805d52f2696badbbb110104abd6a89c9e17dc4c811c0f1408e95f6957aba"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:2bcb206adfddfaf22a7b10083e9f1a59ae8a37d9e9424c990c600ccc0b19770e"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:cf87acd5309fec9c5b367b698396990c36db2e9d55badbd88b9e45bdb48b89ed"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:3f554cbb4e54ea8695d4aa12eaa2e975d32820c234805fad7ec92f395928c654"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:ffa6c9b1c4aeaaf35d2d227fe24b33600f7cf2b730c7f06f7a44f2ed1d840c1e"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:491fb93aebe850b5fa8f6decca26cd9074094a905f228efbedf7ca924697e99a"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:dc572ee23b489d2cf3191437c0aa868af373a0f02a8d5dca7a716f9f68630bae"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:560dc86157bb2cd5c9007b20cb7c6b6b6c2010c15a72bca85472c79141a377f4"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:800220bc36b5866653f1f0631c835e8361765b93d159ccbed3e61720c020c402"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:5e6c76e7c9f2678b50c6711ab755897c765e0a7b100b3575f31dda8b804081f8"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:11e47fb6daf038d42e37299d4b16984d28dc0cec9d1bdbdb75f4f18b1c32b6ac"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:8c053ff798f35a0b58884d0bdcd2692c4038cf4212fc35e87ad3fa43f5918bcc"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:e74983c4d95fe5dfe8608227e321f34e097a38e7b68ae6b317b5623eb43387a1"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:915ad61437701f66a4e789a1a964f3861723f079c140249e6b059acc619949ce"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:c6e55f5b849bee617ebf427a22d672dfc7a63502d1f0377cd33792201b7bd89d"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:9282a1e7741c39ee054943b583545488c8c5690e487fdbfd5deb30eab58b61e2"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:26fd4cbf06f4d6c7b169de4ea8df3afb9ace95ab0feffd86fadd637dd614fd0f"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:9a4e78bea1f346c340e0797d4d0e7b63c6855103125d8ed9dc753133c235647a"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:80531dbd2a7c5948fa5d5ee77121eea5a2748f7ac689e8977aa4fedc5d3eb4c2"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:c93b8ee06d20c6bd95663fa229e31ebb87e7423d40bf7b53c4541d38ffc6ef99"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:5621638a3e503e31c6f3887fb88dd9b1a8ecdfcec63eff5517e69917806ae2f8"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:e490964e13389a1882b17608b86d8d867134e5c22d2b36b272ff493a9feb13c5"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "DOMAIN_GAP_OBSERVED",
+          "observation_ids": [
+            "requirement-observation:6fc14d16d4482cb3abe900e8e6cc073cdab09ce8beca0800210f01c0b86f7288"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:f8a0193ca2cacf18b0211120b9d5cef4e9b97f606443f79245459094c2ec8e6d"
+          ],
+          "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+        },
+        {
+          "code": "UNPARSED_CLAUSE",
+          "observation_ids": [
+            "requirement-observation:66b256d2a9f1d2a2159c11ed733cb23ac3c03c6c9b66aa07f80ea58139e175d7"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+          ],
+          "description": "A mandatory source clause was not parsed safely"
+        },
+        {
+          "code": "UNPARSED_CLAUSE",
+          "observation_ids": [
+            "requirement-observation:708973872ea84df743938f5be666559bbd373a5ba57e54e1bb0de10394fd7ebf"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:5328746949d5f93f80eb490e254647521d4f2d9d1e31ff01f39f820417f6bd6b"
+          ],
+          "description": "A mandatory source clause was not parsed safely"
+        },
+        {
+          "code": "UNPARSED_CLAUSE",
+          "observation_ids": [
+            "requirement-observation:8c7cb9298ed94836805000c69e22b7e9e3bcf48cf0aa0b2ef2e86713c000c676"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:68d936ab7a34454a982ff1f10a81403432d0caa4fed0fca4e3bc324c3a7b908e"
+          ],
+          "description": "A mandatory source clause was not parsed safely"
+        },
+        {
+          "code": "UNPARSED_CLAUSE",
+          "observation_ids": [
+            "requirement-observation:414a3f5236e64efcdac417103bd58c2fd38a265e1775073e915805ef38dd206a"
+          ],
+          "evidence_fragment_ids": [
+            "requirement-evidence-fragment:fc6ab2535e689cc1ffad605889298694e0c2aaa769c470e608438138217a0957"
+          ],
+          "description": "A mandatory source clause was not parsed safely"
+        }
+      ]
+    }
+  },
+  "composition_blockers": [
+    {
+      "code": "AMBIGUOUS",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:bad3c0a215bcdc429ba3426851d760f7e49e002a7482391093e7d2b3fe15058d"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:bcd7a45d1dfd09abe9e13d901bc0d7fb1b656c53b8276b0d3ce5726d05f34eb1"
+      ],
+      "description": "A mandatory source clause has unresolved semantics"
+    },
+    {
+      "code": "AMBIGUOUS",
+      "source_kinds": [
+        "JOB_TABLE"
+      ],
+      "observation_ids": [
+        "requirement-observation:cf2fc00d1b7a6f2954ee065624ea130feeaf3d24da4fba848e0706413da2ddbe"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a"
+      ],
+      "description": "A mandatory source clause has unresolved semantics"
+    },
+    {
+      "code": "AMBIGUOUS",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:c70f490d47411c1c712dcbf00c800c15bf0a507ccecb70f0740619fbbaa61929"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ee1153ffe87dc5299cbc98e112f1d48f7d5505426843b6ee4473fe84dfea1cc1"
+      ],
+      "description": "A mandatory source clause has unresolved semantics"
+    },
+    {
+      "code": "AMBIGUOUS",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:bb0c70b4f7c74d622494ad2c173a8ed4fc8ba88a3b6e4c680ff9e139a1b92c1d"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:f05f7d4d072d1e426c3c0d8cfb536eb2209e229a7651e41fbe6faa2c84a8fa63"
+      ],
+      "description": "A mandatory source clause has unresolved semantics"
+    },
+    {
+      "code": "AMBIGUOUS",
+      "source_kinds": [
+        "JOB_TABLE"
+      ],
+      "observation_ids": [
+        "requirement-observation:8a4caab5ac810e21e693914a00129a22d7a86eb218e01716b54c92ffb22cf973"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54",
+        "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940"
+      ],
+      "description": "A mandatory source clause has unresolved semantics"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:e0d1f89fba66392b1575410739447d3f9b7612b1e62eb5eb26fb8a805825e29f"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:09d42afc81781b9bab73af6492061fb8494c0466139143158103962eeda2ed4e"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:78db50e128b325a2d667509a01885f22ec373064bc43dbbf161d997a56eda318"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:2230223b186651ecef6eb642f14b6ccf146d4b9499496107e4a3936f55dc7099"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:00c69c7062b728429e8ddf3494e4bcace0297107657fbf2a0c6168319c2c75e5"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:254c0b3a2b45fb5ad0b2f42f17f5936638441d43051dfdeb68d95b034181ce08"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:170e805d52f2696badbbb110104abd6a89c9e17dc4c811c0f1408e95f6957aba"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:2bcb206adfddfaf22a7b10083e9f1a59ae8a37d9e9424c990c600ccc0b19770e"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:cf87acd5309fec9c5b367b698396990c36db2e9d55badbd88b9e45bdb48b89ed"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:3f554cbb4e54ea8695d4aa12eaa2e975d32820c234805fad7ec92f395928c654"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:ffa6c9b1c4aeaaf35d2d227fe24b33600f7cf2b730c7f06f7a44f2ed1d840c1e"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:491fb93aebe850b5fa8f6decca26cd9074094a905f228efbedf7ca924697e99a"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:dc572ee23b489d2cf3191437c0aa868af373a0f02a8d5dca7a716f9f68630bae"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:560dc86157bb2cd5c9007b20cb7c6b6b6c2010c15a72bca85472c79141a377f4"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:800220bc36b5866653f1f0631c835e8361765b93d159ccbed3e61720c020c402"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:5e6c76e7c9f2678b50c6711ab755897c765e0a7b100b3575f31dda8b804081f8"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:11e47fb6daf038d42e37299d4b16984d28dc0cec9d1bdbdb75f4f18b1c32b6ac"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:8c053ff798f35a0b58884d0bdcd2692c4038cf4212fc35e87ad3fa43f5918bcc"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "JOB_TABLE"
+      ],
+      "observation_ids": [
+        "requirement-observation:e74983c4d95fe5dfe8608227e321f34e097a38e7b68ae6b317b5623eb43387a1"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:915ad61437701f66a4e789a1a964f3861723f079c140249e6b059acc619949ce"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:c6e55f5b849bee617ebf427a22d672dfc7a63502d1f0377cd33792201b7bd89d"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:9282a1e7741c39ee054943b583545488c8c5690e487fdbfd5deb30eab58b61e2"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:26fd4cbf06f4d6c7b169de4ea8df3afb9ace95ab0feffd86fadd637dd614fd0f"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:9a4e78bea1f346c340e0797d4d0e7b63c6855103125d8ed9dc753133c235647a"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:80531dbd2a7c5948fa5d5ee77121eea5a2748f7ac689e8977aa4fedc5d3eb4c2"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:c93b8ee06d20c6bd95663fa229e31ebb87e7423d40bf7b53c4541d38ffc6ef99"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:5621638a3e503e31c6f3887fb88dd9b1a8ecdfcec63eff5517e69917806ae2f8"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:e490964e13389a1882b17608b86d8d867134e5c22d2b36b272ff493a9feb13c5"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "DOMAIN_GAP_OBSERVED",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:6fc14d16d4482cb3abe900e8e6cc073cdab09ce8beca0800210f01c0b86f7288"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:f8a0193ca2cacf18b0211120b9d5cef4e9b97f606443f79245459094c2ec8e6d"
+      ],
+      "description": "A mandatory source clause is outside the approved typed Requirement Domain"
+    },
+    {
+      "code": "UNPARSED_CLAUSE",
+      "source_kinds": [
+        "JOB_TABLE"
+      ],
+      "observation_ids": [
+        "requirement-observation:66b256d2a9f1d2a2159c11ed733cb23ac3c03c6c9b66aa07f80ea58139e175d7"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+      ],
+      "description": "A mandatory source clause was not parsed safely"
+    },
+    {
+      "code": "UNPARSED_CLAUSE",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:708973872ea84df743938f5be666559bbd373a5ba57e54e1bb0de10394fd7ebf"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:5328746949d5f93f80eb490e254647521d4f2d9d1e31ff01f39f820417f6bd6b"
+      ],
+      "description": "A mandatory source clause was not parsed safely"
+    },
+    {
+      "code": "UNPARSED_CLAUSE",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:8c7cb9298ed94836805000c69e22b7e9e3bcf48cf0aa0b2ef2e86713c000c676"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:68d936ab7a34454a982ff1f10a81403432d0caa4fed0fca4e3bc324c3a7b908e"
+      ],
+      "description": "A mandatory source clause was not parsed safely"
+    },
+    {
+      "code": "UNPARSED_CLAUSE",
+      "source_kinds": [
+        "ANNOUNCEMENT"
+      ],
+      "observation_ids": [
+        "requirement-observation:414a3f5236e64efcdac417103bd58c2fd38a265e1775073e915805ef38dd206a"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:fc6ab2535e689cc1ffad605889298694e0c2aaa769c470e608438138217a0957"
+      ],
+      "description": "A mandatory source clause was not parsed safely"
+    }
+  ],
+  "fact_audit": [
+    {
+      "requirement_fact_id": "requirement-fact:148752a786f4fe90a77656f14d96d95c4c80ae8c0c3d278f19214e9dc2b5b851",
+      "dimension": "EDUCATION_LEVEL",
+      "scope": "CANDIDATE",
+      "sources": [
+        "JOB_TABLE"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:bf7e2907636a8ae399764281df07a2f2c230c140222f30c4f2474e316601ca51"
+      ]
+    },
+    {
+      "requirement_fact_id": "requirement-fact:8fa4c16c14a2c2f777bdb6bc1c306c84207a463bac0f0c4bead95ee05fa62dad",
+      "dimension": "ACADEMIC_DEGREE",
+      "scope": "CANDIDATE",
+      "sources": [
+        "JOB_TABLE"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:f937fc13686d944d6ded194c22d8b6d03fde2731c70b0cae96cb55256d6758e4"
+      ]
+    },
+    {
+      "requirement_fact_id": "requirement-fact:7286fe4a637c4a49324bb5a28a5f35f308c226c913b9affb5439d605ad915ae4",
+      "dimension": "MAJOR",
+      "scope": "BACHELOR",
+      "sources": [
+        "JOB_TABLE"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:2e7d08bcb0a38967d436238c6f2ed9668b42b2676791d89577fd68577c5402e1"
+      ]
+    },
+    {
+      "requirement_fact_id": "requirement-fact:5799a00570241478d0d4af22d32a863872948872555ce0e0c8921cf50de62ada",
+      "dimension": "MAJOR",
+      "scope": "GRADUATE",
+      "sources": [
+        "JOB_TABLE"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940",
+        "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54"
+      ]
+    },
+    {
+      "requirement_fact_id": "requirement-fact:eac8950b1f692e114fdec730a3c043a97813e0e21b50db2509f6ad13ff73dd97",
+      "dimension": "MAJOR",
+      "scope": "GRADUATE",
+      "sources": [
+        "JOB_TABLE"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940",
+        "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54"
+      ]
+    },
+    {
+      "requirement_fact_id": "requirement-fact:9c12cc0fda54f732f148dbff7e745e0c52d4dc4c52524dc136b50a7dc2108d97",
+      "dimension": "PROFESSIONAL_QUALIFICATION",
+      "scope": "CANDIDATE",
+      "sources": [
+        "JOB_TABLE"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:a5e86ccac4be2a8891054f8449cef79f59f9aa1fb9d3596b35809562a04fa2aa"
+      ]
+    }
+  ],
+  "observation_audit": [
+    {
+      "requirement_observation_id": "requirement-observation:26fd4cbf06f4d6c7b169de4ea8df3afb9ace95ab0feffd86fadd637dd614fd0f",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "1.具有中华人民共和国国籍，拥护中华人民共和国宪法，具有良好的思想政治素质。",
+      "normalized_value": "1.具有中华人民共和国国籍,拥护中华人民共和国宪法,具有良好的思想政治素质。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:9a4e78bea1f346c340e0797d4d0e7b63c6855103125d8ed9dc753133c235647a"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:e0d1f89fba66392b1575410739447d3f9b7612b1e62eb5eb26fb8a805825e29f",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "2.具有正确的政治立场、政治态度、理想信念和思想品德。",
+      "normalized_value": "2.具有正确的政治立场、政治态度、理想信念和思想品德。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:09d42afc81781b9bab73af6492061fb8494c0466139143158103962eeda2ed4e"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:170e805d52f2696badbbb110104abd6a89c9e17dc4c811c0f1408e95f6957aba",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "3.遵纪守法，诚实守信，品行端正、人格健全。",
+      "normalized_value": "3.遵纪守法,诚实守信,品行端正、人格健全。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:2bcb206adfddfaf22a7b10083e9f1a59ae8a37d9e9424c990c600ccc0b19770e"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:708973872ea84df743938f5be666559bbd373a5ba57e54e1bb0de10394fd7ebf",
+      "source": "ANNOUNCEMENT",
+      "status": "UNPARSED_CLAUSE",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "4.安心应聘岗位工作，有较强的事业心和责任感。",
+      "normalized_value": "4.安心应聘岗位工作,有较强的事业心和责任感。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:5328746949d5f93f80eb490e254647521d4f2d9d1e31ff01f39f820417f6bd6b"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:8c7cb9298ed94836805000c69e22b7e9e3bcf48cf0aa0b2ef2e86713c000c676",
+      "source": "ANNOUNCEMENT",
+      "status": "UNPARSED_CLAUSE",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "5.具有胜任应聘岗位需要的相关专业知识（含科学素质）和工作能力。",
+      "normalized_value": "5.具有胜任应聘岗位需要的相关专业知识(含科学素质)和工作能力。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:68d936ab7a34454a982ff1f10a81403432d0caa4fed0fca4e3bc324c3a7b908e"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:bad3c0a215bcdc429ba3426851d760f7e49e002a7482391093e7d2b3fe15058d",
+      "source": "ANNOUNCEMENT",
+      "status": "AMBIGUOUS",
+      "clause_role": "MANDATORY",
+      "dimension": "AGE",
+      "scope": "CANDIDATE",
+      "raw_value": "6.年龄在18周岁以上（2007年2月17日以前出生），35周岁以下（1989年2月21日以后出生）。硕士研究生年龄放宽到40周岁（1984年2月21日以后出生），具有博士学位或高级专业技术职务的年龄放宽到45周岁（1979年2月21日以后出生）。以上日期均含当日。",
+      "normalized_value": "6.年龄在18周岁以上(2007年2月17日以前出生),35周岁以下(1989年2月21日以后出生)。硕士研究生年龄放宽到40周岁(1984年2月21日以后出生),具有博士学位或高级专业技术职务的年龄放宽到45周岁(1979年2月21日以后出生)。以上日期均含当日。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:bcd7a45d1dfd09abe9e13d901bc0d7fb1b656c53b8276b0d3ce5726d05f34eb1"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:80531dbd2a7c5948fa5d5ee77121eea5a2748f7ac689e8977aa4fedc5d3eb4c2",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "7.身体健康，符合应聘岗位要求的身体条件。",
+      "normalized_value": "7.身体健康,符合应聘岗位要求的身体条件。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:c93b8ee06d20c6bd95663fa229e31ebb87e7423d40bf7b53c4541d38ffc6ef99"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:5621638a3e503e31c6f3887fb88dd9b1a8ecdfcec63eff5517e69917806ae2f8",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": "CANDIDATE_COHORT",
+      "scope": "CANDIDATE",
+      "raw_value": "尚在试用期或服务期内的省内事业单位在编工作人员，不在本次公开招聘对象范围。",
+      "normalized_value": "尚在试用期或服务期内的省内事业单位在编工作人员,不在本次公开招聘对象范围。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:e490964e13389a1882b17608b86d8d867134e5c22d2b36b272ff493a9feb13c5"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:c70f490d47411c1c712dcbf00c800c15bf0a507ccecb70f0740619fbbaa61929",
+      "source": "ANNOUNCEMENT",
+      "status": "AMBIGUOUS",
+      "clause_role": "MANDATORY",
+      "dimension": "MAJOR",
+      "scope": "ANY_EDUCATION",
+      "raw_value": "特别提示：（1）报名应聘人员填报的专业名称必须与毕业证和学位证完全一致，如专业名称后面带括号或其他说明的也必须如实填报。（2）留学归国、高校自设学科等应聘人员所学学科专业与资格条件要求的学科专业相近但不在选定参考目录，且所学专业课程、研究方向与岗位所需专业相近率达到70%，可纳入报考范围；岗位专业要求为二级学科的，对属于该二级学科专业研究方向且课程相同率达到70%以上的一级学科，可纳入报考范围。符合本条款规定的报考人员，在报名表中“是否符合专业比对条件栏”应如实填写，并提供本人亲笔签字按手印的《符合专业比对条件报考人员承诺书》（附件4）发送到邮箱2813008434@qq.com。资格复审环节由报考人员本人如实提供比对专业名称及课程的有效证明材料，招聘单位将根据报考人员提供的证明材料组织专家结合岗位专业要求开展论证。不如实提供有效证明材料的责任由报考人员本人承担。招聘单位将根据专家论证结果进行资格复审，若专家论证结果为达不到本条款要求的，不得进入下一环节。",
+      "normalized_value": "特别提示:(1)报名应聘人员填报的专业名称必须与毕业证和学位证完全一致,如专业名称后面带括号或其他说明的也必须如实填报。(2)留学归国、高校自设学科等应聘人员所学学科专业与资格条件要求的学科专业相近但不在选定参考目录,且所学专业课程、研究方向与岗位所需专业相近率达到70%,可纳入报考范围;岗位专业要求为二级学科的,对属于该二级学科专业研究方向且课程相同率达到70%以上的一级学科,可纳入报考范围。符合本条款规定的报考人员,在报名表中“是否符合专业比对条件栏”应如实填写,并提供本人亲笔签字按手印的《符合专业比对条件报考人员承诺书》(附件4)发送到邮箱2813008434@qq.com。资格复审环节由报考人员本人如实提供比对专业名称及课程的有效证明材料,招聘单位将根据报考人员提供的证明材料组织专家结合岗位专业要求开展论证。不如实提供有效证明材料的责任由报考人员本人承担。招聘单位将根据专家论证结果进行资格复审,若专家论证结果为达不到本条款要求的,不得进入下一环节。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ee1153ffe87dc5299cbc98e112f1d48f7d5505426843b6ee4473fe84dfea1cc1"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:6fc14d16d4482cb3abe900e8e6cc073cdab09ce8beca0800210f01c0b86f7288",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "1.不能坚持党的基本路线，在重大政治问题上不能与党中央保持一致的人员；",
+      "normalized_value": "1.不能坚持党的基本路线,在重大政治问题上不能与党中央保持一致的人员;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:f8a0193ca2cacf18b0211120b9d5cef4e9b97f606443f79245459094c2ec8e6d"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:00c69c7062b728429e8ddf3494e4bcace0297107657fbf2a0c6168319c2c75e5",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": "CANDIDATE_COHORT",
+      "scope": "CANDIDATE",
+      "raw_value": "2.定向到具体行业或单位的当年度毕业生；",
+      "normalized_value": "2.定向到具体行业或单位的当年度毕业生;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:254c0b3a2b45fb5ad0b2f42f17f5936638441d43051dfdeb68d95b034181ce08"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:bb0c70b4f7c74d622494ad2c173a8ed4fc8ba88a3b6e4c680ff9e139a1b92c1d",
+      "source": "ANNOUNCEMENT",
+      "status": "AMBIGUOUS",
+      "clause_role": "MANDATORY",
+      "dimension": "CANDIDATE_COHORT",
+      "scope": "CANDIDATE",
+      "raw_value": "3.在读的非2025届应届大中专及以上毕业生；",
+      "normalized_value": "3.在读的非2025届应届大中专及以上毕业生;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:f05f7d4d072d1e426c3c0d8cfb536eb2209e229a7651e41fbe6faa2c84a8fa63"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:78db50e128b325a2d667509a01885f22ec373064bc43dbbf161d997a56eda318",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "4.现役军人；",
+      "normalized_value": "4.现役军人;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:2230223b186651ecef6eb642f14b6ccf146d4b9499496107e4a3936f55dc7099"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:c6e55f5b849bee617ebf427a22d672dfc7a63502d1f0377cd33792201b7bd89d",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "5.曾因犯罪受过刑事处罚或受过劳动教养的人员；",
+      "normalized_value": "5.曾因犯罪受过刑事处罚或受过劳动教养的人员;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:9282a1e7741c39ee054943b583545488c8c5690e487fdbfd5deb30eab58b61e2"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:ffa6c9b1c4aeaaf35d2d227fe24b33600f7cf2b730c7f06f7a44f2ed1d840c1e",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "6.被开除公职的人员；",
+      "normalized_value": "6.被开除公职的人员;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:491fb93aebe850b5fa8f6decca26cd9074094a905f228efbedf7ca924697e99a"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:11e47fb6daf038d42e37299d4b16984d28dc0cec9d1bdbdb75f4f18b1c32b6ac",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "7.曾因贪污、行贿受贿、泄露国家机密等原因受到过党纪、政纪处分或近三年在机关、事业单位年度考核中曾被确定为“不称职”、“不合格”的人员；",
+      "normalized_value": "7.曾因贪污、行贿受贿、泄露国家机密等原因受到过党纪、政纪处分或近三年在机关、事业单位年度考核中曾被确定为“不称职”、“不合格”的人员;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:8c053ff798f35a0b58884d0bdcd2692c4038cf4212fc35e87ad3fa43f5918bcc"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:800220bc36b5866653f1f0631c835e8361765b93d159ccbed3e61720c020c402",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "8.截止考察环节未能提交招聘岗位所需资格条件的相关证明材料的人员；",
+      "normalized_value": "8.截止考察环节未能提交招聘岗位所需资格条件的相关证明材料的人员;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:5e6c76e7c9f2678b50c6711ab755897c765e0a7b100b3575f31dda8b804081f8"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:cf87acd5309fec9c5b367b698396990c36db2e9d55badbd88b9e45bdb48b89ed",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "10.在事业单位公开招聘中被认定有舞弊等严重违反聘用纪律行为的人员，以及在各级各类事业单位公开招聘中因违反《事业单位公开招聘违纪违规行为处理规定》被记入事业单位公开招聘应聘人员诚信档案的人员;",
+      "normalized_value": "10.在事业单位公开招聘中被认定有舞弊等严重违反聘用纪律行为的人员,以及在各级各类事业单位公开招聘中因违反《事业单位公开招聘违纪违规行为处理规定》被记入事业单位公开招聘应聘人员诚信档案的人员;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:3f554cbb4e54ea8695d4aa12eaa2e975d32820c234805fad7ec92f395928c654"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:dc572ee23b489d2cf3191437c0aa868af373a0f02a8d5dca7a716f9f68630bae",
+      "source": "ANNOUNCEMENT",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "11.人民法院认定为失信被执行人的或经有关政府行政主管部门认定存在严重违法失信行为的人员；",
+      "normalized_value": "11.人民法院认定为失信被执行人的或经有关政府行政主管部门认定存在严重违法失信行为的人员;",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:560dc86157bb2cd5c9007b20cb7c6b6b6c2010c15a72bca85472c79141a377f4"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:414a3f5236e64efcdac417103bd58c2fd38a265e1775073e915805ef38dd206a",
+      "source": "ANNOUNCEMENT",
+      "status": "UNPARSED_CLAUSE",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": null,
+      "raw_value": "12.有法律、法规规定不得聘用的人员。",
+      "normalized_value": "12.有法律、法规规定不得聘用的人员。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:fc6ab2535e689cc1ffad605889298694e0c2aaa769c470e608438138217a0957"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:37310ff3a8c24abecdeea180c2be8a0fb0e8d113e3f3905bcd562c22ab587ab6",
+      "source": "JOB_TABLE",
+      "status": "CONFIRMED_REQUIREMENT",
+      "clause_role": "MANDATORY",
+      "dimension": "EDUCATION_LEVEL",
+      "scope": "CANDIDATE",
+      "raw_value": "本科及以上",
+      "normalized_value": "本科及以上",
+      "requirement_fact_ids": [
+        "requirement-fact:148752a786f4fe90a77656f14d96d95c4c80ae8c0c3d278f19214e9dc2b5b851"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:bf7e2907636a8ae399764281df07a2f2c230c140222f30c4f2474e316601ca51"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:de2962d54003fb1775b3af5474582de51616843c2e2e2be628cbe41f2729ffe4",
+      "source": "JOB_TABLE",
+      "status": "CONFIRMED_REQUIREMENT",
+      "clause_role": "MANDATORY",
+      "dimension": "ACADEMIC_DEGREE",
+      "scope": "CANDIDATE",
+      "raw_value": "学士及以上",
+      "normalized_value": "学士及以上",
+      "requirement_fact_ids": [
+        "requirement-fact:8fa4c16c14a2c2f777bdb6bc1c306c84207a463bac0f0c4bead95ee05fa62dad"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:f937fc13686d944d6ded194c22d8b6d03fde2731c70b0cae96cb55256d6758e4"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:0cd60d0c71be4a143e1c8a3e51d6e1326fe08ee37a6e08ec3999bd415e9a2f33",
+      "source": "JOB_TABLE",
+      "status": "CONFIRMED_REQUIREMENT",
+      "clause_role": "MANDATORY",
+      "dimension": "MAJOR",
+      "scope": "BACHELOR",
+      "raw_value": "法学类",
+      "normalized_value": "法学类",
+      "requirement_fact_ids": [
+        "requirement-fact:7286fe4a637c4a49324bb5a28a5f35f308c226c913b9affb5439d605ad915ae4"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:2e7d08bcb0a38967d436238c6f2ed9668b42b2676791d89577fd68577c5402e1"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:39296441117ed48849129e8daa704961286adf403d33f0b070812d8a5781492b",
+      "source": "JOB_TABLE",
+      "status": "CONFIRMED_REQUIREMENT",
+      "clause_role": "MANDATORY",
+      "dimension": "MAJOR",
+      "scope": "GRADUATE",
+      "raw_value": "法学（0301）；法律（0351）",
+      "normalized_value": "法学(0301);法律(0351)",
+      "requirement_fact_ids": [
+        "requirement-fact:5799a00570241478d0d4af22d32a863872948872555ce0e0c8921cf50de62ada",
+        "requirement-fact:eac8950b1f692e114fdec730a3c043a97813e0e21b50db2509f6ad13ff73dd97"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54",
+        "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:cf2fc00d1b7a6f2954ee065624ea130feeaf3d24da4fba848e0706413da2ddbe",
+      "source": "JOB_TABLE",
+      "status": "AMBIGUOUS",
+      "clause_role": "MANDATORY",
+      "dimension": "MAJOR",
+      "scope": null,
+      "raw_value": "本科：法学类\n研究生：法学（0301）；法律（0351）",
+      "normalized_value": "本科:法学类\n研究生:法学(0301);法律(0351)",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:8a4caab5ac810e21e693914a00129a22d7a86eb218e01716b54c92ffb22cf973",
+      "source": "JOB_TABLE",
+      "status": "AMBIGUOUS",
+      "clause_role": "MANDATORY",
+      "dimension": "MAJOR",
+      "scope": "GRADUATE",
+      "raw_value": "法学（0301）；法律（0351）",
+      "normalized_value": "法学(0301);法律(0351)",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:fb7313b550844b8129b056ee1848c164134afd7387a94266b9976fb9dee93e54",
+        "requirement-evidence-fragment:c71248cf526914f14578bb4ddb0a492f0ce809cc5ee763987fc9a7d66881a940"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:e74983c4d95fe5dfe8608227e321f34e097a38e7b68ae6b317b5623eb43387a1",
+      "source": "JOB_TABLE",
+      "status": "DOMAIN_GAP_OBSERVED",
+      "clause_role": "MANDATORY",
+      "dimension": null,
+      "scope": "CANDIDATE",
+      "raw_value": "限男性",
+      "normalized_value": "限男性",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:915ad61437701f66a4e789a1a964f3861723f079c140249e6b059acc619949ce"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:5f3e3333bbab6ac62f97e04040ec2e4c0293d8d860295514b3440d5152187153",
+      "source": "JOB_TABLE",
+      "status": "CONFIRMED_REQUIREMENT",
+      "clause_role": "MANDATORY",
+      "dimension": "PROFESSIONAL_QUALIFICATION",
+      "scope": "CANDIDATE",
+      "raw_value": "具有A类法律职业资格证书",
+      "normalized_value": "具有A类法律职业资格证书",
+      "requirement_fact_ids": [
+        "requirement-fact:9c12cc0fda54f732f148dbff7e745e0c52d4dc4c52524dc136b50a7dc2108d97"
+      ],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:a5e86ccac4be2a8891054f8449cef79f59f9aa1fb9d3596b35809562a04fa2aa"
+      ]
+    },
+    {
+      "requirement_observation_id": "requirement-observation:66b256d2a9f1d2a2159c11ed733cb23ac3c03c6c9b66aa07f80ea58139e175d7",
+      "source": "JOB_TABLE",
+      "status": "UNPARSED_CLAUSE",
+      "clause_role": "UNKNOWN",
+      "dimension": null,
+      "scope": "CANDIDATE",
+      "raw_value": "需到男犯监狱、男性戒毒场所开展调研工作。",
+      "normalized_value": "需到男犯监狱、男性戒毒场所开展调研工作。",
+      "requirement_fact_ids": [],
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+      ]
+    }
+  ],
+  "source_absences": [
+    {
+      "dimension": "ACADEMIC_DEGREE",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "notice-degree",
+      "evidence_fragment_ids": [],
+      "source_stage_blocked_completeness": false,
+      "source": "ANNOUNCEMENT"
+    },
+    {
+      "dimension": "WORK_EXPERIENCE",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "notice-work-experience",
+      "evidence_fragment_ids": [],
+      "source_stage_blocked_completeness": false,
+      "source": "ANNOUNCEMENT"
+    },
+    {
+      "dimension": "HOUSEHOLD_REGISTRATION",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "notice-household",
+      "evidence_fragment_ids": [],
+      "source_stage_blocked_completeness": false,
+      "source": "ANNOUNCEMENT"
+    },
+    {
+      "dimension": "STUDENT_ORIGIN",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "notice-student-origin",
+      "evidence_fragment_ids": [],
+      "source_stage_blocked_completeness": false,
+      "source": "ANNOUNCEMENT"
+    },
+    {
+      "dimension": "PROFESSIONAL_QUALIFICATION",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "notice-legal-qualification",
+      "evidence_fragment_ids": [],
+      "source_stage_blocked_completeness": false,
+      "source": "ANNOUNCEMENT"
+    },
+    {
+      "dimension": "AGE",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "requirement-observation-candidate:age:4f328d3f89694764840f5696f806b4948ef438f3ca38b9f044242e78023b5956",
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a",
+        "requirement-evidence-fragment:8e5d585b2ffa41965b341b7d882c33b39551dbc3c2a196633ca85f2644c97332",
+        "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+      ],
+      "source_stage_blocked_completeness": true,
+      "source": "JOB_TABLE"
+    },
+    {
+      "dimension": "WORK_EXPERIENCE",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "requirement-observation-candidate:work-experience:19a38aca814e2c3bf4196fae8817bb43f5ca92b438dc2ed836e79fee17f7df80",
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a",
+        "requirement-evidence-fragment:8e5d585b2ffa41965b341b7d882c33b39551dbc3c2a196633ca85f2644c97332",
+        "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+      ],
+      "source_stage_blocked_completeness": true,
+      "source": "JOB_TABLE"
+    },
+    {
+      "dimension": "CANDIDATE_COHORT",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "requirement-observation-candidate:candidate-cohort:101f929790e268b105db0c681ff72a3a42122d8d167e918a8aeeb7d23b8ef8ed",
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a",
+        "requirement-evidence-fragment:8e5d585b2ffa41965b341b7d882c33b39551dbc3c2a196633ca85f2644c97332",
+        "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+      ],
+      "source_stage_blocked_completeness": true,
+      "source": "JOB_TABLE"
+    },
+    {
+      "dimension": "HOUSEHOLD_REGISTRATION",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "requirement-observation-candidate:household-registration:8614ac97f8dc17489fbc2bec7caeae0fc8a72554eeb52f62c17418b645889555",
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a",
+        "requirement-evidence-fragment:8e5d585b2ffa41965b341b7d882c33b39551dbc3c2a196633ca85f2644c97332",
+        "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+      ],
+      "source_stage_blocked_completeness": true,
+      "source": "JOB_TABLE"
+    },
+    {
+      "dimension": "STUDENT_ORIGIN",
+      "subject_scope": "CANDIDATE",
+      "status": "NOT_OBSERVED",
+      "source_observation_id": "requirement-observation-candidate:student-origin:d14661655f748e2503793250177f97c9dae626c4d07fcb04da44a18fa90b048a",
+      "evidence_fragment_ids": [
+        "requirement-evidence-fragment:ce3939a6eb3014a7eb8194d4f027868586a02bb1b7b16614c18ae46a374b273a",
+        "requirement-evidence-fragment:8e5d585b2ffa41965b341b7d882c33b39551dbc3c2a196633ca85f2644c97332",
+        "requirement-evidence-fragment:07b3f9c0c152f6d3bf61aa248c0777d4db6015e50ad9202410ac09c7a3abaff0"
+      ],
+      "source_stage_blocked_completeness": true,
+      "source": "JOB_TABLE"
+    }
+  ],
+  "source_conflicts": [],
+  "network_requests": 0,
+  "composer_version": "p2-legal-06-multi-source-requirement-composer/1.0.0"
+}

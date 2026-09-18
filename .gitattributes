@@ -1,0 +1,5 @@
+/tests/fixtures/historical-evidence/** -text
+/fixtures/p2-04/beijing-public-institution-job-list.html -text
+/tests/fixtures/historical-evidence/guizhou-notice.html whitespace=-blank-at-eol
+/fixtures/p2-04d/beijing-public-institution-job-detail.html -text
+/fixtures/p2-04e/beijing-public-institution-job-table.xlsx -text

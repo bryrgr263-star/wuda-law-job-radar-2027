@@ -1,4 +1,5 @@
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
+import { PRESENTATION_DECISION_V2_SCHEMA_VERSION, PRESENTATION_READ_MODEL_V2_SCHEMA_VERSION } from "../domain/presentation";
 
 import type {
   CandidateProfile,
@@ -11,6 +12,11 @@ import type {
   OpportunityVersionId,
   OpportunityCandidate,
   OpportunityCandidateId,
+  PresentationDecision,
+  PresentationDecisionId,
+  PresentationReadModel,
+  PresentationReadModelId,
+  PresentationMigrationAudit,
   Organization,
   OrganizationId,
   RecruitmentEndpoint,
@@ -31,6 +37,7 @@ import type {
 import type {
   AppendOnlyRepository,
   OpportunityRecallPersistenceRepository,
+  PresentationPersistenceRepository,
   ShadowPersistenceRepositories
 } from "./repositories";
 
@@ -213,8 +220,110 @@ implements OpportunityRecallPersistenceRepository {
   }
 }
 
+class SqlitePresentationPersistence implements PresentationPersistenceRepository {
+  readonly #database: DatabaseSync;
+
+  constructor(database: DatabaseSync) { this.#database = database; }
+
+  appendDecision(decision: PresentationDecision) {
+    const existing = this.getDecision(decision.presentation_decision_id);
+    if (existing) return samePayload(existing, decision,
+      "shadow_presentation_decisions", decision.presentation_decision_id);
+    if (decision.schema_version === PRESENTATION_DECISION_V2_SCHEMA_VERSION) {
+      this.#database.prepare(`INSERT INTO shadow_presentation_v2_decisions
+        (presentation_decision_id, opportunity_candidate_id, scope, record_kind, position_id, revision,
+         supersedes_presentation_decision_id, semantic_hash, projection_version, integrity_hash, payload_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(decision.presentation_decision_id, decision.opportunity_candidate_id, decision.scope, decision.record_kind,
+          decision.position_id, decision.revision, decision.supersedes_presentation_decision_id,
+          decision.record_kind === "POSITION_PRESENTATION" ? decision.semantic_hash : null,
+          decision.record_kind === "POSITION_PRESENTATION" ? decision.semantic_projection.projection_version : null,
+          decision.integrity_hash, JSON.stringify(decision));
+      return clone(decision);
+    }
+    this.#database.prepare(`INSERT INTO shadow_presentation_decisions
+      (presentation_decision_id, opportunity_candidate_id, revision, status, integrity_hash, payload_json)
+      VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(decision.presentation_decision_id, decision.opportunity_candidate_id,
+        decision.revision, decision.status, decision.integrity_hash, JSON.stringify(decision));
+    return clone(decision);
+  }
+
+  appendReadModel(readModel: PresentationReadModel) {
+    const existing = this.getReadModel(readModel.presentation_read_model_id);
+    if (existing) return samePayload(existing, readModel,
+      "shadow_presentation_read_models", readModel.presentation_read_model_id);
+    if (readModel.schema_version === PRESENTATION_READ_MODEL_V2_SCHEMA_VERSION) {
+      this.#database.prepare(`INSERT INTO shadow_presentation_v2_read_models
+        (presentation_read_model_id, presentation_decision_id, scope, position_id, decision_revision, integrity_hash, payload_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`)
+        .run(readModel.presentation_read_model_id, readModel.presentation_decision_id, readModel.scope,
+          readModel.position_id, readModel.decision_revision, readModel.integrity_hash, JSON.stringify(readModel));
+      return clone(readModel);
+    }
+    this.#database.prepare(`INSERT INTO shadow_presentation_read_models
+      (presentation_read_model_id, presentation_decision_id, opportunity_candidate_id,
+       presentation_status, updated_at, integrity_hash, payload_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(readModel.presentation_read_model_id, readModel.presentation_decision_id,
+        readModel.opportunity_candidate_id, readModel.presentation_status,
+        readModel.updated_at, readModel.integrity_hash, JSON.stringify(readModel));
+    return clone(readModel);
+  }
+
+  getDecision(id: PresentationDecisionId) {
+    return readPayload<PresentationDecision>(this.#database,
+      "shadow_presentation_decisions", "presentation_decision_id", id)
+      ?? readPayload<PresentationDecision>(this.#database, "shadow_presentation_v2_decisions", "presentation_decision_id", id);
+  }
+
+  getReadModel(id: PresentationReadModelId) {
+    return readPayload<PresentationReadModel>(this.#database,
+      "shadow_presentation_read_models", "presentation_read_model_id", id)
+      ?? readPayload<PresentationReadModel>(this.#database, "shadow_presentation_v2_read_models", "presentation_read_model_id", id);
+  }
+
+  listCurrentReadModels() {
+    if (countRows(this.#database, "shadow_presentation_v2_decisions") > 0
+        || countRows(this.#database, "shadow_presentation_v2_migration_audits") > 0) {
+      throw new Error("Presentation V2 requires the root-composed validated read repository");
+    }
+    return this.#database.prepare(`
+      SELECT model.payload_json
+      FROM shadow_presentation_read_models model
+      JOIN shadow_presentation_decisions decision
+        ON decision.presentation_decision_id = model.presentation_decision_id
+      WHERE decision.revision = (
+        SELECT MAX(current.revision)
+        FROM shadow_presentation_decisions current
+        WHERE current.opportunity_candidate_id = decision.opportunity_candidate_id
+      )
+      ORDER BY model.updated_at DESC, model.presentation_read_model_id ASC
+    `).all().map((row) => JSON.parse(String(row.payload_json)) as PresentationReadModel);
+  }
+
+  readPresentationHistory() {
+    const read = <Artifact>(table: string) => this.#database.prepare(`SELECT payload_json FROM ${table}`)
+      .all().map((row) => JSON.parse(String(row.payload_json)) as Artifact);
+    const decisions = [...read<PresentationDecision>("shadow_presentation_decisions"), ...read<PresentationDecision>("shadow_presentation_v2_decisions")];
+    const models = [...read<PresentationReadModel>("shadow_presentation_read_models"), ...read<PresentationReadModel>("shadow_presentation_v2_read_models")];
+    return { decisions, read_models: models, migration_audits: read<PresentationMigrationAudit>("shadow_presentation_v2_migration_audits") };
+  }
+
+  appendMigrationAudit(audit: PresentationMigrationAudit) {
+    const existing = readPayload<PresentationMigrationAudit>(this.#database,
+      "shadow_presentation_v2_migration_audits", "migration_id", audit.migration_id);
+    if (existing) return samePayload(existing, audit, "shadow_presentation_v2_migration_audits", audit.migration_id);
+    this.#database.prepare(`INSERT INTO shadow_presentation_v2_migration_audits
+      (migration_id, scope, position_id, integrity_hash, payload_json) VALUES (?, ?, ?, ?, ?)`)
+      .run(audit.migration_id, audit.scope, audit.position_id, audit.integrity_hash, JSON.stringify(audit));
+    return clone(audit);
+  }
+}
+
 export class SqliteShadowPersistence implements ShadowPersistenceRepositories {
   readonly opportunity_recall: OpportunityRecallPersistenceRepository;
+  readonly presentation: PresentationPersistenceRepository;
   readonly organizations: AppendOnlyRepository<Organization, OrganizationId>;
   readonly source_definitions: AppendOnlyRepository<
     SourceDefinition,
@@ -259,6 +368,7 @@ export class SqliteShadowPersistence implements ShadowPersistenceRepositories {
 
   constructor(database: DatabaseSync) {
     this.opportunity_recall = new SqliteOpportunityRecallPersistence(database);
+    this.presentation = new SqlitePresentationPersistence(database);
     this.organizations = repository(database, {
       table: "shadow_organizations",
       id_column: "organization_id",
@@ -381,6 +491,18 @@ export class SqliteShadowPersistence implements ShadowPersistenceRepositories {
       ]
     });
   }
+}
+
+function samePayload<Entity>(
+  existing: Entity,
+  entity: Entity,
+  table: string,
+  id: string
+): Entity {
+  if (JSON.stringify(existing) !== JSON.stringify(entity)) {
+    throw new Error(`${table} immutable identity collision: ${id}`);
+  }
+  return clone(existing);
 }
 
 function repository<Entity, Id>(

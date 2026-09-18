@@ -1,0 +1,2488 @@
+{
+  "head": "7de0554d1fb23db8453376099f165fd4d0af33ee",
+  "branch": "codex/ingestion-foundation",
+  "rows": [
+    {
+      "status": " M",
+      "path": "lib/ingestion/domain/index.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/adapters/contract.ts",
+        "lib/ingestion/adapters/fixture-adapter.ts",
+        "lib/ingestion/canonicalization/conservative-canonicalizer.ts",
+        "lib/ingestion/canonicalization/opportunity-version-tracker.ts",
+        "lib/ingestion/canonicalization/types.ts",
+        "lib/ingestion/eligibility/deterministic-eligibility-engine.ts",
+        "lib/ingestion/eligibility/types.ts",
+        "lib/ingestion/index.ts",
+        "lib/ingestion/lifecycle/source-run-missing-guard.ts",
+        "lib/ingestion/lifecycle/types.ts",
+        "lib/ingestion/normalization/extracted-record-identity.ts",
+        "lib/ingestion/normalization/opportunity-recall-tracker.ts",
+        "lib/ingestion/normalization/position-bound-opportunity-tracker.ts",
+        "lib/ingestion/normalization/position-identity-resolver.ts",
+        "lib/ingestion/normalization/position-version-tracker.ts",
+        "lib/ingestion/normalization/source-discovery-support.ts",
+        "lib/ingestion/normalization/source-occurrence-materializer.ts",
+        "lib/ingestion/normalization/source-occurrence-tracker.ts",
+        "lib/ingestion/normalization/source-record-normalizer.ts",
+        "lib/ingestion/normalization/text-normalizer.ts",
+        "lib/ingestion/normalization/trusted-source-occurrence-registry.ts",
+        "lib/ingestion/persistence/repositories.ts",
+        "lib/ingestion/persistence/sqlite-shadow-persistence.ts",
+        "lib/ingestion/pipeline/approved-requirement-projector.ts",
+        "lib/ingestion/pipeline/legal-employment-relevance.ts",
+        "lib/ingestion/pipeline/position-bound-eligibility-assessment.ts",
+        "lib/ingestion/pipeline/position-bound-predicate-resolution.ts",
+        "lib/ingestion/pipeline/position-bound-requirement-set.ts",
+        "lib/ingestion/pipeline/position-bound-source-composition.ts",
+        "lib/ingestion/pipeline/presentation-decision.ts",
+        "lib/ingestion/pipeline/presentation-persistence.ts",
+        "lib/ingestion/pipeline/presentation-read-model.ts",
+        "lib/ingestion/pipeline/presentation-semantic-projection.ts",
+        "lib/ingestion/pipeline/trusted-artifact-chain.ts",
+        "lib/ingestion/pipeline/trusted-candidate-evidence.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+        "lib/ingestion/pipeline/trusted-requirement-projection.ts",
+        "lib/ingestion/raw/capture.ts",
+        "lib/ingestion/raw/repositories.ts",
+        "lib/ingestion/registry/source-registry.ts",
+        "lib/ingestion/registry/types.ts",
+        "lib/ingestion/registry/validation.ts",
+        "lib/ingestion/requirements/deterministic-requirement-parser.ts",
+        "lib/ingestion/requirements/source-surface-composer.ts",
+        "lib/ingestion/requirements/types.ts",
+        "lib/ingestion/transport/fixture-transport.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/domain/primitives.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/domain/eligibility.ts",
+        "lib/ingestion/domain/index.ts",
+        "lib/ingestion/domain/opportunity.ts",
+        "lib/ingestion/domain/presentation.ts",
+        "lib/ingestion/domain/raw.ts",
+        "lib/ingestion/domain/recall.ts",
+        "lib/ingestion/domain/recruitment-context.ts",
+        "lib/ingestion/domain/relevance.ts",
+        "lib/ingestion/domain/requirements.ts",
+        "lib/ingestion/domain/source-surface-composition.ts",
+        "lib/ingestion/domain/source.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/domain/requirements.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/domain/eligibility.ts",
+        "lib/ingestion/domain/index.ts",
+        "lib/ingestion/domain/relevance.ts",
+        "lib/ingestion/domain/source-surface-composition.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/normalization/index.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/index.ts",
+        "lib/ingestion/pipeline/approved-requirement-projector.ts",
+        "lib/ingestion/pipeline/legal-employment-relevance.ts",
+        "lib/ingestion/pipeline/position-bound-eligibility-assessment.ts",
+        "lib/ingestion/pipeline/position-bound-predicate-resolution.ts",
+        "lib/ingestion/pipeline/position-bound-requirement-set.ts",
+        "lib/ingestion/pipeline/position-bound-source-composition.ts",
+        "lib/ingestion/pipeline/presentation-decision.ts",
+        "lib/ingestion/pipeline/presentation-read-model.ts",
+        "lib/ingestion/pipeline/presentation-semantic-projection.ts",
+        "lib/ingestion/pipeline/trusted-artifact-chain.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+        "lib/ingestion/pipeline/trusted-requirement-projection.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/normalization/trusted-source-occurrence-registry.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/normalization/index.ts",
+        "lib/ingestion/normalization/source-discovery-support.ts",
+        "lib/ingestion/pipeline/position-bound-source-composition.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/persistence/repositories.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/persistence/index.ts",
+        "lib/ingestion/persistence/sqlite-shadow-persistence.ts"
+      ],
+      "literal_references": [
+        "tests/domain/domain-types.test.ts"
+      ],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/persistence/sqlite-shadow-persistence.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/persistence/index.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/pipeline/approved-requirement-projector.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/trusted-requirement-projection.ts"
+      ],
+      "literal_references": [],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/pipeline/index.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/index.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/pipeline/trusted-artifact-chain.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/index.ts",
+        "lib/ingestion/pipeline/presentation-decision.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/pipeline/trusted-candidate-evidence.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/index.ts",
+        "lib/ingestion/pipeline/trusted-artifact-chain.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/registry/source-registry.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/registry/index.ts"
+      ],
+      "literal_references": [],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "lib/ingestion/requirements/deterministic-requirement-parser.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/requirements/index.ts"
+      ],
+      "literal_references": [
+        "tests/requirements/p1-cr9-minimal-domain-extension.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "package.json",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/ci/phase-1-ci.test.ts"
+      ],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "pnpm-lock.yaml",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "tests/architecture/ingestion-boundary.test.ts",
+      "production": false,
+      "test": true,
+      "guard": true,
+      "importers": [],
+      "literal_references": [],
+      "category": "D",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "tests/integration/phase-1-pipeline.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "tests/persistence/shadow-migration.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "tests/persistence/shadow-test-database.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "tests/integration/phase-1-pipeline.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts",
+        "tests/persistence/opportunity-recall-shadow.test.ts",
+        "tests/persistence/presentation-shadow.test.ts",
+        "tests/persistence/shadow-migration.test.ts",
+        "tests/persistence/shadow-repository.test.ts",
+        "tests/pipeline/presentation-decision.test.ts",
+        "tests/presentation-read-api/presentation-api.test.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "tests/pipeline/approved-requirement-projection-coverage.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "tests/pipeline/position-bound-phase-fixture.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "tests/normalization/source-discovery-support.test.ts",
+        "tests/pipeline/approved-requirement-projection-coverage.test.ts",
+        "tests/pipeline/legal-employment-relevance.test.ts",
+        "tests/pipeline/position-bound-eligibility-assessment.test.ts",
+        "tests/pipeline/position-bound-predicate-resolution.test.ts",
+        "tests/pipeline/position-bound-requirement-set.test.ts",
+        "tests/pipeline/position-bound-source-composition.test.ts",
+        "tests/pipeline/presentation-decision.test.ts",
+        "tests/pipeline/trusted-candidate-evidence.test.ts",
+        "tests/pipeline/trusted-chain-restoration.test.ts",
+        "tests/production-persistence/git-raw-object-persistence.test.ts",
+        "tests/production-persistence/zero-cost-production-composition-root.test.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "tests/pipeline/trusted-candidate-evidence.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": " M",
+      "path": "tests/requirements/requirement-parser.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "app/api/presentation/v1/[...segments]/route.ts",
+      "production": true,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/authoritative-current-presentation-identity-v2-design.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/authoritative-current-presentation-identity-v2-verification.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/p2-legal-08b-architecture-alignment-requirementset-migration.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/p2-legal-08b-eligibility-business-rules.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/production-persistence-design.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/production-persistence-phase-1-recovery.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/scheduler-prerequisite-identity-probe.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "F",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/zero-cost-git-persistence-layout.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/zero-cost-git-raw-boundary.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "docs/zero-cost-production-composition-root.md",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "E",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "fixtures/p2-04/ntsc-talent-list.synthetic.html",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/ingestion/domain/presentation.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/domain/index.ts",
+        "lib/ingestion/persistence/sqlite-shadow-persistence.ts",
+        "lib/production-persistence/git-append-only-execution-store.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/ingestion/normalization/source-discovery-support.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/normalization/index.ts",
+        "lib/ingestion/normalization/trusted-source-occurrence-registry.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+        "lib/ingestion/pipeline/trusted-chain-restoration.ts",
+        "lib/production-persistence/git-raw-object-persistence.ts",
+        "tests/normalization/source-discovery-support.test.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/ingestion/pipeline/presentation-decision.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/index.ts",
+        "lib/ingestion/pipeline/presentation-persistence.ts",
+        "lib/ingestion/pipeline/presentation-read-model.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/ingestion/pipeline/presentation-persistence.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/index.ts",
+        "lib/production-persistence/git-append-only-execution-store.ts",
+        "tests/pipeline/presentation-decision.test.ts",
+        "tests/pipeline/trusted-chain-restoration.test.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/ingestion/pipeline/presentation-read-model.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/index.ts",
+        "lib/ingestion/pipeline/presentation-persistence.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/ingestion/pipeline/presentation-semantic-projection.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/presentation-decision.ts",
+        "lib/ingestion/pipeline/presentation-read-model.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+        "tests/pipeline/presentation-decision.test.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/index.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/ingestion/pipeline/trusted-chain-restoration.ts",
+      "production": true,
+      "test": true,
+      "guard": true,
+      "importers": [
+        "lib/ingestion/pipeline/index.ts",
+        "lib/ingestion/pipeline/trusted-chain-composition-root.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-04/beijing-first-live-canary.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-04/run-beijing-first-live-canary.ts",
+        "tests/p2-04/beijing-first-live-canary.test.ts"
+      ],
+      "literal_references": [
+        "tests/p2-04/beijing-first-live-canary.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-04/index.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-04/ntsc-official-html-adapter.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-04/index.ts",
+        "lib/live-canary/p2-04/ntsc-offline-composition.ts"
+      ],
+      "literal_references": [
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-04/ntsc-offline-composition.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-04/index.ts"
+      ],
+      "literal_references": [
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-04/run-beijing-first-live-canary.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/p2-04/beijing-first-live-canary.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "CANARY_ONLY_ORCHESTRATION"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-acq-01/approved-official-canary-transport.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-acq-01/beijing-html-xlsx-canary.ts",
+        "lib/live-canary/p2-acq-01/index.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-acq-01/beijing-html-xlsx-canary.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-acq-01/index.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-acq-01/index.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "tests/p2-acq-01/official-html-xlsx-canary.test.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-01/guizhou-legal-canary-admission-preflight.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-legal-02/guizhou-notice-observation-canary.ts",
+        "lib/live-canary/p2-legal-03/guizhou-attachment-admission-preflight.ts",
+        "lib/live-canary/p2-legal-05/guizhou-legal-xlsx-requirement-adapter.ts",
+        "lib/live-canary/p2-legal-05/run-guizhou-legal-xlsx-requirement-extraction.ts",
+        "lib/live-canary/p2-legal-06/run-guizhou-legal-requirement-set-composition.ts",
+        "lib/live-canary/p2-legal-08b/target-source-composition.ts",
+        "tests/canonicalization/position-bound-opportunity-tracker.test.ts",
+        "tests/normalization/position-identity-resolver.test.ts",
+        "tests/normalization/position-version-tracker.test.ts",
+        "tests/normalization/trusted-source-occurrence-registry.test.ts",
+        "tests/p2-legal-01/guizhou-legal-canary-admission-preflight.test.ts",
+        "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts",
+        "tests/p2-legal-03/guizhou-attachment-admission-preflight.test.ts",
+        "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts"
+      ],
+      "literal_references": [
+        "tests/p2-legal-01/guizhou-legal-canary-admission-preflight.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-02/guizhou-notice-observation-canary.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-legal-02/run-guizhou-notice-observation-canary.ts",
+        "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts"
+      ],
+      "literal_references": [
+        "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-02/run-guizhou-notice-observation-canary.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "CANARY_ONLY_ORCHESTRATION"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-03/guizhou-attachment-admission-preflight.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-legal-04/guizhou-attachment-observation-canary.ts",
+        "lib/live-canary/p2-legal-05/guizhou-legal-xlsx-requirement-adapter.ts",
+        "lib/live-canary/p2-legal-08b/target-source-composition.ts",
+        "tests/p2-legal-03/guizhou-attachment-admission-preflight.test.ts",
+        "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts"
+      ],
+      "literal_references": [
+        "tests/p2-legal-03/guizhou-attachment-admission-preflight.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-04/guizhou-attachment-observation-canary.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-legal-04/run-guizhou-attachment-observation-canary.ts",
+        "lib/live-canary/p2-legal-05/guizhou-legal-xlsx-requirement-adapter.ts",
+        "lib/live-canary/p2-legal-06/run-guizhou-legal-requirement-set-composition.ts",
+        "lib/live-canary/p2-legal-08b/target-source-composition.ts",
+        "tests/canonicalization/position-bound-opportunity-tracker.test.ts",
+        "tests/normalization/position-identity-resolver.test.ts",
+        "tests/normalization/position-version-tracker.test.ts",
+        "tests/normalization/trusted-source-occurrence-registry.test.ts",
+        "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts",
+        "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts"
+      ],
+      "literal_references": [
+        "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-04/run-guizhou-attachment-observation-canary.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "CANARY_ONLY_ORCHESTRATION"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-05/guizhou-legal-xlsx-requirement-adapter.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-legal-05/run-guizhou-legal-xlsx-requirement-extraction.ts",
+        "lib/live-canary/p2-legal-06/guizhou-legal-requirement-set-composer.ts",
+        "lib/live-canary/p2-legal-06/run-guizhou-legal-requirement-set-composition.ts",
+        "lib/live-canary/p2-legal-07/guizhou-requirement-blocker-audit.ts",
+        "lib/live-canary/p2-legal-08b/target-source-composition.ts",
+        "tests/canonicalization/position-bound-opportunity-tracker.test.ts",
+        "tests/normalization/position-identity-resolver.test.ts",
+        "tests/normalization/position-version-tracker.test.ts",
+        "tests/normalization/trusted-source-occurrence-registry.test.ts",
+        "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts"
+      ],
+      "literal_references": [
+        "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-05/run-guizhou-legal-xlsx-requirement-extraction.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "F",
+      "canary_kind": "CANARY_ONLY_ORCHESTRATION"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-06/guizhou-legal-requirement-set-composer.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-legal-06/run-guizhou-legal-requirement-set-composition.ts",
+        "lib/live-canary/p2-legal-07/guizhou-requirement-blocker-audit.ts",
+        "lib/live-canary/p2-legal-07/run-guizhou-requirement-blocker-audit.ts",
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+        "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts"
+      ],
+      "literal_references": [
+        "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-06/run-guizhou-legal-requirement-set-composition.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "F",
+      "canary_kind": "CANARY_ONLY_ORCHESTRATION"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-07/guizhou-requirement-blocker-audit.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-legal-07/run-guizhou-requirement-blocker-audit.ts",
+        "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts"
+      ],
+      "literal_references": [
+        "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "DIAGNOSTIC_ONLY"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-07/run-guizhou-requirement-blocker-audit.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "F",
+      "canary_kind": "DIAGNOSTIC_ONLY"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-08b/index.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "tests/normalization/trusted-source-occurrence-registry.test.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/p2-legal-08b/target-source-composition.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/p2-legal-08b/index.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-2027-haier/haier-2027-source.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/real-2027-haier/haier-2027-trusted-run.ts",
+        "lib/live-canary/real-2027-haier/index.ts",
+        "lib/live-canary/real-2027-haier/run-haier-2027-canary.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "GENERIC_REUSABLE_SOURCE_CAPABILITY (candidate only; site-bound)"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-2027-haier/haier-2027-trusted-run.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/real-2027-haier/index.ts",
+        "lib/live-canary/real-2027-haier/run-haier-2027-canary.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-2027-haier/index.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "tests/real-2027-haier/haier-2027-canary.test.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-2027-haier/run-haier-2027-canary.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "F",
+      "canary_kind": "CANARY_ONLY_ORCHESTRATION"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-2027-zhenghan/index.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "tests/real-2027-zhenghan/zhenghan-2027-source.test.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-2027-zhenghan/run-zhenghan-2027-canary.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "F",
+      "canary_kind": "CANARY_ONLY_ORCHESTRATION"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-2027-zhenghan/zhenghan-2027-source.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/real-2027-zhenghan/index.ts",
+        "lib/live-canary/real-2027-zhenghan/run-zhenghan-2027-canary.ts",
+        "lib/live-canary/real-2027-zhenghan/zhenghan-2027-trusted-run.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "GENERIC_REUSABLE_SOURCE_CAPABILITY (candidate only; site-bound)"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-2027-zhenghan/zhenghan-2027-trusted-run.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/real-2027-haier/haier-2027-trusted-run.ts",
+        "lib/live-canary/real-2027-zhenghan/index.ts",
+        "lib/live-canary/real-2027-zhenghan/run-zhenghan-2027-canary.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-legal-canary/run-shenzhen-bankruptcy-notice-reobservation-canary.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "H",
+      "canary_kind": "DIAGNOSTIC_ONLY"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-legal-canary/run-shenzhen-bankruptcy-observation-canary.ts",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/real-legal-canary/shenzhen-bankruptcy-observation-canary.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "CANARY_ONLY_ORCHESTRATION"
+    },
+    {
+      "status": "??",
+      "path": "lib/live-canary/real-legal-canary/shenzhen-bankruptcy-observation-canary.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/real-legal-canary/run-shenzhen-bankruptcy-notice-reobservation-canary.ts",
+        "lib/live-canary/real-legal-canary/run-shenzhen-bankruptcy-observation-canary.ts",
+        "tests/real-legal-canary/shenzhen-bankruptcy-observation-canary.test.ts"
+      ],
+      "literal_references": [
+        "tests/real-legal-canary/shenzhen-bankruptcy-observation-canary.test.ts"
+      ],
+      "category": "C",
+      "canary_kind": "CANARY_TEST_SUPPORT"
+    },
+    {
+      "status": "??",
+      "path": "lib/presentation-read-api/api.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/presentation-read-api/index.ts",
+        "lib/presentation-read-api/runtime.ts",
+        "lib/presentation-read-api/shadow-runtime.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/presentation-read-api/index.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "app/api/presentation/v1/[...segments]/route.ts",
+        "tests/p2-legal-08b/target-source-composition.test.ts",
+        "tests/pipeline/presentation-decision.test.ts",
+        "tests/pipeline/trusted-chain-restoration.test.ts",
+        "tests/presentation-read-api/presentation-api.test.ts",
+        "tests/production-persistence/phase-3-contracts.test.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts"
+      ],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/presentation-read-api/runtime.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/presentation-read-api/index.ts"
+      ],
+      "literal_references": [
+        "tests/architecture/ingestion-boundary.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/presentation-read-api/shadow-runtime.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/presentation-read-api/index.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/candidate-evidence-object-boundary.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/contracts.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/real-2027-haier/haier-2027-source.ts",
+        "lib/live-canary/real-2027-zhenghan/zhenghan-2027-source.ts",
+        "lib/production-persistence/candidate-evidence-object-boundary.ts",
+        "lib/production-persistence/git-raw-object-persistence.ts",
+        "lib/production-persistence/git-source-registry-persistence.ts",
+        "lib/production-persistence/index.ts",
+        "lib/production-persistence/postgres-js-executor.ts",
+        "lib/production-persistence/postgres-presentation-read-repository.ts",
+        "lib/production-persistence/postgres-production-persistence.ts",
+        "lib/production-persistence/production-journal.ts",
+        "lib/production-persistence/raw-object-boundary.ts",
+        "lib/production-persistence/source-owner-rehydration.ts",
+        "lib/production-persistence/supabase-private-raw-storage.ts",
+        "lib/production-persistence/zero-cost-production-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/git-append-only-execution-store.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts",
+        "lib/production-persistence/zero-cost-production-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/git-raw-object-persistence.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/git-raw-sqlite-index.ts",
+        "lib/production-persistence/index.ts",
+        "lib/production-persistence/zero-cost-production-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/git-raw-sqlite-index.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/git-source-registry-persistence.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts",
+        "lib/production-persistence/zero-cost-production-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/index.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/live-canary/real-2027-haier/run-haier-2027-canary.ts",
+        "lib/live-canary/real-2027-zhenghan/run-zhenghan-2027-canary.ts",
+        "lib/live-canary/real-2027-zhenghan/zhenghan-2027-trusted-run.ts",
+        "lib/presentation-read-api/runtime.ts",
+        "tests/pipeline/trusted-chain-restoration.test.ts",
+        "tests/production-persistence/git-append-only-execution-store.test.ts",
+        "tests/production-persistence/git-raw-object-persistence.test.ts",
+        "tests/production-persistence/journal-contract.test.ts",
+        "tests/production-persistence/phase-1-contracts.test.ts",
+        "tests/production-persistence/phase-3-contracts.test.ts",
+        "tests/production-persistence/zero-cost-production-composition-root.test.ts",
+        "tests/real-2027-haier/haier-2027-canary.test.ts",
+        "tests/real-2027-zhenghan/zhenghan-2027-source.test.ts"
+      ],
+      "literal_references": [
+        "tests/adapters/adapter-contract-harness.ts",
+        "tests/p2-04/ntsc-official-html-adapter.test.ts",
+        "tests/pipeline/trusted-chain-restoration.test.ts",
+        "tests/production-persistence/git-raw-object-persistence.test.ts",
+        "tests/production-persistence/zero-cost-production-composition-root.test.ts"
+      ],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/postgres-js-executor.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/postgres-presentation-read-repository.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/postgres-production-persistence.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/production-journal.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts",
+        "lib/production-persistence/postgres-production-persistence.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/raw-object-boundary.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/git-raw-object-persistence.ts",
+        "lib/production-persistence/index.ts",
+        "lib/production-persistence/zero-cost-production-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/source-owner-rehydration.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts",
+        "lib/production-persistence/zero-cost-production-composition-root.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/supabase-private-raw-storage.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts"
+      ],
+      "literal_references": [],
+      "category": "B",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "lib/production-persistence/zero-cost-production-composition-root.ts",
+      "production": true,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "lib/production-persistence/index.ts"
+      ],
+      "literal_references": [
+        "tests/production-persistence/zero-cost-production-architecture.test.ts"
+      ],
+      "category": "A",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "production/persistence/migrations/001_trusted_chain_foundation.up.sql",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/production-persistence/migration-security.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "production/persistence/migrations/002_source_registry_admission.up.sql",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/production-persistence/migration-security.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "production/persistence/migrations/003_raw_acquisition_source_facts.up.sql",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/production-persistence/migration-security.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "production/persistence/migrations/004_artifact_ledger.up.sql",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/production-persistence/migration-security.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "production/persistence/migrations/005_atomic_command_journal.up.sql",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/production-persistence/migration-005-hardening.test.ts",
+        "tests/production-persistence/migration-security.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "production/persistence/migrations/006_candidate_evidence_presentation_reader.up.sql",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/production-persistence/migration-security.test.ts"
+      ],
+      "category": "F",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "shadow/migrations/003_presentation_read_model.sql",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/persistence/shadow-test-database.ts"
+      ],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "shadow/migrations/004_presentation_identity_v2.sql",
+      "production": false,
+      "test": false,
+      "guard": false,
+      "importers": [],
+      "literal_references": [
+        "tests/persistence/shadow-test-database.ts"
+      ],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/normalization/source-discovery-support.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/normalization/source-occurrence-materializer-parity.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-04/beijing-first-live-canary.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-04/ntsc-official-html-adapter.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-acq-01/official-html-xlsx-canary.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-legal-01/guizhou-legal-canary-admission-preflight.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-legal-03/guizhou-attachment-admission-preflight.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/p2-legal-08b/target-source-composition.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/persistence/presentation-fixture.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [
+        "tests/persistence/presentation-shadow.test.ts",
+        "tests/presentation-read-api/presentation-api.test.ts",
+        "tests/production-persistence/phase-3-contracts.test.ts"
+      ],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/persistence/presentation-shadow.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/pipeline/presentation-decision.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/pipeline/trusted-chain-restoration.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/presentation-read-api/presentation-api.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/architecture-boundary.test.ts",
+      "production": false,
+      "test": true,
+      "guard": true,
+      "importers": [],
+      "literal_references": [],
+      "category": "D",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/git-append-only-execution-store.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/git-raw-object-persistence.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/journal-contract.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/migration-005-hardening.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/migration-security.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/phase-1-contracts.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/phase-3-contracts.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/zero-cost-production-architecture.test.ts",
+      "production": false,
+      "test": true,
+      "guard": true,
+      "importers": [],
+      "literal_references": [],
+      "category": "D",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/production-persistence/zero-cost-production-composition-root.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/real-2027-haier/haier-2027-canary.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/real-2027-zhenghan/zhenghan-2027-source.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    },
+    {
+      "status": "??",
+      "path": "tests/real-legal-canary/shenzhen-bankruptcy-observation-canary.test.ts",
+      "production": false,
+      "test": true,
+      "guard": false,
+      "importers": [],
+      "literal_references": [],
+      "category": "C",
+      "canary_kind": "-"
+    }
+  ],
+  "production": [
+    "app/api/presentation/v1/[...segments]/route.ts",
+    "lib/application/source-admission/index.ts",
+    "lib/application/source-admission/live-canary-authorization.ts",
+    "lib/application/source-admission/source-admission-register.ts",
+    "lib/application/source-admission/types.ts",
+    "lib/collection-runtime/collection-runner.ts",
+    "lib/collection-runtime/http-transport.ts",
+    "lib/collection-runtime/index.ts",
+    "lib/collection-runtime/local-egress-policy.ts",
+    "lib/collection-runtime/types.ts",
+    "lib/ingestion/adapters/contract.ts",
+    "lib/ingestion/adapters/errors.ts",
+    "lib/ingestion/adapters/fixture-adapter.ts",
+    "lib/ingestion/adapters/index.ts",
+    "lib/ingestion/canonicalization/conservative-canonicalizer.ts",
+    "lib/ingestion/canonicalization/index.ts",
+    "lib/ingestion/canonicalization/opportunity-version-tracker.ts",
+    "lib/ingestion/canonicalization/types.ts",
+    "lib/ingestion/domain/eligibility.ts",
+    "lib/ingestion/domain/index.ts",
+    "lib/ingestion/domain/opportunity.ts",
+    "lib/ingestion/domain/presentation.ts",
+    "lib/ingestion/domain/primitives.ts",
+    "lib/ingestion/domain/raw.ts",
+    "lib/ingestion/domain/recall.ts",
+    "lib/ingestion/domain/recruitment-context.ts",
+    "lib/ingestion/domain/relevance.ts",
+    "lib/ingestion/domain/requirements.ts",
+    "lib/ingestion/domain/source-surface-composition.ts",
+    "lib/ingestion/domain/source.ts",
+    "lib/ingestion/domain/text.ts",
+    "lib/ingestion/eligibility/deterministic-eligibility-engine.ts",
+    "lib/ingestion/eligibility/index.ts",
+    "lib/ingestion/eligibility/types.ts",
+    "lib/ingestion/index.ts",
+    "lib/ingestion/lifecycle/index.ts",
+    "lib/ingestion/lifecycle/source-run-missing-guard.ts",
+    "lib/ingestion/lifecycle/types.ts",
+    "lib/ingestion/normalization/canonical-artifact-registry.ts",
+    "lib/ingestion/normalization/extracted-record-identity.ts",
+    "lib/ingestion/normalization/index.ts",
+    "lib/ingestion/normalization/opportunity-recall-tracker.ts",
+    "lib/ingestion/normalization/position-bound-opportunity-tracker.ts",
+    "lib/ingestion/normalization/position-identity-resolver.ts",
+    "lib/ingestion/normalization/position-version-tracker.ts",
+    "lib/ingestion/normalization/source-discovery-support.ts",
+    "lib/ingestion/normalization/source-occurrence-materializer.ts",
+    "lib/ingestion/normalization/source-occurrence-tracker.ts",
+    "lib/ingestion/normalization/source-record-normalizer.ts",
+    "lib/ingestion/normalization/text-normalizer.ts",
+    "lib/ingestion/normalization/trusted-source-occurrence-registry.ts",
+    "lib/ingestion/persistence/index.ts",
+    "lib/ingestion/persistence/repositories.ts",
+    "lib/ingestion/persistence/sqlite-shadow-persistence.ts",
+    "lib/ingestion/pipeline/approved-requirement-projector.ts",
+    "lib/ingestion/pipeline/index.ts",
+    "lib/ingestion/pipeline/legal-employment-relevance.ts",
+    "lib/ingestion/pipeline/position-bound-eligibility-assessment.ts",
+    "lib/ingestion/pipeline/position-bound-predicate-resolution.ts",
+    "lib/ingestion/pipeline/position-bound-requirement-set.ts",
+    "lib/ingestion/pipeline/position-bound-source-composition.ts",
+    "lib/ingestion/pipeline/presentation-decision.ts",
+    "lib/ingestion/pipeline/presentation-persistence.ts",
+    "lib/ingestion/pipeline/presentation-read-model.ts",
+    "lib/ingestion/pipeline/presentation-semantic-projection.ts",
+    "lib/ingestion/pipeline/trusted-artifact-chain.ts",
+    "lib/ingestion/pipeline/trusted-candidate-evidence.ts",
+    "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+    "lib/ingestion/pipeline/trusted-chain-restoration.ts",
+    "lib/ingestion/pipeline/trusted-requirement-projection.ts",
+    "lib/ingestion/raw/capture.ts",
+    "lib/ingestion/raw/index.ts",
+    "lib/ingestion/raw/repositories.ts",
+    "lib/ingestion/registry/index.ts",
+    "lib/ingestion/registry/source-registry.ts",
+    "lib/ingestion/registry/types.ts",
+    "lib/ingestion/registry/validation.ts",
+    "lib/ingestion/requirements/deterministic-requirement-parser.ts",
+    "lib/ingestion/requirements/index.ts",
+    "lib/ingestion/requirements/source-surface-composer.ts",
+    "lib/ingestion/requirements/types.ts",
+    "lib/ingestion/transport/fixture-transport.ts",
+    "lib/ingestion/transport/index.ts",
+    "lib/presentation-read-api/api.ts",
+    "lib/presentation-read-api/index.ts",
+    "lib/presentation-read-api/runtime.ts",
+    "lib/presentation-read-api/shadow-runtime.ts",
+    "lib/production-persistence/candidate-evidence-object-boundary.ts",
+    "lib/production-persistence/contracts.ts",
+    "lib/production-persistence/git-append-only-execution-store.ts",
+    "lib/production-persistence/git-raw-object-persistence.ts",
+    "lib/production-persistence/git-raw-sqlite-index.ts",
+    "lib/production-persistence/git-source-registry-persistence.ts",
+    "lib/production-persistence/index.ts",
+    "lib/production-persistence/postgres-js-executor.ts",
+    "lib/production-persistence/postgres-presentation-read-repository.ts",
+    "lib/production-persistence/postgres-production-persistence.ts",
+    "lib/production-persistence/production-journal.ts",
+    "lib/production-persistence/raw-object-boundary.ts",
+    "lib/production-persistence/source-owner-rehydration.ts",
+    "lib/production-persistence/supabase-private-raw-storage.ts",
+    "lib/production-persistence/zero-cost-production-composition-root.ts"
+  ],
+  "test": [
+    "app/api/ingestion/v1/[...segments]/route.ts",
+    "app/preview/opportunities/[opportunityId]/page.tsx",
+    "app/preview/page.tsx",
+    "lib/application/index.ts",
+    "lib/application/preview-persistence/index.ts",
+    "lib/application/preview-persistence/raw-storage-mapping.ts",
+    "lib/application/preview-persistence/recovery.ts",
+    "lib/application/preview-persistence/types.ts",
+    "lib/application/source-admission/index.ts",
+    "lib/application/source-admission/live-canary-authorization.ts",
+    "lib/application/source-admission/source-admission-register.ts",
+    "lib/application/source-admission/types.ts",
+    "lib/collection-runtime/collection-runner.ts",
+    "lib/collection-runtime/http-transport.ts",
+    "lib/collection-runtime/index.ts",
+    "lib/collection-runtime/local-egress-policy.ts",
+    "lib/collection-runtime/types.ts",
+    "lib/ingestion/adapters/contract.ts",
+    "lib/ingestion/adapters/errors.ts",
+    "lib/ingestion/adapters/fixture-adapter.ts",
+    "lib/ingestion/adapters/index.ts",
+    "lib/ingestion/canonicalization/conservative-canonicalizer.ts",
+    "lib/ingestion/canonicalization/index.ts",
+    "lib/ingestion/canonicalization/opportunity-version-tracker.ts",
+    "lib/ingestion/canonicalization/types.ts",
+    "lib/ingestion/domain/eligibility.ts",
+    "lib/ingestion/domain/index.ts",
+    "lib/ingestion/domain/opportunity.ts",
+    "lib/ingestion/domain/presentation.ts",
+    "lib/ingestion/domain/primitives.ts",
+    "lib/ingestion/domain/raw.ts",
+    "lib/ingestion/domain/recall.ts",
+    "lib/ingestion/domain/recruitment-context.ts",
+    "lib/ingestion/domain/relevance.ts",
+    "lib/ingestion/domain/requirements.ts",
+    "lib/ingestion/domain/source-surface-composition.ts",
+    "lib/ingestion/domain/source.ts",
+    "lib/ingestion/domain/text.ts",
+    "lib/ingestion/eligibility/deterministic-eligibility-engine.ts",
+    "lib/ingestion/eligibility/index.ts",
+    "lib/ingestion/eligibility/types.ts",
+    "lib/ingestion/index.ts",
+    "lib/ingestion/lifecycle/index.ts",
+    "lib/ingestion/lifecycle/source-run-missing-guard.ts",
+    "lib/ingestion/lifecycle/types.ts",
+    "lib/ingestion/normalization/canonical-artifact-registry.ts",
+    "lib/ingestion/normalization/extracted-record-identity.ts",
+    "lib/ingestion/normalization/index.ts",
+    "lib/ingestion/normalization/opportunity-recall-tracker.ts",
+    "lib/ingestion/normalization/position-bound-opportunity-tracker.ts",
+    "lib/ingestion/normalization/position-identity-resolver.ts",
+    "lib/ingestion/normalization/position-version-tracker.ts",
+    "lib/ingestion/normalization/source-discovery-support.ts",
+    "lib/ingestion/normalization/source-occurrence-materializer.ts",
+    "lib/ingestion/normalization/source-occurrence-tracker.ts",
+    "lib/ingestion/normalization/source-record-normalizer.ts",
+    "lib/ingestion/normalization/text-normalizer.ts",
+    "lib/ingestion/normalization/trusted-source-occurrence-registry.ts",
+    "lib/ingestion/persistence/index.ts",
+    "lib/ingestion/persistence/repositories.ts",
+    "lib/ingestion/persistence/sqlite-shadow-persistence.ts",
+    "lib/ingestion/pipeline/approved-requirement-projector.ts",
+    "lib/ingestion/pipeline/index.ts",
+    "lib/ingestion/pipeline/legal-employment-relevance.ts",
+    "lib/ingestion/pipeline/position-bound-eligibility-assessment.ts",
+    "lib/ingestion/pipeline/position-bound-predicate-resolution.ts",
+    "lib/ingestion/pipeline/position-bound-requirement-set.ts",
+    "lib/ingestion/pipeline/position-bound-source-composition.ts",
+    "lib/ingestion/pipeline/presentation-decision.ts",
+    "lib/ingestion/pipeline/presentation-persistence.ts",
+    "lib/ingestion/pipeline/presentation-read-model.ts",
+    "lib/ingestion/pipeline/presentation-semantic-projection.ts",
+    "lib/ingestion/pipeline/trusted-artifact-chain.ts",
+    "lib/ingestion/pipeline/trusted-candidate-evidence.ts",
+    "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+    "lib/ingestion/pipeline/trusted-chain-restoration.ts",
+    "lib/ingestion/pipeline/trusted-requirement-projection.ts",
+    "lib/ingestion/raw/capture.ts",
+    "lib/ingestion/raw/index.ts",
+    "lib/ingestion/raw/repositories.ts",
+    "lib/ingestion/registry/index.ts",
+    "lib/ingestion/registry/source-registry.ts",
+    "lib/ingestion/registry/types.ts",
+    "lib/ingestion/registry/validation.ts",
+    "lib/ingestion/requirements/deterministic-requirement-parser.ts",
+    "lib/ingestion/requirements/index.ts",
+    "lib/ingestion/requirements/source-surface-composer.ts",
+    "lib/ingestion/requirements/types.ts",
+    "lib/ingestion/transport/fixture-transport.ts",
+    "lib/ingestion/transport/index.ts",
+    "lib/live-canary/p2-04/beijing-canary-authorization-preparation.ts",
+    "lib/live-canary/p2-04/beijing-first-live-canary.ts",
+    "lib/live-canary/p2-04/beijing-public-institution-html-adapter.ts",
+    "lib/live-canary/p2-04/index.ts",
+    "lib/live-canary/p2-04/ntsc-official-html-adapter.ts",
+    "lib/live-canary/p2-04/ntsc-offline-composition.ts",
+    "lib/live-canary/p2-04d/beijing-public-institution-detail-html-adapter.ts",
+    "lib/live-canary/p2-04d/beijing-public-institution-detail-live-canary.ts",
+    "lib/live-canary/p2-04e/beijing-public-institution-attachment-contract.ts",
+    "lib/live-canary/p2-04e/beijing-public-institution-attachment-observation-canary.ts",
+    "lib/live-canary/p2-04e/beijing-public-institution-xlsx-job-table-adapter.ts",
+    "lib/live-canary/p2-acq-01/approved-official-canary-transport.ts",
+    "lib/live-canary/p2-acq-01/beijing-html-xlsx-canary.ts",
+    "lib/live-canary/p2-acq-01/index.ts",
+    "lib/live-canary/p2-legal-01/guizhou-legal-canary-admission-preflight.ts",
+    "lib/live-canary/p2-legal-02/guizhou-notice-observation-canary.ts",
+    "lib/live-canary/p2-legal-03/guizhou-attachment-admission-preflight.ts",
+    "lib/live-canary/p2-legal-04/guizhou-attachment-observation-canary.ts",
+    "lib/live-canary/p2-legal-05/guizhou-legal-xlsx-requirement-adapter.ts",
+    "lib/live-canary/p2-legal-06/guizhou-legal-requirement-set-composer.ts",
+    "lib/live-canary/p2-legal-07/guizhou-requirement-blocker-audit.ts",
+    "lib/live-canary/p2-legal-08b/index.ts",
+    "lib/live-canary/p2-legal-08b/target-source-composition.ts",
+    "lib/live-canary/real-2027-haier/haier-2027-source.ts",
+    "lib/live-canary/real-2027-haier/haier-2027-trusted-run.ts",
+    "lib/live-canary/real-2027-haier/index.ts",
+    "lib/live-canary/real-2027-zhenghan/index.ts",
+    "lib/live-canary/real-2027-zhenghan/zhenghan-2027-source.ts",
+    "lib/live-canary/real-2027-zhenghan/zhenghan-2027-trusted-run.ts",
+    "lib/live-canary/real-legal-canary/shenzhen-bankruptcy-observation-canary.ts",
+    "lib/p2-08-preview/presentation.tsx",
+    "lib/p2-08-preview/read-only-data.ts",
+    "lib/presentation-read-api/api.ts",
+    "lib/presentation-read-api/index.ts",
+    "lib/presentation-read-api/runtime.ts",
+    "lib/presentation-read-api/shadow-runtime.ts",
+    "lib/production-ingestion/index.ts",
+    "lib/production-ingestion/local-production-like-database.ts",
+    "lib/production-ingestion/repository.ts",
+    "lib/production-ingestion/types.ts",
+    "lib/production-persistence/candidate-evidence-object-boundary.ts",
+    "lib/production-persistence/contracts.ts",
+    "lib/production-persistence/git-append-only-execution-store.ts",
+    "lib/production-persistence/git-raw-object-persistence.ts",
+    "lib/production-persistence/git-raw-sqlite-index.ts",
+    "lib/production-persistence/git-source-registry-persistence.ts",
+    "lib/production-persistence/index.ts",
+    "lib/production-persistence/postgres-js-executor.ts",
+    "lib/production-persistence/postgres-presentation-read-repository.ts",
+    "lib/production-persistence/postgres-production-persistence.ts",
+    "lib/production-persistence/production-journal.ts",
+    "lib/production-persistence/raw-object-boundary.ts",
+    "lib/production-persistence/source-owner-rehydration.ts",
+    "lib/production-persistence/supabase-private-raw-storage.ts",
+    "lib/production-persistence/zero-cost-production-composition-root.ts",
+    "lib/read-only-api/api.ts",
+    "lib/read-only-api/index.ts",
+    "lib/read-only-api/projection.ts",
+    "lib/read-only-api/runtime-composition.ts",
+    "lib/read-only-api/types.ts",
+    "lib/source-scheduler/collection-run-audit.ts",
+    "lib/source-scheduler/incremental-discovery.ts",
+    "lib/source-scheduler/index.ts",
+    "lib/source-scheduler/source-health.ts",
+    "lib/source-scheduler/source-scheduler.ts",
+    "lib/source-scheduler/types.ts",
+    "tests/adapters/adapter-contract-harness.ts",
+    "tests/adapters/fixture-adapter.test.ts",
+    "tests/architecture/ingestion-boundary.test.ts",
+    "tests/canonicalization/conservative-canonicalizer.test.ts",
+    "tests/canonicalization/position-bound-opportunity-tracker.test.ts",
+    "tests/canonicalization/recruitment-context-position-identity.test.ts",
+    "tests/ci/phase-1-ci.test.ts",
+    "tests/domain/domain-types.test.ts",
+    "tests/eligibility/eligibility-engine.test.ts",
+    "tests/eligibility/p1-cr10-candidate-model-major-equivalence.test.ts",
+    "tests/eligibility/p1-cr10-engine-integration-cr11-major-match-relation.test.ts",
+    "tests/eligibility/p1-general-eligibility-prerequisites-gate.test.ts",
+    "tests/eligibility/p2-legal-08a-candidate-profile.test.ts",
+    "tests/helpers/network-guard.ts",
+    "tests/integration/phase-1-pipeline.test.ts",
+    "tests/lifecycle/source-run-missing-guard.test.ts",
+    "tests/normalization/opportunity-recall-tracker.test.ts",
+    "tests/normalization/position-identity-resolver.test.ts",
+    "tests/normalization/position-version-tracker.test.ts",
+    "tests/normalization/source-discovery-support.test.ts",
+    "tests/normalization/source-occurrence-materializer-parity.test.ts",
+    "tests/normalization/source-occurrence.test.ts",
+    "tests/normalization/trusted-source-occurrence-registry.test.ts",
+    "tests/p2-01/application-boundary.test.ts",
+    "tests/p2-01/observation-canary-authorization.test.ts",
+    "tests/p2-01/source-admission-tiers.test.ts",
+    "tests/p2-01/source-admission.test.ts",
+    "tests/p2-02/preview-local-exercise.test.ts",
+    "tests/p2-02/preview-migration-contract.test.ts",
+    "tests/p2-02/preview-persistence-boundary.test.ts",
+    "tests/p2-02/preview-raw-storage.test.ts",
+    "tests/p2-02/preview-recovery.test.ts",
+    "tests/p2-03/collection-runner.test.ts",
+    "tests/p2-03/collection-runtime-boundary.test.ts",
+    "tests/p2-03/collection-timeout.test.ts",
+    "tests/p2-03/local-http-transport.test.ts",
+    "tests/p2-03/local-test-adapter.ts",
+    "tests/p2-03/network-guard.test.ts",
+    "tests/p2-03/test-support.ts",
+    "tests/p2-04/beijing-canary-authorization-preparation.test.ts",
+    "tests/p2-04/beijing-first-live-canary.test.ts",
+    "tests/p2-04/beijing-public-institution-html-adapter.test.ts",
+    "tests/p2-04/ntsc-official-html-adapter.test.ts",
+    "tests/p2-04d/beijing-public-institution-detail-html-adapter.test.ts",
+    "tests/p2-04d/beijing-public-institution-detail-live-canary.test.ts",
+    "tests/p2-04e/beijing-public-institution-attachment-observation-canary.test.ts",
+    "tests/p2-04e/beijing-public-institution-xlsx-job-table-adapter.test.ts",
+    "tests/p2-05/boundary.test.ts",
+    "tests/p2-05/incremental-discovery.test.ts",
+    "tests/p2-05/source-scheduler.test.ts",
+    "tests/p2-05/test-support.ts",
+    "tests/p2-06/production-isolated-write.test.ts",
+    "tests/p2-07/read-only-api.test.ts",
+    "tests/p2-07/read-only-runtime-composition.test.ts",
+    "tests/p2-07/test-support.ts",
+    "tests/p2-08/preview-ui.test.tsx",
+    "tests/p2-acq-01/official-html-xlsx-canary.test.ts",
+    "tests/p2-legal-01/guizhou-legal-canary-admission-preflight.test.ts",
+    "tests/p2-legal-02/guizhou-notice-observation-canary.test.ts",
+    "tests/p2-legal-03/guizhou-attachment-admission-preflight.test.ts",
+    "tests/p2-legal-04/guizhou-attachment-observation-canary.test.ts",
+    "tests/p2-legal-05/guizhou-legal-xlsx-requirement-extraction.test.ts",
+    "tests/p2-legal-06/guizhou-legal-requirement-set-composition.test.ts",
+    "tests/p2-legal-07/guizhou-requirement-blocker-audit.test.ts",
+    "tests/p2-legal-08b/target-source-composition.test.ts",
+    "tests/persistence/opportunity-recall-shadow.test.ts",
+    "tests/persistence/presentation-fixture.ts",
+    "tests/persistence/presentation-shadow.test.ts",
+    "tests/persistence/shadow-fixture.ts",
+    "tests/persistence/shadow-migration.test.ts",
+    "tests/persistence/shadow-repository.test.ts",
+    "tests/persistence/shadow-test-database.ts",
+    "tests/pipeline/approved-requirement-projection-coverage.test.ts",
+    "tests/pipeline/legal-employment-relevance.test.ts",
+    "tests/pipeline/position-bound-eligibility-assessment.test.ts",
+    "tests/pipeline/position-bound-phase-fixture.ts",
+    "tests/pipeline/position-bound-predicate-resolution.test.ts",
+    "tests/pipeline/position-bound-requirement-set.test.ts",
+    "tests/pipeline/position-bound-source-composition.test.ts",
+    "tests/pipeline/presentation-decision.test.ts",
+    "tests/pipeline/trusted-candidate-evidence.test.ts",
+    "tests/pipeline/trusted-chain-restoration.test.ts",
+    "tests/presentation-read-api/presentation-api.test.ts",
+    "tests/production-persistence/architecture-boundary.test.ts",
+    "tests/production-persistence/git-append-only-execution-store.test.ts",
+    "tests/production-persistence/git-raw-object-persistence.test.ts",
+    "tests/production-persistence/journal-contract.test.ts",
+    "tests/production-persistence/migration-005-hardening.test.ts",
+    "tests/production-persistence/migration-security.test.ts",
+    "tests/production-persistence/phase-1-contracts.test.ts",
+    "tests/production-persistence/phase-3-contracts.test.ts",
+    "tests/production-persistence/zero-cost-production-architecture.test.ts",
+    "tests/production-persistence/zero-cost-production-composition-root.test.ts",
+    "tests/real-2027-haier/haier-2027-canary.test.ts",
+    "tests/real-2027-zhenghan/zhenghan-2027-source.test.ts",
+    "tests/real-legal-canary/shenzhen-bankruptcy-observation-canary.test.ts",
+    "tests/registry/source-registry.test.ts",
+    "tests/requirements/p1-cr11-recruitment-major-expression.test.ts",
+    "tests/requirements/p1-cr12-requirement-logic-modality-applicability.test.ts",
+    "tests/requirements/p1-cr9-minimal-domain-extension.test.ts",
+    "tests/requirements/p1-general-eligibility-prerequisites-disqualifications.test.ts",
+    "tests/requirements/requirement-parser.test.ts",
+    "tests/requirements/source-surface-composition.test.ts",
+    "tests/transport/transport-raw.test.ts"
+  ],
+  "guards": [
+    "lib/collection-runtime/collection-runner.ts",
+    "lib/collection-runtime/http-transport.ts",
+    "lib/collection-runtime/index.ts",
+    "lib/collection-runtime/local-egress-policy.ts",
+    "lib/collection-runtime/types.ts",
+    "lib/ingestion/adapters/contract.ts",
+    "lib/ingestion/adapters/errors.ts",
+    "lib/ingestion/adapters/fixture-adapter.ts",
+    "lib/ingestion/adapters/index.ts",
+    "lib/ingestion/canonicalization/conservative-canonicalizer.ts",
+    "lib/ingestion/canonicalization/index.ts",
+    "lib/ingestion/canonicalization/opportunity-version-tracker.ts",
+    "lib/ingestion/canonicalization/types.ts",
+    "lib/ingestion/domain/eligibility.ts",
+    "lib/ingestion/domain/index.ts",
+    "lib/ingestion/domain/opportunity.ts",
+    "lib/ingestion/domain/presentation.ts",
+    "lib/ingestion/domain/primitives.ts",
+    "lib/ingestion/domain/raw.ts",
+    "lib/ingestion/domain/recall.ts",
+    "lib/ingestion/domain/recruitment-context.ts",
+    "lib/ingestion/domain/relevance.ts",
+    "lib/ingestion/domain/requirements.ts",
+    "lib/ingestion/domain/source-surface-composition.ts",
+    "lib/ingestion/domain/source.ts",
+    "lib/ingestion/domain/text.ts",
+    "lib/ingestion/eligibility/deterministic-eligibility-engine.ts",
+    "lib/ingestion/eligibility/index.ts",
+    "lib/ingestion/eligibility/types.ts",
+    "lib/ingestion/index.ts",
+    "lib/ingestion/lifecycle/index.ts",
+    "lib/ingestion/lifecycle/source-run-missing-guard.ts",
+    "lib/ingestion/lifecycle/types.ts",
+    "lib/ingestion/normalization/canonical-artifact-registry.ts",
+    "lib/ingestion/normalization/extracted-record-identity.ts",
+    "lib/ingestion/normalization/index.ts",
+    "lib/ingestion/normalization/opportunity-recall-tracker.ts",
+    "lib/ingestion/normalization/position-bound-opportunity-tracker.ts",
+    "lib/ingestion/normalization/position-identity-resolver.ts",
+    "lib/ingestion/normalization/position-version-tracker.ts",
+    "lib/ingestion/normalization/source-discovery-support.ts",
+    "lib/ingestion/normalization/source-occurrence-materializer.ts",
+    "lib/ingestion/normalization/source-occurrence-tracker.ts",
+    "lib/ingestion/normalization/source-record-normalizer.ts",
+    "lib/ingestion/normalization/text-normalizer.ts",
+    "lib/ingestion/normalization/trusted-source-occurrence-registry.ts",
+    "lib/ingestion/persistence/index.ts",
+    "lib/ingestion/persistence/repositories.ts",
+    "lib/ingestion/persistence/sqlite-shadow-persistence.ts",
+    "lib/ingestion/pipeline/approved-requirement-projector.ts",
+    "lib/ingestion/pipeline/index.ts",
+    "lib/ingestion/pipeline/legal-employment-relevance.ts",
+    "lib/ingestion/pipeline/position-bound-eligibility-assessment.ts",
+    "lib/ingestion/pipeline/position-bound-predicate-resolution.ts",
+    "lib/ingestion/pipeline/position-bound-requirement-set.ts",
+    "lib/ingestion/pipeline/position-bound-source-composition.ts",
+    "lib/ingestion/pipeline/presentation-decision.ts",
+    "lib/ingestion/pipeline/presentation-persistence.ts",
+    "lib/ingestion/pipeline/presentation-read-model.ts",
+    "lib/ingestion/pipeline/presentation-semantic-projection.ts",
+    "lib/ingestion/pipeline/trusted-artifact-chain.ts",
+    "lib/ingestion/pipeline/trusted-candidate-evidence.ts",
+    "lib/ingestion/pipeline/trusted-chain-composition-root.ts",
+    "lib/ingestion/pipeline/trusted-chain-restoration.ts",
+    "lib/ingestion/pipeline/trusted-requirement-projection.ts",
+    "lib/ingestion/raw/capture.ts",
+    "lib/ingestion/raw/index.ts",
+    "lib/ingestion/raw/repositories.ts",
+    "lib/ingestion/registry/index.ts",
+    "lib/ingestion/registry/source-registry.ts",
+    "lib/ingestion/registry/types.ts",
+    "lib/ingestion/registry/validation.ts",
+    "lib/ingestion/requirements/deterministic-requirement-parser.ts",
+    "lib/ingestion/requirements/index.ts",
+    "lib/ingestion/requirements/source-surface-composer.ts",
+    "lib/ingestion/requirements/types.ts",
+    "lib/ingestion/transport/fixture-transport.ts",
+    "lib/ingestion/transport/index.ts",
+    "tests/architecture/ingestion-boundary.test.ts",
+    "tests/ci/phase-1-ci.test.ts",
+    "tests/helpers/network-guard.ts",
+    "tests/p2-03/network-guard.test.ts",
+    "tests/production-persistence/architecture-boundary.test.ts",
+    "tests/production-persistence/zero-cost-production-architecture.test.ts"
+  ],
+  "guardSeeds": [
+    "tests/architecture/ingestion-boundary.test.ts",
+    "tests/ci/phase-1-ci.test.ts",
+    "tests/helpers/network-guard.ts",
+    "tests/p2-03/network-guard.test.ts",
+    "tests/production-persistence/architecture-boundary.test.ts",
+    "tests/production-persistence/zero-cost-production-architecture.test.ts"
+  ],
+  "missing": [
+    {
+      "file": "app/layout.tsx",
+      "spec": "./globals.css"
+    },
+    {
+      "file": "app/preview/layout.tsx",
+      "spec": "./preview.css"
+    },
+    {
+      "file": "experiments/zhaopin-campus/legacy-scripts/debug-zhaopin-sources.ts",
+      "spec": "../lib/crawler"
+    },
+    {
+      "file": "experiments/zhaopin-campus/legacy-scripts/debug-zhaopin-sources.ts",
+      "spec": "../lib/source-catalog"
+    },
+    {
+      "file": "experiments/zhaopin-campus/legacy-scripts/debug-zhaopin.ts",
+      "spec": "../lib/source-catalog"
+    },
+    {
+      "file": "experiments/zhaopin-campus/legacy-scripts/debug-zhaopin.ts",
+      "spec": "../lib/crawler"
+    }
+  ],
+  "prohibited": [],
+  "external": [
+    "@supabase/supabase-js",
+    "cheerio",
+    "lucide-react",
+    "next",
+    "next/link",
+    "next/navigation",
+    "next/server",
+    "node:assert/strict",
+    "node:child_process",
+    "node:crypto",
+    "node:fs",
+    "node:fs/promises",
+    "node:http",
+    "node:https",
+    "node:module",
+    "node:net",
+    "node:os",
+    "node:path",
+    "node:sqlite",
+    "node:test",
+    "node:tls",
+    "node:url",
+    "node:zlib",
+    "postgres",
+    "react",
+    "react-dom/server"
+  ],
+  "risks": [
+    {
+      "file": "docs/authoritative-current-presentation-identity-v2-verification.md",
+      "kind": "absolute-path",
+      "samples": [
+        "C:/Users/HUAWEI/AppData/Local/Temp/`: `presentation-v2-full-offline-final.log`, `presentation-v2-p1-final.log`, `presentation-v2-boundaries-final.log`, `presentation-v2-trusted-chain-final.log`, `presentation-v2-persistence-final.log`, `presentation-v2-process-b-final.log`, and `presentation-v2-failed-rediscovery-final.log`.",
+        "C:/Users/HUAWEI/Documents/Codex/2026-08-10/2027-job-radar-ingestion-foundation`.",
+        "C:/Users/HUAWEI/Documents/Codex/2026-08-10/2027-job-radar-ingestion-foundation`."
+      ]
+    }
+  ],
+  "category_counts": {
+    "A": 22,
+    "B": 21,
+    "C": 61,
+    "D": 3,
+    "E": 9,
+    "F": 17,
+    "G": 0,
+    "H": 1
+  },
+  "category_names": {
+    "A": "REQUIRED_PRODUCTION",
+    "B": "REQUIRED_RUNTIME_SUPPORT",
+    "C": "REQUIRED_TEST",
+    "D": "REQUIRED_ARCHITECTURE_GUARD",
+    "E": "REQUIRED_DOCUMENTATION",
+    "F": "OPTIONAL_REFERENCE",
+    "G": "LEGACY_REFERENCE_ONLY",
+    "H": "NOT_YET_SAFE_TO_DELETE"
+  }
+}
