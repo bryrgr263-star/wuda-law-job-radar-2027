@@ -6,6 +6,13 @@ import {
   type SourceAdmissionId,
   type SourceAutomationPermission
 } from "./types";
+import {
+  issueContinuousRecord, replayContinuousRecords, currentContinuousGrant, pendingContinuousAttempt,
+  revokeContinuousRecord, reserveContinuousRecord, closeContinuousRecord,
+  type ContinuousRecord, type ContinuousSourceContext, type ContinuousIssueCommand,
+  type ContinuousContextResolver, type ContinuousFencingVerifier
+} from "./continuous-acquisition";
+import { canonicalSerialize } from "../../ingestion/normalization/canonical-artifact-registry";
 
 const phaseTwoApprovedSourceTypes = new Set([
   "OFFICIAL_CAREER_SITE",
@@ -22,6 +29,43 @@ export class SourceAdmissionError extends Error {
 
 export class InMemorySourceAdmissionRegister {
   readonly #admissions = new Map<SourceAdmissionId, SourceAdmission>();
+  #continuousRecords: ContinuousRecord[] = [];
+
+  restoreContinuousRecords(records: readonly ContinuousRecord[], resolve: ContinuousContextResolver, verifier?: ContinuousFencingVerifier) {
+    const restored = replayContinuousRecords(records, resolve, verifier);
+    this.#continuousRecords = restored;
+  }
+
+  issueContinuousAuthorization(context: ContinuousSourceContext, command: ContinuousIssueCommand) {
+    const current = this.get(context.admission.source_admission_id);
+    if (canonicalSerialize(current) !== canonicalSerialize(context.admission)) throw new SourceAdmissionError("Admission binding is not current");
+    return issueContinuousRecord(this.#continuousRecords, context, command);
+  }
+
+  revokeContinuousAuthorization(id: string, actor: string, at: string, reference: string) {
+    return revokeContinuousRecord(this.#continuousRecords, id, actor, at, reference);
+  }
+
+  reserveContinuousAttempt(...input: Parameters<typeof reserveContinuousRecord> extends [unknown, ...infer Rest] ? Rest : never) {
+    const context = input[1];
+    if (canonicalSerialize(this.get(context.admission.source_admission_id)) !== canonicalSerialize(context.admission)) {
+      throw new SourceAdmissionError("Admission binding is not current");
+    }
+    return reserveContinuousRecord(this.#continuousRecords, ...input);
+  }
+
+  closeContinuousAttempt(...input: Parameters<typeof closeContinuousRecord> extends [unknown, ...infer Rest] ? Rest : never) {
+    return closeContinuousRecord(this.#continuousRecords, ...input);
+  }
+
+  listContinuousRecords() { return clone(this.#continuousRecords); }
+
+  resolveContinuousAuthorization(id: string) {
+    const grant = currentContinuousGrant(this.#continuousRecords, id);
+    const revocation = this.#continuousRecords.find(record => record.kind === "REVOKE" && record.payload.authorization_id === id);
+    return { grant, state: revocation ? "REVOKED" as const : "ACTIVE" as const,
+      revocation: clone(revocation ?? null), pending_attempt: pendingContinuousAttempt(this.#continuousRecords) };
+  }
 
   register(admission: SourceAdmission): SourceAdmission {
     validateSourceAdmission(admission);
@@ -82,6 +126,11 @@ export function evaluateSourceAutomationPermission(
   if (admission.admission_decision !== "APPROVED") {
     return deniedAutomation(admission);
   }
+  if (admission.automation_basis === "HUMAN_APPROVED_CONTINUOUS_SCOPE") {
+    validateSourceAdmission(admission);
+    return { allowed: true, admission_level: admission.admission_level as "A" | "B",
+      mode: "REVOCABLE_CONTINUOUS_UNATTENDED_ACQUISITION", requires_current_authorization: true };
+  }
   if (admission.admission_level === "A") {
     return {
       allowed: true,
@@ -121,6 +170,28 @@ function validateEndpointContract(admission: SourceAdmission) {
 }
 
 function validateAdmissionTier(admission: SourceAdmission) {
+  if (admission.automation_basis === "HUMAN_APPROVED_CONTINUOUS_SCOPE") {
+    const scope = admission.continuous_acquisition_scope;
+    if ((admission.admission_level !== "A" && admission.admission_level !== "B")
+      || admission.admission_decision !== "APPROVED" || !scope
+      || !scope.exact_targets.length || !Number.isSafeInteger(scope.min_interval_seconds) || scope.min_interval_seconds < 1
+      || !["PRODUCTION", "CONTROLLED_TEST"].includes(scope.scope)
+      || !Number.isFinite(Date.parse(scope.effective_from))
+      || new Set(scope.exact_targets.map(item => item.allowlist_entry_id)).size !== scope.exact_targets.length
+      || !admission.review_records.some(review => review.source_admission_review_id === scope.approval_review_id && review.decision === "APPROVED")) {
+      throw new SourceAdmissionError("Continuous approval requires exact scope and explicit review");
+    }
+    for (const target of scope.exact_targets) {
+      validateEndpoint(target.exact_url);
+      const url = new URL(target.exact_url);
+      if (!target.allowlist_entry_id.trim() || url.protocol !== "https:" || url.search || url.hash || url.href !== target.exact_url) {
+        throw new SourceAdmissionError("Continuous approval requires exact HTTPS targets without query or fragment");
+      }
+    }
+    if (hasProhibitedAccessEvidence(admission)) throw new SourceAdmissionError("Continuous approval cannot override prohibited evidence");
+    validateApprovedOfficialAdmission(admission);
+    return;
+  }
   if (
     admission.source_type === "THIRD_PARTY_PLATFORM"
     && (admission.admission_level !== "D" || admission.admission_decision !== "REJECTED")
@@ -298,7 +369,8 @@ function validateAdmissionRevision(current: SourceAdmission, next: SourceAdmissi
   }
   const governanceChanged = current.admission_level !== next.admission_level
     || current.admission_decision !== next.admission_decision
-    || current.automation_basis !== next.automation_basis;
+    || current.automation_basis !== next.automation_basis
+    || canonicalSerialize(current.continuous_acquisition_scope ?? null) !== canonicalSerialize(next.continuous_acquisition_scope ?? null);
   if (!governanceChanged) return;
 
   const evidenceIds = new Set(current.evidence.map((evidence) => {

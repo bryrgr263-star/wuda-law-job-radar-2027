@@ -1,4 +1,6 @@
 import type { InMemorySourceAdmissionRegister } from "../application/source-admission";
+import type { ContinuousRecord, ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
+import { resolveContinuousSourceContext } from "./continuous-source-context";
 import type { InMemorySourceRegistry } from "../ingestion";
 import {
   assertSourcePersistenceVersion,
@@ -10,6 +12,8 @@ export async function rehydrateProductionSourceOwners(input: {
   readonly repository: ProductionSourceRegistryRepository;
   readonly source_registry: InMemorySourceRegistry;
   readonly source_admission_register: InMemorySourceAdmissionRegister;
+  readonly continuous_records?: readonly ContinuousRecord[];
+  readonly fencing_verifier?: ContinuousFencingVerifier;
 }) {
   const versions = await input.repository.listVersions();
   const currentRevision = new Map<string, SourcePersistenceVersion>();
@@ -31,7 +35,9 @@ export async function rehydrateProductionSourceOwners(input: {
     restored += 1;
   }
 
-  return { restored_version_count: restored } as const;
+  input.source_admission_register.restoreContinuousRecords(input.continuous_records ?? [],
+    bindings => resolveContinuousSourceContext(versions, bindings), input.fencing_verifier);
+  return { restored_version_count: restored, restored_continuous_record_count: input.continuous_records?.length ?? 0 } as const;
 }
 
 function replayVersion(

@@ -1,9 +1,9 @@
 import {
   CONTENT_KINDS,
   HTTP_REQUEST_METHODS,
-  UTF8_TEXT_ENCODING,
   type RecruitmentEndpoint
-} from "../domain";
+} from "../domain/source";
+import { UTF8_TEXT_ENCODING } from "../domain/text";
 import { SourceRegistryError } from "./types";
 
 const endpointKeys = new Set([

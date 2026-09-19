@@ -59,6 +59,9 @@ import {
 import { GitSourceRegistryPersistence } from "./git-source-registry-persistence";
 import { ProductionRawObjectBoundary } from "./raw-object-boundary";
 import { rehydrateProductionSourceOwners } from "./source-owner-rehydration";
+import { resolveContinuousSourceContext } from "./continuous-source-context";
+import { executeContinuousRequest } from "./continuous-request-gate";
+import { pendingContinuousAttempt, type ContinuousRecord, type ContinuousScope, type ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
 
 const RUN_SCHEMA_VERSION = "zero-cost-production-run/1.0.0" as const;
 const activeWriters = new Set<string>();
@@ -74,6 +77,7 @@ export type ZeroCostProductionRunStatus =
   | "PARTIAL";
 
 export type ZeroCostProductionFaultPoint =
+  | "AFTER_CONTINUOUS_RESERVATION"
   | "AFTER_ACQUISITION"
   | "BEFORE_ATOMIC_COMMIT"
   | "AFTER_LOCAL_COMMIT"
@@ -114,6 +118,7 @@ export interface ZeroCostProductionTrustedRunContext {
 }
 
 export interface ZeroCostProductionRunInput {
+  readonly continuous_authorization_ids?: readonly string[];
   readonly run_id: string;
   readonly source_versions: readonly SourcePersistenceVersion[];
   readonly source_admission_id: string;
@@ -136,6 +141,9 @@ export interface ZeroCostProductionRunInput {
 }
 
 export interface ZeroCostProductionCompositionRootOptions {
+  readonly continuous_scope?: ContinuousScope;
+  readonly continuous_fencing_verifier?: ContinuousFencingVerifier;
+  readonly controlled_continuous_transport?: ZeroCostProductionAcquisitionTransport;
   readonly remote_url: string;
   readonly branch: string;
   readonly stream_id: string;
@@ -147,6 +155,8 @@ export interface ZeroCostProductionCompositionRootOptions {
 }
 
 export interface ZeroCostProductionRestoreResult {
+  readonly continuous_records: readonly ContinuousRecord[];
+  readonly continuous_authorizations: readonly ReturnType<InMemorySourceAdmissionRegister["resolveContinuousAuthorization"]>[];
   readonly committed_head: string;
   readonly source_version_count: number;
   readonly acquisition_count: number;
@@ -201,8 +211,49 @@ export function bootstrapZeroCostProductionCompositionRoot(
     email: "zero-cost-production@invalid.local"
   };
   let running = false;
+  const continuousScope = options.continuous_scope ?? "PRODUCTION";
+  if (options.controlled_continuous_transport && continuousScope !== "CONTROLLED_TEST") {
+    throw new Error("CONTROLLED_TRANSPORT_NOT_ALLOWED");
+  }
+
+  async function control(command: (owner: InMemorySourceAdmissionRegister, versions: readonly SourcePersistenceVersion[]) => ContinuousRecord) {
+    const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), "source-control-"));
+    const checkoutPath = path.join(temporaryRoot, "checkout");
+    try {
+      cloneRemote(remoteUrl, branch, checkoutPath);
+      const repository = new GitSourceRegistryPersistence({ repository_path: checkoutPath, fencing_verifier: options.continuous_fencing_verifier });
+      const owner = new InMemorySourceAdmissionRegister();
+      await rehydrateProductionSourceOwners({ repository, source_registry: new InMemorySourceRegistry(),
+        source_admission_register: owner, continuous_records: repository.listContinuousRecords(), fencing_verifier: options.continuous_fencing_verifier });
+      const parent = repository.readCommittedHead();
+      repository.assertAuthoritativeHead(branch, parent);
+      const record = command(owner, await repository.listVersions());
+      const grant = record.payload.grant ?? owner.resolveContinuousAuthorization(record.payload.authorization_id
+        ?? pendingContinuousAttempt(owner.listContinuousRecords())?.payload.authorization_id ?? "").grant;
+      if (grant.canonical_payload.scope !== continuousScope) throw new Error("AUTHORIZATION_SCOPE_MISMATCH");
+      const committedHead = await repository.publishContinuousRecord(record, { expected_parent: parent, branch, commit_identity: commitIdentity });
+      return { committed_head: committedHead, record: structuredClone(record) };
+    } finally { rmSync(temporaryRoot, { recursive: true, force: true }); }
+  }
 
   const root = Object.freeze({
+    async issueContinuousAuthorization(input: { readonly allowlist_entry_id: string; readonly effective_from: string; readonly min_interval_seconds: number; readonly actor: string }) {
+      return control((owner, versions) => owner.issueContinuousAuthorization(resolveContinuousSourceContext(versions, input.allowlist_entry_id), {
+        effective_from: input.effective_from, min_interval_seconds: input.min_interval_seconds, actor: input.actor, issued_at: now() }));
+    },
+
+    async revokeContinuousAuthorization(input: { readonly authorization_id: string; readonly actor: string; readonly reference: string }) {
+      return control(owner => owner.revokeContinuousAuthorization(input.authorization_id, input.actor, now(), input.reference));
+    },
+
+    async recoverContinuousAttempt(input: { readonly attempt_id: string; readonly fencing_evidence: Readonly<Record<string, unknown>> }) {
+      return control(owner => {
+        const pending = pendingContinuousAttempt(owner.listContinuousRecords());
+        if (!pending || pending.payload.attempt_id !== input.attempt_id) throw new Error("PENDING_ATTEMPT_MISSING");
+        return owner.closeContinuousAttempt(input.attempt_id, pending.payload.holder!, now(), "FENCED_UNKNOWN", input.fencing_evidence, options.continuous_fencing_verifier);
+      });
+    },
+
     async run(input: ZeroCostProductionRunInput): Promise<ZeroCostProductionRunResult> {
       if (running || activeWriters.has(writerKey)) {
         return emptyResult(input.run_id, "FAILED", [event(
@@ -231,8 +282,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
         cloneRemote(remoteUrl, branch, checkoutPath);
         expectedParent = git(checkoutPath, "rev-parse", "HEAD").trim();
         const sourceRepository = new GitSourceRegistryPersistence({
-          repository_path: checkoutPath
+          repository_path: checkoutPath, fencing_verifier: options.continuous_fencing_verifier
         });
+        if (input.continuous_authorization_ids?.length && input.source_versions.length) throw new Error("CONTINUOUS_EXECUTION_REQUIRES_COMMITTED_SOURCE_STATE");
         for (const version of input.source_versions) {
           await sourceRepository.appendVersion(version);
         }
@@ -241,7 +293,8 @@ export function bootstrapZeroCostProductionCompositionRoot(
         await rehydrateProductionSourceOwners({
           repository: sourceRepository,
           source_registry: sourceRegistry,
-          source_admission_register: admissionRegister
+          source_admission_register: admissionRegister,
+          continuous_records: sourceRepository.listContinuousRecords(), fencing_verifier: options.continuous_fencing_verifier
         });
         const endpoint = sourceRegistry.getRecruitmentEndpoint(
           input.recruitment_endpoint_id as never
@@ -249,6 +302,11 @@ export function bootstrapZeroCostProductionCompositionRoot(
         const admission = admissionRegister.get(input.source_admission_id as never);
         const permission = evaluateSourceAutomationPermission(admission);
         if (!permission.allowed) throw new Error("Source Admission does not allow collection");
+        const continuous = permission.mode === "REVOCABLE_CONTINUOUS_UNATTENDED_ACQUISITION" || !!input.continuous_authorization_ids?.length;
+        if (continuous && (!input.continuous_authorization_ids?.length || input.source_versions.length)) {
+          throw new Error("CONTINUOUS_AUTHORIZATION_REFERENCE_AND_COMMITTED_SOURCE_STATE_REQUIRED");
+        }
+        const sourceVersions = continuous ? await sourceRepository.listVersions() : input.source_versions;
         if (admission.recruitment_endpoint_id !== endpoint.recruitment_endpoint_id) {
           throw new Error("Source Admission endpoint binding mismatch");
         }
@@ -260,11 +318,11 @@ export function bootstrapZeroCostProductionCompositionRoot(
         }
         const validation = input.adapter.validateEndpoint(endpoint);
         if (!validation.valid) throw new Error(validation.issues.join("; "));
-        const endpointVersion = currentVersion(input.source_versions, "RECRUITMENT_ENDPOINT",
+        const endpointVersion = currentVersion(sourceVersions, "RECRUITMENT_ENDPOINT",
           endpoint.recruitment_endpoint_id);
-        const admissionVersion = currentVersion(input.source_versions, "SOURCE_ADMISSION",
+        const admissionVersion = currentVersion(sourceVersions, "SOURCE_ADMISSION",
           admission.source_admission_id);
-        const allowlistVersions = input.source_versions.filter((version) => {
+        const allowlistVersions = sourceVersions.filter((version) => {
           return version.artifact.kind === "OFFICIAL_ENDPOINT_ALLOWLIST"
             && version.artifact.payload.recruitment_endpoint_artifact_id
               === endpointVersion.artifact_id
@@ -314,6 +372,15 @@ export function bootstrapZeroCostProductionCompositionRoot(
           transport: {
             execute: async (request: HttpTransportRequest) => {
               allowlistFor(request);
+              if (continuous) {
+                const execution = await executeContinuousRequest({ repository_path: checkoutPath, branch,
+                  authorization_ids: input.continuous_authorization_ids!, source_admission_id: input.source_admission_id,
+                  recruitment_endpoint_id: input.recruitment_endpoint_id, scope: continuousScope, commit_identity: commitIdentity,
+                  now, fencing_verifier: options.continuous_fencing_verifier, controlled_transport: options.controlled_continuous_transport,
+                  after_reservation: () => options.fault_injector?.("AFTER_CONTINUOUS_RESERVATION") }, request);
+                expectedParent = execution.committed_head;
+                return execution.response;
+              }
               return input.transport.execute(request);
             }
           },
@@ -535,7 +602,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
           run_id: input.run_id,
           lifecycle: committedLifecycle,
           expected_parent: expectedParent,
-          source_version_ids: input.source_versions.map((version) => version.artifact_id),
+          source_version_ids: sourceVersions.map((version) => version.artifact_id),
           acquisition_run_ids: acquisitions.map((bundle) => {
             return bundle.acquisition_run.acquisition_run_id;
           }),
@@ -616,14 +683,15 @@ export function bootstrapZeroCostProductionCompositionRoot(
       try {
         cloneRemote(remoteUrl, branch, checkoutPath);
         const sourceRepository = new GitSourceRegistryPersistence({
-          repository_path: checkoutPath
+          repository_path: checkoutPath, fencing_verifier: options.continuous_fencing_verifier
         });
         const sourceRegistry = new InMemorySourceRegistry();
         const admissionRegister = new InMemorySourceAdmissionRegister();
         const sourceRestoration = await rehydrateProductionSourceOwners({
           repository: sourceRepository,
           source_registry: sourceRegistry,
-          source_admission_register: admissionRegister
+          source_admission_register: admissionRegister,
+          continuous_records: sourceRepository.listContinuousRecords(), fencing_verifier: options.continuous_fencing_verifier
         });
         const rawPersistence = new GitRawObjectPersistence({
           repository_path: checkoutPath
@@ -674,6 +742,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
         });
         const currentSnapshot = journalStore.readCurrentSnapshot();
         return {
+          continuous_records: sourceRepository.listContinuousRecords(),
+          continuous_authorizations: [...new Set(sourceRepository.listContinuousRecords().filter(record => record.kind === "GRANT")
+            .map(record => record.payload.grant!.authorization_id))].map(id => admissionRegister.resolveContinuousAuthorization(id)),
           committed_head: git(checkoutPath, "rev-parse", "HEAD").trim(),
           source_version_count: sourceRestoration.restored_version_count,
           acquisition_count: acquisitions.length,

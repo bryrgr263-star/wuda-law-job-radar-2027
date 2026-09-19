@@ -47,6 +47,7 @@ export const SOURCE_AUTOMATION_BASES = [
   "ROBOTS_ALLOW",
   "OFFICIAL_API",
   "HUMAN_REVIEWED_CANARY",
+  "HUMAN_APPROVED_CONTINUOUS_SCOPE",
   "NO_AUTOMATION_ALLOWED",
   "INSUFFICIENT_EVIDENCE",
   "CONFLICTING_EVIDENCE"
@@ -150,6 +151,13 @@ export interface SourceAccessReview {
 }
 
 export interface SourceAdmission {
+  readonly continuous_acquisition_scope?: {
+    readonly scope: "PRODUCTION" | "CONTROLLED_TEST";
+    readonly exact_targets: readonly { readonly allowlist_entry_id: string; readonly exact_url: string }[];
+    readonly min_interval_seconds: number;
+    readonly effective_from: string;
+    readonly approval_review_id: SourceAdmissionReviewId;
+  };
   readonly source_admission_id: SourceAdmissionId;
   readonly admission_level: SourceAdmissionLevel;
   readonly automation_basis: SourceAutomationBasis;
@@ -177,6 +185,12 @@ export interface SourceAdmission {
 }
 
 export type SourceAutomationPermission =
+  | {
+      readonly allowed: true;
+      readonly admission_level: "A" | "B";
+      readonly mode: "REVOCABLE_CONTINUOUS_UNATTENDED_ACQUISITION";
+      readonly requires_current_authorization: true;
+    }
   | {
       readonly allowed: true;
       readonly admission_level: "A";
