@@ -50,6 +50,7 @@ async function main() {
   };
   const trustedRun = createZhenghan2027TrustedRun(startedAt as never);
   const root = bootstrapZeroCostProductionCompositionRoot({
+    execution_mode: "CANARY",
     remote_url: remotePath,
     branch: "main",
     stream_id: "real-2027-zhenghan-trusted-chain",

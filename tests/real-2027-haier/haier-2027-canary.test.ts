@@ -131,6 +131,7 @@ test("existing production root safely blocks unsupported Haier requirements and 
     initializeRemote(temporaryRoot, remotePath);
     const trustedRun = createHaier2027TrustedRun(now);
     const root = bootstrapZeroCostProductionCompositionRoot({
+      execution_mode: "CANARY",
       remote_url: remotePath,
       branch: "main",
       stream_id: "test-real-2027-haier-trusted-chain",

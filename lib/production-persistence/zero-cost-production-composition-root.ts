@@ -61,6 +61,16 @@ import { ProductionRawObjectBoundary } from "./raw-object-boundary";
 import { rehydrateProductionSourceOwners } from "./source-owner-rehydration";
 import { resolveContinuousSourceContext } from "./continuous-source-context";
 import { executeContinuousRequest } from "./continuous-request-gate";
+import {
+  readSourceExecutionOutcomes,
+  sealSourceExecutionOutcome,
+  writeSourceExecutionOutcome,
+  type SourceExecutionOutcome,
+  type SourceExecutionStatus
+} from "./source-execution-outcome";
+import { classifyTrustedAcquisition, type TrustedAcquisitionClassification,
+  type TrustedAcquisitionObservation } from "./trusted-acquisition-evidence";
+import { executeProductionTrustedChainBinding } from "./production-trusted-chain-execution-binding";
 import { pendingContinuousAttempt, type ContinuousRecord, type ContinuousScope, type ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
 
 const RUN_SCHEMA_VERSION = "zero-cost-production-run/1.0.0" as const;
@@ -74,7 +84,10 @@ export type ZeroCostProductionRunStatus =
   | "COMMITTED"
   | "FAILED"
   | "EVIDENCE_BLOCKED"
-  | "PARTIAL";
+  | "PARTIAL"
+  | "SUSPICIOUS_EMPTY"
+  | "NOT_MODIFIED"
+  | "CONFIRMED_EMPTY";
 
 export type ZeroCostProductionFaultPoint =
   | "AFTER_CONTINUOUS_RESERVATION"
@@ -113,6 +126,7 @@ export interface ZeroCostProductionTrustedRunContext {
   readonly source_occurrences: readonly unknown[];
   readonly snapshots: readonly Snapshot[];
   readonly extracted_records: readonly ExtractedRecordV2[];
+  readonly available_artifact_references: readonly { readonly artifact_kind: string; readonly artifact_id: string }[];
   readonly resolvers: TrustedChainCompositionRoot["resolvers"];
   execute(command: TrustedChainCommand): Promise<unknown>;
 }
@@ -140,7 +154,11 @@ export interface ZeroCostProductionRunInput {
   readonly candidate_evidence_source_verifier?: TrustedCandidateEvidenceSourceVerifier;
 }
 
+export type ZeroCostProductionEntryInput = Omit<ZeroCostProductionRunInput,
+  "execute_trusted_chain" | "source_role_for_record" | "candidate_evidence_source_verifier">;
+
 export interface ZeroCostProductionCompositionRootOptions {
+  readonly execution_mode?: "PRODUCTION" | "CANARY" | "TEST_ONLY";
   readonly continuous_scope?: ContinuousScope;
   readonly continuous_fencing_verifier?: ContinuousFencingVerifier;
   readonly controlled_continuous_transport?: ZeroCostProductionAcquisitionTransport;
@@ -155,6 +173,7 @@ export interface ZeroCostProductionCompositionRootOptions {
 }
 
 export interface ZeroCostProductionRestoreResult {
+  readonly source_execution_outcomes: readonly SourceExecutionOutcome[];
   readonly continuous_records: readonly ContinuousRecord[];
   readonly continuous_authorizations: readonly ReturnType<InMemorySourceAdmissionRegister["resolveContinuousAuthorization"]>[];
   readonly committed_head: string;
@@ -237,6 +256,14 @@ export function bootstrapZeroCostProductionCompositionRoot(
   }
 
   const root = Object.freeze({
+    async runProduction(input: ZeroCostProductionEntryInput): Promise<ZeroCostProductionRunResult> {
+      if ("execute_trusted_chain" in input || "source_role_for_record" in input
+        || "candidate_evidence_source_verifier" in input) {
+        throw new Error("CALLER_TRUSTED_CHAIN_EXECUTOR_DENIED");
+      }
+      return root.run({ ...input, execute_trusted_chain: executeProductionTrustedChainBinding });
+    },
+
     async issueContinuousAuthorization(input: { readonly allowlist_entry_id: string; readonly effective_from: string; readonly min_interval_seconds: number; readonly actor: string }) {
       return control((owner, versions) => owner.issueContinuousAuthorization(resolveContinuousSourceContext(versions, input.allowlist_entry_id), {
         effective_from: input.effective_from, min_interval_seconds: input.min_interval_seconds, actor: input.actor, issued_at: now() }));
@@ -255,6 +282,13 @@ export function bootstrapZeroCostProductionCompositionRoot(
     },
 
     async run(input: ZeroCostProductionRunInput): Promise<ZeroCostProductionRunResult> {
+      if ((options.execution_mode ?? "PRODUCTION") === "PRODUCTION"
+        && input.execute_trusted_chain !== executeProductionTrustedChainBinding) {
+        throw new Error("CALLER_TRUSTED_CHAIN_EXECUTOR_DENIED");
+      }
+      if (options.execution_mode === "CANARY" && input.continuous_authorization_ids?.length) {
+        throw new Error("CANARY_EXECUTOR_CANNOT_RUN_CONTINUOUS_SOURCE");
+      }
       if (running || activeWriters.has(writerKey)) {
         return emptyResult(input.run_id, "FAILED", [event(
           "FAILED", now(), "A production writer is already active"
@@ -271,13 +305,63 @@ export function bootstrapZeroCostProductionCompositionRoot(
       let expectedParent: string | null = null;
       let committedHead: string | null = null;
       let pushed = false;
+      let faultBoundary: ZeroCostProductionFaultPoint | null = null;
       let rawBlobIds: string[] = [];
       let snapshotIds: string[] = [];
       let extractedRecordIds: string[] = [];
       let restorationRecordIds: string[] = [];
       let readModels: PresentationReadModel[] = [];
+      let rawPersistenceForOutcome: GitRawObjectPersistence | null = null;
+      let collectionAbortError: string | null = null;
+      let acquisitionEvidence: {
+        readonly source_definition_id: string;
+        readonly recruitment_endpoint_id: string;
+        readonly source_version_ids: readonly string[];
+        readonly source_admission_artifact_id: string;
+        readonly authorization_ids: readonly string[];
+        readonly continuous_record_start_count: number;
+        readonly completed_at: string;
+        readonly status: SourceExecutionStatus;
+        readonly reason_codes: readonly string[];
+        readonly classification: TrustedAcquisitionClassification;
+        readonly acquisition_run_ids: readonly string[];
+        readonly acquisition_bundle_hashes: readonly string[];
+      } | null = null;
       const retainedModels: PresentationReadModel[] = [];
       const retainedOutcomes: NonNullable<ZeroCostCommittedRunManifest["retained_outcome_references"]>[number][] = [];
+      const commitAcquisitionOutcome = async (trustedChainStatus: SourceExecutionOutcome["trusted_chain_status"]) => {
+        if (!acquisitionEvidence || !rawPersistenceForOutcome || !expectedParent) {
+          throw new Error("Verified acquisition evidence is unavailable for source outcome commit");
+        }
+        const currentRecords = new GitSourceRegistryPersistence({ repository_path: checkoutPath,
+          fencing_verifier: options.continuous_fencing_verifier }).listContinuousRecords();
+        const attempts = currentRecords.slice(acquisitionEvidence.continuous_record_start_count)
+          .filter(record => record.kind === "RESERVE").map(record => record.payload.attempt_id!);
+        const outcome = sealSourceExecutionOutcome({
+          source_execution_id: input.run_id,
+          status: acquisitionEvidence.status,
+          trusted_chain_status: trustedChainStatus,
+          source_definition_id: acquisitionEvidence.source_definition_id,
+          recruitment_endpoint_id: acquisitionEvidence.recruitment_endpoint_id,
+          source_version_ids: acquisitionEvidence.source_version_ids,
+          source_admission_artifact_id: acquisitionEvidence.source_admission_artifact_id,
+          continuous_authorization_ids: acquisitionEvidence.authorization_ids,
+          request_attempt_ids: attempts,
+          expected_parent: expectedParent,
+          started_at: input.started_at,
+          completed_at: acquisitionEvidence.completed_at,
+          reason_codes: acquisitionEvidence.reason_codes,
+          acquisition_evidence: acquisitionEvidence.classification,
+          acquisition_run_ids: acquisitionEvidence.acquisition_run_ids,
+          acquisition_bundle_hashes: acquisitionEvidence.acquisition_bundle_hashes,
+          raw_blob_ids: rawBlobIds,
+          snapshot_ids: snapshotIds,
+          extracted_record_ids: extractedRecordIds
+        });
+        rawPersistenceForOutcome.prepareAtomicCommit(expectedParent);
+        writeSourceExecutionOutcome(checkoutPath, outcome);
+        return outcome;
+      };
       try {
         cloneRemote(remoteUrl, branch, checkoutPath);
         expectedParent = git(checkoutPath, "rev-parse", "HEAD").trim();
@@ -327,15 +411,54 @@ export function bootstrapZeroCostProductionCompositionRoot(
             && version.artifact.payload.recruitment_endpoint_artifact_id
               === endpointVersion.artifact_id
             && version.artifact.payload.source_admission_artifact_id
-              === admissionVersion.artifact_id;
+              === admissionVersion.artifact_id
+            && currentVersion(sourceVersions, "OFFICIAL_ENDPOINT_ALLOWLIST", version.stream_id).artifact_id
+              === version.artifact_id;
         });
         if (allowlistVersions.length === 0) {
           throw new Error("Approved official endpoint allowlist is unavailable");
         }
+        const sourceDefinition = sourceRegistry.getSourceDefinition(endpoint.source_definition_id);
+        const currentSourceVersionIds = [
+          currentVersion(sourceVersions, "ORGANIZATION", sourceDefinition.publisher_organization_id).artifact_id,
+          currentVersion(sourceVersions, "SOURCE_DEFINITION", endpoint.source_definition_id).artifact_id,
+          endpointVersion.artifact_id,
+          currentVersion(sourceVersions, "ADAPTER_REGISTRATION", endpoint.adapter_key).artifact_id,
+          admissionVersion.artifact_id,
+          ...[...new Set(allowlistVersions.map(version => version.stream_id))].sort()
+            .map(id => currentVersion(sourceVersions, "OFFICIAL_ENDPOINT_ALLOWLIST", id).artifact_id)
+        ];
 
         const rawPersistence = new GitRawObjectPersistence({
           repository_path: checkoutPath
         });
+        rawPersistenceForOutcome = rawPersistence;
+        const previousAcquisitions = await rawPersistence.listVerifiedAcquisitions();
+        const acquisitionOrder = new Map(previousAcquisitions.map((bundle, index) => [bundle.acquisition_run.acquisition_run_id, index]));
+        const previousOutcomes = await readSourceExecutionOutcomes(checkoutPath, previousAcquisitions,
+          await sourceRepository.listVersions(), sourceRepository.listContinuousRecords(), manifest => rawPersistence.read({
+            bucket: manifest.bucket_id, object_key: manifest.object_key }));
+        assertSourceOutcomeRunBindings(previousOutcomes, readRunManifests(checkoutPath));
+        const previousOutcome = previousOutcomes.filter(outcome => outcome.recruitment_endpoint_id === endpoint.recruitment_endpoint_id
+          && canonicalSerialize(outcome.source_version_ids) === canonicalSerialize(currentSourceVersionIds)
+          && outcome.trusted_chain_status === "COMMITTED"
+          && ["SUCCESS", "NOT_MODIFIED"].includes(outcome.status))
+          .sort((left, right) => (acquisitionOrder.get(left.acquisition_run_ids.at(-1) ?? "") ?? -1)
+            - (acquisitionOrder.get(right.acquisition_run_ids.at(-1) ?? "") ?? -1)).at(-1) ?? null;
+        const previousContent = previousOutcome && previousOutcome.acquisition_run_ids.every(id => {
+          return previousAcquisitions.some(bundle => bundle.acquisition_run.acquisition_run_id === id
+            && bundle.raw_blob_manifest);
+        }) ? {
+          source_execution_id: previousOutcome.source_execution_id,
+          requests: previousOutcome.acquisition_run_ids.map(id => {
+            const bundle = previousAcquisitions.find(item => item.acquisition_run.acquisition_run_id === id)!;
+            return { locator: String(bundle.acquisition_run.request_metadata.locator),
+              raw_hash: bundle.raw_blob_manifest!.raw_content_sha256 };
+          })
+        } : null;
+        const continuousRecordStartCount = sourceRepository.listContinuousRecords().length;
+        const acquisitionRunIds: string[] = [];
+        const acquisitionBundleHashes: string[] = [];
         const rawBoundary = new ProductionRawObjectBoundary(
           rawPersistence,
           rawPersistence
@@ -343,7 +466,16 @@ export function bootstrapZeroCostProductionCompositionRoot(
         const rawRepository = new InMemoryRawBlobRepository();
         const snapshotRepository = new InMemorySnapshotRepository();
         let snapshotSequence = 0;
-        const capture = new RawCaptureService(rawRepository, snapshotRepository, {
+        const capturedRequests: TrustedAcquisitionObservation["request_results"][number][] = [];
+        const observedRecords: ExtractedRecord[] = [];
+        const capture = new class extends RawCaptureService {
+          override record(request: import("../ingestion").TransportRequest, response: TransportResponse) {
+            const captured = super.record(request, response);
+            capturedRequests.push({ request: structuredClone(request), response: structuredClone(response),
+              snapshot: captured.snapshot, raw_blob: captured.raw_blob });
+            return captured;
+          }
+        }(rawRepository, snapshotRepository, {
           create_snapshot_id: () => {
             snapshotSequence += 1;
             return `${input.run_id}:snapshot:${snapshotSequence}` as never;
@@ -368,7 +500,21 @@ export function bootstrapZeroCostProductionCompositionRoot(
           }
           return match;
         };
-        const collection = await new CollectionRunner({
+        const observedAdapter: RecruitmentAdapter = {
+          descriptor: input.adapter.descriptor,
+          validateEndpoint: candidate => input.adapter.validateEndpoint(candidate),
+          plan: candidate => input.adapter.plan(candidate),
+          extract: source => {
+            const records = input.adapter.extract(source);
+            observedRecords.push(...records);
+            return records;
+          },
+          nextPage: source => input.adapter.nextPage(source),
+          assessCompleteness: source => input.adapter.assessCompleteness(source)
+        };
+        let collection: TrustedAcquisitionObservation;
+        try {
+          collection = await new CollectionRunner({
           transport: {
             execute: async (request: HttpTransportRequest) => {
               allowlistFor(request);
@@ -399,11 +545,30 @@ export function bootstrapZeroCostProductionCompositionRoot(
             now_ms: () => Date.now(),
             sleep: async () => undefined
           }
-        }).run({
+          }).run({
           collection_run_id: input.run_id,
           endpoint,
-          adapter: input.adapter
-        });
+          adapter: observedAdapter
+          });
+        } catch (error) {
+          if (!continuous || capturedRequests.length === 0 || faultBoundary) throw error;
+          collectionAbortError = errorMessage(error);
+          collection = {
+            collection_run_id: input.run_id,
+            source_definition_id: endpoint.source_definition_id,
+            recruitment_endpoint_id: endpoint.recruitment_endpoint_id,
+            started_at: capturedRequests[0]!.request.requested_at,
+            completed_at: now() as IsoDateTime,
+            status: "FAILED",
+            reason_codes: ["TRANSPORT_FAILED"],
+            request_results: capturedRequests,
+            snapshots: capturedRequests.map(result => result.snapshot),
+            raw_blobs: capturedRequests.flatMap(result => result.raw_blob ? [result.raw_blob] : []),
+            extracted_records: observedRecords,
+            pages_collected: capturedRequests.filter(result => result.response.status === "SUCCESS").length,
+            requests_made: capturedRequests.length
+          };
+        }
         const snapshots = [...collection.snapshots];
         const snapshotById = new Map(snapshots.map((snapshot) => {
           return [snapshot.snapshot_id, snapshot] as const;
@@ -421,6 +586,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
           });
           const allowlistVersion = allowlistFor(request);
           const acquisitionRunId = `${input.run_id}:acquisition:${index + 1}`;
+          acquisitionRunIds.push(acquisitionRunId);
           const bundle: Omit<AcquisitionPersistenceBundle, "raw_blob_manifest"> = {
             acquisition_run: {
               acquisition_run_id: acquisitionRunId,
@@ -458,8 +624,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
                 throw new Error("EVIDENCE_BLOCKED: Raw manifest reuse requires exact original source and bytes");
               }
               await rawPersistence.appendAcquisitionBundle({ ...bundle, raw_blob_manifest: originalManifest });
+              acquisitionBundleHashes.push(canonicalHash({ ...bundle, raw_blob_manifest: originalManifest }));
             } else {
-              await rawBoundary.persistSuccessfulAcquisition({
+              const manifest = await rawBoundary.persistSuccessfulAcquisition({
                 raw_blob: rawBlob,
                 source_definition_id: endpoint.source_definition_id,
                 recruitment_endpoint_id: endpoint.recruitment_endpoint_id,
@@ -467,23 +634,57 @@ export function bootstrapZeroCostProductionCompositionRoot(
                 provenance: input.provenance,
                 bundle
               });
+              acquisitionBundleHashes.push(canonicalHash({ ...bundle, raw_blob_manifest: manifest.manifest }));
             }
             rawBlobIds.push(rawBlob.raw_blob_id);
           } else {
             await rawBoundary.persistFailedAcquisition(bundle);
+            acquisitionBundleHashes.push(canonicalHash({ ...bundle, raw_blob_manifest: null }));
           }
         }
         snapshotIds = snapshots.map((snapshot) => snapshot.snapshot_id);
         extractedRecordIds = extractedRecords.map((record) => record.extracted_record_id);
+        const classification = classifyTrustedAcquisition({ collection,
+          previous: previousContent, content_kind: endpoint.content_kind });
+        const acquisitionStatus = classification.status;
+        acquisitionEvidence = {
+          source_definition_id: endpoint.source_definition_id,
+          recruitment_endpoint_id: endpoint.recruitment_endpoint_id,
+          source_version_ids: currentSourceVersionIds,
+          source_admission_artifact_id: admissionVersion.artifact_id,
+          authorization_ids: input.continuous_authorization_ids ?? [],
+          continuous_record_start_count: continuousRecordStartCount,
+          completed_at: collection.completed_at,
+          status: acquisitionStatus,
+          reason_codes: [
+            ...(classification.assessment?.reason_codes ?? collection.reason_codes),
+            ...(collectionAbortError ? [`COLLECTION_ABORTED:${collectionAbortError}`] : [])
+          ],
+          classification,
+          acquisition_run_ids: acquisitionRunIds,
+          acquisition_bundle_hashes: acquisitionBundleHashes
+        };
+        faultBoundary = "AFTER_ACQUISITION";
         await options.fault_injector?.("AFTER_ACQUISITION");
-        if (collection.status !== "SUCCESS") {
-          const status = collection.status === "PARTIAL" ? "PARTIAL"
-            : collection.status === "SUSPICIOUS_EMPTY" ? "EVIDENCE_BLOCKED"
+        faultBoundary = null;
+        if (acquisitionStatus !== "SUCCESS") {
+          const status = acquisitionStatus === "NOT_MODIFIED" ? "NOT_MODIFIED"
+            : acquisitionStatus === "CONFIRMED_EMPTY" ? "CONFIRMED_EMPTY"
+            : acquisitionStatus === "PARTIAL" ? "PARTIAL"
+            : acquisitionStatus === "SUSPICIOUS_EMPTY" ? "SUSPICIOUS_EMPTY"
               : "FAILED";
-          lifecycle.push(event(status, now(), collection.reason_codes.join(",")));
-          return result(input.run_id, status, lifecycle, expectedParent, null, {
+          lifecycle.push(event(status, now(), acquisitionEvidence.reason_codes.join(",")));
+          await commitAcquisitionOutcome("NOT_RUN");
+          squashAndCommit(checkoutPath, expectedParent!, input.run_id, commitIdentity, true);
+          committedHead = git(checkoutPath, "rev-parse", "HEAD").trim();
+          assertRemoteHead(remoteUrl, branch, expectedParent!);
+          git(checkoutPath, "push", "origin", `HEAD:refs/heads/${branch}`);
+          if (remoteHead(remoteUrl, branch) !== committedHead) throw new Error("Remote did not accept the source outcome commit");
+          pushed = true;
+          return result(input.run_id, status, lifecycle, expectedParent, committedHead, {
             rawBlobIds, snapshotIds, extractedRecordIds,
-            error: collection.reason_codes.join(",")
+            error: status === "NOT_MODIFIED" || status === "CONFIRMED_EMPTY"
+              ? null : acquisitionEvidence.reason_codes.join(",")
           });
         }
 
@@ -514,8 +715,10 @@ export function bootstrapZeroCostProductionCompositionRoot(
             return candidate.snapshot_id === record.snapshot_id;
           });
           if (!snapshot) throw new Error("ExtractedRecord Snapshot is unavailable");
+          const sourceRole = input.source_role_for_record?.(record)
+            ?? (record.recruitment_context ? "POSITION_BEARING" : "PACKAGE");
           const sourceInput = {
-            source_role: input.source_role_for_record?.(record) ?? "POSITION_BEARING" as const,
+            source_role: sourceRole,
             endpoint, snapshot, extracted_record: record
           };
           const current = trusted.root.resolvers.source_occurrences.resolveForDiscovery(sourceInput);
@@ -536,7 +739,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
           sourceOccurrences.push(await trusted.root.execute({
             kind: "SOURCE_OCCURRENCE_MATERIALIZE",
             input: {
-              source_role: input.source_role_for_record?.(record) ?? "POSITION_BEARING",
+              source_role: sourceRole,
               endpoint,
               snapshot,
               extracted_record: record
@@ -577,6 +780,8 @@ export function bootstrapZeroCostProductionCompositionRoot(
           source_occurrences: structuredClone(sourceOccurrences),
           snapshots: structuredClone(snapshots),
           extracted_records: structuredClone(extractedRecords),
+          available_artifact_references: journalStore.listVerifiedExecutions().flatMap(execution =>
+            execution.record.expected_artifacts.map(seal => ({ artifact_kind: seal.artifact_kind, artifact_id: seal.artifact_id }))),
           resolvers: trusted.root.resolvers,
           execute
         }));
@@ -591,9 +796,11 @@ export function bootstrapZeroCostProductionCompositionRoot(
           return execution.record.restoration_record_id;
         });
         lifecycle.push(event("COMMITTING", now(), "Atomic Git commit is being prepared"));
+        faultBoundary = "BEFORE_ATOMIC_COMMIT";
         await options.fault_injector?.("BEFORE_ATOMIC_COMMIT");
+        faultBoundary = null;
         journalStore.prepareAtomicCommit(expectedParent);
-        rawPersistence.prepareAtomicCommit(expectedParent);
+        await commitAcquisitionOutcome("COMMITTED");
         const committedLifecycle = [
           ...lifecycle,
           event("COMMITTED", now(), "Atomic state commit prepared")
@@ -621,7 +828,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
         writeRunManifest(checkoutPath, runManifest);
         squashAndCommit(checkoutPath, expectedParent, input.run_id, commitIdentity);
         committedHead = git(checkoutPath, "rev-parse", "HEAD").trim();
+        faultBoundary = "AFTER_LOCAL_COMMIT";
         await options.fault_injector?.("AFTER_LOCAL_COMMIT");
+        faultBoundary = null;
         assertRemoteHead(remoteUrl, branch, expectedParent);
         git(checkoutPath, "push", "origin", `HEAD:refs/heads/${branch}`);
         if (remoteHead(remoteUrl, branch) !== committedHead) {
@@ -664,8 +873,30 @@ export function bootstrapZeroCostProductionCompositionRoot(
         }
         const status = /EVIDENCE_BLOCKED/u.test(errorMessage(error))
           ? "EVIDENCE_BLOCKED" : "FAILED";
+        if (acquisitionEvidence && rawPersistenceForOutcome && expectedParent && !pushed && !faultBoundary
+          && !acquisitionEvidence.reason_codes.includes("SOURCE_OUTCOME_COMMIT_FAILED")) {
+          try {
+            if (!readFileSync(path.join(checkoutPath, "production-runs", "source-executions",
+              `${canonicalHash({ source_execution_id: input.run_id })}.json`), "utf8")) {
+              throw new Error("Source outcome file is empty");
+            }
+          } catch {
+            try {
+              await commitAcquisitionOutcome("FAILED");
+              squashAndCommit(checkoutPath, expectedParent, input.run_id, commitIdentity, true);
+              committedHead = git(checkoutPath, "rev-parse", "HEAD").trim();
+              assertRemoteHead(remoteUrl, branch, expectedParent);
+              git(checkoutPath, "push", "origin", `HEAD:refs/heads/${branch}`);
+              if (remoteHead(remoteUrl, branch) !== committedHead) throw new Error("Remote did not accept the source outcome commit");
+              pushed = true;
+            } catch {
+              committedHead = null;
+            }
+          }
+        }
+        if (!pushed) committedHead = null;
         lifecycle.push(event(status, now(), errorMessage(error)));
-        return result(input.run_id, status, lifecycle, expectedParent, null, {
+        return result(input.run_id, status, lifecycle, expectedParent, committedHead, {
           rawBlobIds, snapshotIds, extractedRecordIds, restorationRecordIds,
           readModelIds: readModels.map((model) => model.presentation_read_model_id),
           error: errorMessage(error)
@@ -697,6 +928,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
           repository_path: checkoutPath
         });
         const acquisitions = await rawPersistence.listVerifiedAcquisitions();
+        const sourceExecutionOutcomes = await readSourceExecutionOutcomes(checkoutPath, acquisitions,
+          await sourceRepository.listVersions(), sourceRepository.listContinuousRecords(), manifest => rawPersistence.read({
+            bucket: manifest.bucket_id, object_key: manifest.object_key }));
         const journalStore = new GitAppendOnlyExecutionStore<TrustedChainCommand>({
           repository_path: checkoutPath,
           stream_id: streamId,
@@ -712,6 +946,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
         });
         const executions = journalStore.listVerifiedExecutions();
         const runs = readRunManifests(checkoutPath);
+        assertSourceOutcomeRunBindings(sourceExecutionOutcomes, runs);
         for (const run of runs) {
           const ids = [...run.presentation_read_model_ids, ...(run.retained_read_model_ids ?? [])];
           const hashes = [...run.presentation_read_model_hashes, ...(run.retained_read_model_hashes ?? [])];
@@ -742,6 +977,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
         });
         const currentSnapshot = journalStore.readCurrentSnapshot();
         return {
+          source_execution_outcomes: structuredClone(sourceExecutionOutcomes),
           continuous_records: sourceRepository.listContinuousRecords(),
           continuous_authorizations: [...new Set(sourceRepository.listContinuousRecords().filter(record => record.kind === "GRANT")
             .map(record => record.payload.grant!.authorization_id))].map(id => admissionRegister.resolveContinuousAuthorization(id)),
@@ -852,14 +1088,35 @@ function readRunManifests(repositoryPath: string) {
   });
 }
 
+function assertSourceOutcomeRunBindings(
+  outcomes: readonly SourceExecutionOutcome[],
+  runs: readonly ZeroCostCommittedRunManifest[]
+) {
+  const byId = new Map(runs.map(run => [run.run_id, run]));
+  for (const outcome of outcomes) {
+    const run = byId.get(outcome.source_execution_id);
+    if ((outcome.trusted_chain_status === "COMMITTED") !== Boolean(run)) {
+      throw new Error(`Source execution business-chain binding mismatch: ${outcome.source_execution_id}`);
+    }
+    if (run && (run.expected_parent !== outcome.expected_parent
+      || canonicalSerialize(run.raw_blob_ids) !== canonicalSerialize(outcome.raw_blob_ids)
+      || canonicalSerialize(run.snapshot_ids) !== canonicalSerialize(outcome.snapshot_ids)
+      || canonicalSerialize(run.extracted_record_ids) !== canonicalSerialize(outcome.extracted_record_ids))) {
+      throw new Error(`Source execution run references mismatch: ${outcome.source_execution_id}`);
+    }
+  }
+}
+
 function squashAndCommit(
   repositoryPath: string,
   expectedParent: string,
   runId: string,
-  identity: { readonly name: string; readonly email: string }
+  identity: { readonly name: string; readonly email: string },
+  acquisitionOnly = false
 ) {
-  git(repositoryPath, "reset", "--soft", expectedParent);
-  git(repositoryPath, "add", "-A");
+  git(repositoryPath, "reset", acquisitionOnly ? "--mixed" : "--soft", expectedParent);
+  if (acquisitionOnly) git(repositoryPath, "add", "-A", "--", "production-runs/source-executions", "production-source-state", "trusted-objects");
+  else git(repositoryPath, "add", "-A");
   const changes = git(repositoryPath, "diff", "--cached", "--name-status").trim();
   if (!changes) throw new Error("Production run produced no state changes");
   for (const line of changes.split(/\r?\n/u)) {

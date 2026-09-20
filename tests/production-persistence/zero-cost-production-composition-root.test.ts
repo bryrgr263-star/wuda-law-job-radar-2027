@@ -3,11 +3,10 @@ import "../helpers/network-guard";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { createRequire } from "node:module";
-import { pathToFileURL } from "node:url";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import type { SourceAdmission } from "../../lib/application";
@@ -24,8 +23,7 @@ import {
   type TransportRequest,
   type TransportResponse
 } from "../../lib/ingestion";
-import type { TrustedSourceOccurrenceArtifact, SOVDiscoverySupport } from "../../lib/ingestion";
-import { canonicalDeserialize, canonicalHash, canonicalSerialize } from "../../lib/ingestion/normalization/canonical-artifact-registry";
+import type { TrustedSourceOccurrenceArtifact } from "../../lib/ingestion";
 import {
   bootstrapZeroCostProductionCompositionRoot,
   createSourcePersistenceVersion,
@@ -85,6 +83,197 @@ test("one production run forms one atomic commit and fresh Process B restores it
   }
 });
 
+test("failed HTTP acquisition commits only its sealed source outcome and restores in Process B", async () => {
+  const repository = createRemote();
+  try {
+    const fixture = runFixture("failed-acquisition-outcome");
+    const before = git(repository.remote, "rev-parse", "main").trim();
+    const root = rootFor(repository.remote);
+    const failed = await root.run({ ...fixture.input, transport: {
+      async execute() {
+        return { status: "FAILED", responded_at: OBSERVED_AT, http_status: 503,
+          headers: {}, mime_type: null,
+          error: { code: "OFFLINE", message: "controlled HTTP failure", retryable: false } };
+      }
+    } });
+    assert.equal(failed.status, "FAILED");
+    assert.equal(failed.expected_parent, before);
+    assert.ok(failed.committed_head);
+    assert.notEqual(failed.committed_head, before);
+    const fresh = await rootFor(repository.remote).restore();
+    assert.equal(fresh.committed_head, failed.committed_head);
+    assert.equal(fresh.acquisition_count, 1);
+    assert.equal(fresh.source_execution_outcomes.length, 1);
+    assert.equal(fresh.source_execution_outcomes[0]?.status, "FAILED");
+    assert.deepEqual(fresh.source_execution_outcomes[0]?.snapshot_ids, failed.snapshot_ids);
+    assert.deepEqual(fresh.source_execution_outcomes[0]?.raw_blob_ids, []);
+    assert.deepEqual(fresh.read_models, []);
+    Object.assign(fresh.source_execution_outcomes[0]!, { status: "SUCCESS" });
+    assert.equal((await rootFor(repository.remote).restore()).source_execution_outcomes[0]?.status, "FAILED");
+  } finally { repository.remove(); }
+});
+
+test("identical Raw is committed as NOT_MODIFIED without new business artifacts", async () => {
+  const repository = createRemote();
+  try {
+    const fixture = runFixture("unchanged-acquisition");
+    const root = rootFor(repository.remote);
+    const first = await root.run(fixture.input);
+    assert.equal(first.status, "COMMITTED", JSON.stringify(first));
+    const before = await root.restore();
+    const second = await root.run({ ...fixture.input, run_id: `${fixture.input.run_id}-again`,
+      execute_trusted_chain: async () => { throw new Error("Trusted Chain must not rerun on identical Raw"); } });
+    assert.equal(second.status, "NOT_MODIFIED", JSON.stringify(second));
+    assert.equal(second.error, null);
+    assert.ok(second.committed_head);
+    const fresh = await rootFor(repository.remote).restore();
+    assert.equal(fresh.source_execution_outcomes.at(-1)?.status, "NOT_MODIFIED");
+    assert.deepEqual(fresh.read_models, before.read_models);
+    assert.equal(fresh.restored_record_count, before.restored_record_count);
+  } finally { repository.remove(); }
+});
+
+test("production entry uses its own trusted binding, not the caller's canary executor", async () => {
+  const repository = createRemote();
+  try {
+    const fixture = runFixture("owned-binding");
+    const { execute_trusted_chain: unusedCanaryExecutor, ...productionInput } = fixture.input;
+    assert.ok(unusedCanaryExecutor);
+    const root = rootFor(repository.remote);
+    const result = await root.runProduction(productionInput);
+    assert.equal(result.status, "COMMITTED", JSON.stringify(result));
+    const processB = await rootFor(repository.remote).restore();
+    assert.equal(processB.source_execution_outcomes[0]?.trusted_chain_status, "COMMITTED");
+    assert.equal(processB.presentation_decisions.length, 1, JSON.stringify({
+      seals: processB.artifact_seals, read_models: processB.read_models,
+      runs: processB.runs
+    }));
+    assert.equal(processB.presentation_decisions[0]?.status, "EVIDENCE_BLOCKED");
+    assert.equal(processB.read_models.length, 1);
+    const deniedRoot = bootstrapZeroCostProductionCompositionRoot({ remote_url: repository.remote,
+      branch: "main", stream_id: "zero-cost-production-test", now: () => OBSERVED_AT });
+    await assert.rejects(() => deniedRoot.run(fixture.input), /CALLER_TRUSTED_CHAIN_EXECUTOR_DENIED/u);
+    await assert.rejects(() => deniedRoot.runProduction(Object.assign({}, productionInput, {
+      execute_trusted_chain: async () => undefined
+    })), /CALLER_TRUSTED_CHAIN_EXECUTOR_DENIED/u);
+    await assert.rejects(() => deniedRoot.runProduction(Object.assign({}, productionInput, {
+      source_role_for_record: () => "PACKAGE" as const
+    })), /CALLER_TRUSTED_CHAIN_EXECUTOR_DENIED/u);
+  } finally { repository.remove(); }
+});
+
+test("production binding preserves package records without treating them as positions", async () => {
+  const repository = createRemote();
+  try {
+    const fixture = runFixture("owned-package-binding");
+    const adapter: RecruitmentAdapter = {
+      ...fixture.input.adapter,
+      extract(input) {
+        const position = fixture.input.adapter.extract(input)[0]!;
+        const { recruitment_context: ignoredContext, ...packageFields } = position;
+        return [{ ...packageFields,
+          extracted_record_id: `${position.extracted_record_id}:package` as never,
+          raw_source_record_id: "official-announcement-package",
+          identity_candidates: [{ kind: "SOURCE_RECORD_ID", value: "official-announcement-package", confidence: "HIGH" }],
+          source_record_locator: { kind: "OTHER", locator: "official-announcement-package" }
+        }, position];
+      },
+      assessCompleteness(input) {
+        return input.records.length === 2 && input.extraction_errors.length === 0
+          ? { status: "COMPLETE", reason_codes: ["TEST_COMPLETE"] }
+          : { status: "FAILED", reason_codes: ["TEST_INCOMPLETE"] };
+      }
+    };
+    const { execute_trusted_chain: unusedCanaryExecutor, ...productionInput } = fixture.input;
+    assert.ok(unusedCanaryExecutor);
+    const result = await rootFor(repository.remote).runProduction({ ...productionInput, adapter });
+    assert.equal(result.status, "COMMITTED", JSON.stringify(result));
+    const restored = await rootFor(repository.remote).restore();
+    assert.equal(restored.artifact_seals.filter(seal => seal.artifact_kind === "SOURCE_OCCURRENCE_VERSION").length, 2);
+    assert.equal(restored.presentation_decisions.length, 1);
+    assert.equal(restored.read_models[0]?.presentation_status, "EVIDENCE_BLOCKED");
+  } finally { repository.remove(); }
+});
+
+test("parser failure after Raw and partial extraction preserve acquired evidence in Process B", async () => {
+  for (const scenario of ["PARSER_FAILED", "PARTIAL_EXTRACTION"] as const) {
+    const repository = createRemote();
+    try {
+      const fixture = runFixture(`evidence-${scenario.toLowerCase()}`);
+      const adapter: RecruitmentAdapter = scenario === "PARSER_FAILED"
+        ? { ...fixture.input.adapter, extract() { throw new Error("controlled parser failure"); } }
+        : { ...fixture.input.adapter, nextPage() { throw new Error("controlled pagination extraction failure"); } };
+      const result = await rootFor(repository.remote).run({ ...fixture.input, adapter });
+      assert.equal(result.status, scenario === "PARSER_FAILED" ? "FAILED" : "PARTIAL", JSON.stringify(result));
+      assert.ok(result.committed_head);
+      assert.equal(result.raw_blob_ids.length, 1);
+      assert.equal(result.snapshot_ids.length, 1);
+      assert.equal(result.extracted_record_ids.length, scenario === "PARSER_FAILED" ? 0 : 1);
+      const restored = await rootFor(repository.remote).restore();
+      assert.deepEqual(restored.source_execution_outcomes[0]?.raw_blob_ids, result.raw_blob_ids);
+      assert.deepEqual(restored.source_execution_outcomes[0]?.extracted_record_ids, result.extracted_record_ids);
+      assert.equal(restored.source_execution_outcomes[0]?.status, scenario === "PARSER_FAILED" ? "FAILED" : "PARTIAL");
+      assert.equal(restored.restored_record_count, 0);
+    } finally { repository.remove(); }
+  }
+});
+
+test("official closed JSON empty is committed only through P1 guard and restores without hiding prior state", async () => {
+  const repository = createRemote();
+  try {
+    const fixture = runFixture("closed-official-zero", "JSON");
+    const root = rootFor(repository.remote);
+    const first = await root.run(fixture.input);
+    assert.equal(first.status, "COMMITTED", JSON.stringify(first));
+    const prior = await root.restore();
+    const emptyAdapter = { ...fixture.input.adapter, extract: () => [],
+      assessCompleteness: () => ({ status: "COMPLETE" as const, reason_codes: [] }) };
+    const weakBytes = new TextEncoder().encode('{"jobs":[]}');
+    const weak = await root.run({ ...fixture.input,
+      run_id: `${fixture.input.run_id}-weak-zero`, adapter: emptyAdapter,
+      transport: { async execute() { return { status: "SUCCESS" as const, bytes: weakBytes,
+        content_sha256: createHash("sha256").update(weakBytes).digest("hex") as never,
+        responded_at: OBSERVED_AT, mime_type: "application/json", http_status: 200, headers: {} }; } },
+      execute_trusted_chain: async () => { throw new Error("Weak empty must not enter business chain"); }
+    });
+    assert.equal(weak.status, "SUSPICIOUS_EMPTY", JSON.stringify(weak));
+    assert.equal((await rootFor(repository.remote).restore()).source_execution_outcomes.at(-1)?.status,
+      "SUSPICIOUS_EMPTY");
+    const emptyBytes = new TextEncoder().encode('{"jobs":[],"total":0,"next":null}');
+    const second = await root.run({ ...fixture.input,
+      run_id: `${fixture.input.run_id}-official-zero`,
+      adapter: emptyAdapter,
+      transport: { async execute() { return { status: "SUCCESS", bytes: emptyBytes,
+        content_sha256: createHash("sha256").update(emptyBytes).digest("hex") as never,
+        responded_at: OBSERVED_AT, mime_type: "application/json", http_status: 200, headers: {} }; } },
+      execute_trusted_chain: async () => { throw new Error("Empty collection must not enter business chain"); }
+    });
+    assert.equal(second.status, "CONFIRMED_EMPTY", JSON.stringify(second));
+    assert.equal(second.error, null);
+    const fresh = await rootFor(repository.remote).restore();
+    assert.equal(fresh.source_execution_outcomes.at(-1)?.status, "CONFIRMED_EMPTY");
+    assert.equal(fresh.source_execution_outcomes.at(-1)?.acquisition_evidence.assessment?.status, "CONFIRMED_EMPTY");
+    assert.deepEqual(fresh.read_models, prior.read_models);
+    assert.equal(fresh.restored_record_count, prior.restored_record_count);
+    const scriptPath = path.join(repository.local, "source-outcome-process-b.ts");
+    const markerPath = path.join(repository.local, "source-outcome-process-b.json");
+    writeFileSync(scriptPath, `
+      import ${JSON.stringify(pathToFileURL(path.resolve("tests/helpers/network-guard.ts")).href)};
+      import { writeFileSync } from "node:fs";
+      import { bootstrapZeroCostProductionCompositionRoot } from ${JSON.stringify(pathToFileURL(path.resolve("lib/production-persistence/zero-cost-production-composition-root.ts")).href)};
+      void (async () => {
+        const state = await bootstrapZeroCostProductionCompositionRoot({ remote_url: ${JSON.stringify(repository.remote)},
+          branch: "main", stream_id: "zero-cost-production-test" }).restore();
+        writeFileSync(${JSON.stringify(markerPath)}, JSON.stringify(state.source_execution_outcomes));
+      })().catch(error => { console.error(error); process.exitCode = 1; });
+    `, "utf8");
+    const child = spawnSync(process.execPath, ["--import",
+      pathToFileURL(path.resolve("node_modules/tsx/dist/loader.mjs")).href, scriptPath], { encoding: "utf8" });
+    assert.equal(child.status, 0, `${child.stdout}\n${child.stderr}`);
+    assert.deepEqual(JSON.parse(readFileSync(markerPath, "utf8")), fresh.source_execution_outcomes);
+  } finally { repository.remove(); }
+});
+
 test("an audit-only unbound run commits retention without publishing a fake Position or requiring a public Model", async () => {
   const repository = createRemote();
   try {
@@ -126,7 +315,7 @@ test("an audit-only unbound run commits retention without publishing a fake Posi
   } finally { repository.remove(); }
 });
 
-test("committed production boundary reuses original SOV through support and an independent Process B restores exact bindings", async () => {
+test("changed Raw cannot forge SOV discovery support and Process B retains prior state", async () => {
   const repository = createRemote();
   try {
     const fixture = runFixture("discovery-support");
@@ -135,7 +324,7 @@ test("committed production boundary reuses original SOV through support and an i
     assert.equal(first.status, "COMMITTED", JSON.stringify(first));
     const originalState = await productionRoot.restore();
     const originalModel = originalState.read_models[0]!;
-    const originalHead = git(repository.remote, "rev-parse", "main").trim();
+    let previousHead = git(repository.remote, "rev-parse", "main").trim();
     for (const failure of ["FAILED", "PARTIAL", "SUPPORT_INVALID"] as const) {
       const failedInput: ZeroCostProductionRunInput = { ...fixture.input,
         run_id: `${fixture.input.run_id}-${failure.toLowerCase()}`, started_at: AS_OF };
@@ -152,124 +341,33 @@ test("committed production boundary reuses original SOV through support and an i
           source_role: "POSITION_BEARING" } });
       } });
       assert.notEqual(failed.status, "COMMITTED", failure);
-      assert.equal(git(repository.remote, "rev-parse", "main").trim(), originalHead, failure);
+      assert.ok(failed.committed_head, failure);
+      assert.notEqual(failed.committed_head, previousHead, failure);
+      previousHead = failed.committed_head!;
+      assert.equal(git(repository.remote, "rev-parse", "main").trim(), previousHead, failure);
     }
     assert.deepEqual((await productionRoot.restore()).read_models, [originalModel]);
-    const originalPositionVersionId = originalState.artifact_seals.find((seal) => seal.artifact_kind === "POSITION_VERSION")!.artifact_id;
-    let expected: Record<string, unknown> | undefined;
     const secondRoot = bootstrapZeroCostProductionCompositionRoot({ remote_url: repository.remote,
-      branch: "main", stream_id: "zero-cost-production-test", now: () => AS_OF });
-    const second = await secondRoot.run({ ...fixture.input, run_id: `${fixture.input.run_id}-rediscovery`, started_at: AS_OF,
-      transport: { async execute(request) { return { ...await fixture.input.transport.execute(request), responded_at: AS_OF }; } },
-      actor: "different-discovery-actor",
-      execute_trusted_chain: async (context) => {
-        const { discovery_support_id: supportId, ...source } = context.source_occurrences[0] as TrustedSourceOccurrenceArtifact & { discovery_support_id: string };
-        assert.ok(supportId);
-        const support = context.resolvers.source_occurrences.resolveSupport(supportId)!;
-        assert.equal(support.scope, "PRODUCTION");
-        assert.notEqual(context.snapshots[0]!.snapshot_id, source.snapshot.snapshot_id);
-        const registered = await context.execute({ kind: "OPPORTUNITY_REGISTER",
-          source_binding: { kind: "VERIFIED_DISCOVERY_SUPPORT", support_id: supportId },
-          input: { source_definition_id: source.endpoint.source_definition_id,
-            recruitment_endpoint_id: source.endpoint.recruitment_endpoint_id,
-            discovery_locator: context.snapshots[0]!.request_metadata.locator,
-            snapshot_id: context.snapshots[0]!.snapshot_id,
-            extracted_record_id: context.extracted_records[0]!.extracted_record_id,
-            source_occurrence_version_id: source.version.source_occurrence_version_id,
-            publisher_subject: null, discovery_evidence_ids: ["fixture:discovery-support-production-boundary"],
-            first_observed_at: AS_OF, initial_disposition: { status: "RETAINED",
-              reason_codes: ["OFFICIAL_RECRUITMENT_DISCOVERED"], evidence_ids: ["fixture:discovery-support-production-boundary"], decided_at: AS_OF } }
-        }) as RecallRegistration;
-        const position = await context.execute({ kind: "POSITION_VERSION_MATERIALIZE",
-          source_references: [{ source_occurrence_version_id: source.version.source_occurrence_version_id }] }) as PositionResult;
-        assert.equal(position.position_version.position_version_id, originalPositionVersionId);
-        const repeated = await context.execute({ kind: "SOURCE_DISCOVERY_SUPPORT_VERIFY", input: {
-          schema_version: "trusted-sov-discovery-support/1.0.0", sov_id: source.version.source_occurrence_version_id,
-          snapshot_id: context.snapshots[0]!.snapshot_id, extracted_record_id: context.extracted_records[0]!.extracted_record_id,
-          source_role: "POSITION_BEARING" } }) as { support: SOVDiscoverySupport; support_created: boolean };
-        assert.equal(repeated.support_created, false);
-        assert.deepEqual(repeated.support, support);
-        expected = { source, source_seal: canonicalHash(source), support, support_seal: support.integrity_hash,
-          candidate: registered.candidate, position_version: position.position_version,
-          position_id: position.position_version.position_id };
-        const originalDecision = context.resolvers.presentation_decisions.resolve(originalModel.presentation_decision_id)!;
-        const reused = await context.execute({ kind: "PRESENTATION_DECIDE", input: {
-          contract_version: "presentation-decision/2.0.0",
-          expected_current_presentation_decision_id: originalDecision.presentation_decision_id,
-          opportunity_candidate_id: registered.candidate.opportunity_candidate_id,
-          recall_disposition_id: registered.disposition.recall_disposition_id,
-          relevance_assessment_id: originalDecision.relevance_assessment_id,
-          eligibility_assessment_id: originalDecision.eligibility_assessment_id,
-          decided_at: AS_OF
-        } }) as DecisionResult;
-        assert.equal(reused.decision.presentation_decision_id, originalModel.presentation_decision_id);
-        assert.deepEqual(reused.decision, originalDecision);
-        expected = { ...expected, decision: originalDecision, read_model: originalModel };
-        await context.execute({ kind: "PRESENTATION_READ_MODEL_MATERIALIZE", presentation_decision_id: originalModel.presentation_decision_id });
-      }
+      branch: "main", stream_id: "zero-cost-production-test", now: () => AS_OF, execution_mode: "TEST_ONLY" });
+    const second = await secondRoot.run({ ...fixture.input,
+      run_id: `${fixture.input.run_id}-changed-raw`, started_at: AS_OF,
+      transport: { async execute(request) {
+        const original = await fixture.input.transport.execute(request);
+        if (original.status !== "SUCCESS") throw new Error("Expected successful controlled response");
+        const bytes = new Uint8Array([...original.bytes, 10]);
+        return { ...original, bytes, content_sha256: createHash("sha256").update(bytes).digest("hex") as never,
+          responded_at: AS_OF };
+      } }
     });
-    assert.equal(second.status, "COMMITTED", JSON.stringify(second));
-    const currentState = await secondRoot.restore();
-    assert.equal(currentState.read_models.length, 1);
-    assert.deepEqual(currentState.read_models[0], originalModel);
-    assert.ok(expected);
-    const checkout = path.join(repository.local, "process-b-checkout");
-    git(repository.local, "clone", "--branch", "main", repository.remote, checkout);
-    git(checkout, "config", "core.longpaths", "true");
-    const scriptPath = path.join(repository.local, "support-process-b.ts");
-    const markerPath = path.join(repository.local, "support-process-b.json");
-    writeFileSync(scriptPath, `
-      import { writeFileSync } from "node:fs";
-      import { bootstrapTrustedChainCompositionRoot } from ${JSON.stringify(pathToFileURL(path.resolve("lib/ingestion/index.ts")).href)};
-      import { canonicalHash, canonicalSerialize } from ${JSON.stringify(pathToFileURL(path.resolve("lib/ingestion/normalization/canonical-artifact-registry.ts")).href)};
-      import { GitAppendOnlyExecutionStore, GitRawObjectPersistence, GitSourceRegistryPersistence, createRawValidatedRestorationJournal } from ${JSON.stringify(pathToFileURL(path.resolve("lib/production-persistence/index.ts")).href)};
-      void (async () => {
-        const repositoryPath = process.argv[2];
-        const store = new GitAppendOnlyExecutionStore({repository_path:repositoryPath,stream_id:"zero-cost-production-test",scope:"PRODUCTION"});
-        const raw = new GitRawObjectPersistence({repository_path:repositoryPath});
-        const sources = new GitSourceRegistryPersistence({repository_path:repositoryPath});
-        const restored = await bootstrapTrustedChainCompositionRoot({scope:"PRODUCTION",restoration_journal:createRawValidatedRestorationJournal(raw,store,sources)});
-        const executions = store.listVerifiedExecutions();
-        const supports = executions.filter(item=>item.record.command.kind==="SOURCE_DISCOVERY_SUPPORT_VERIFY");
-        const supportId = supports[0].artifact_envelopes[0].artifact_id;
-        const support = restored.root.resolvers.source_occurrences.resolveSupport(supportId);
-        const source = restored.root.resolvers.source_occurrences.resolve(support.target.sov_id);
-        const registration = executions.find(item=>item.record.command.source_binding?.kind==="VERIFIED_DISCOVERY_SUPPORT");
-        const candidateId = registration.record.expected_artifacts.find(item=>item.artifact_kind==="OPPORTUNITY_CANDIDATE").artifact_id;
-        const candidate = restored.root.resolvers.opportunity_candidates.resolve(candidateId);
-        const positionRef = executions.find(item=>item.record.command.kind==="POSITION_VERSION_MATERIALIZE").record.expected_artifacts[0].artifact_id;
-        const position_version = restored.root.resolvers.position_versions.resolve(positionRef).position_version;
-        if(canonicalSerialize(supports[0].artifact_envelopes)!==canonicalSerialize(supports[1].artifact_envelopes)) throw new Error("issuance envelope changed");
-        if(executions.filter(item=>item.record.command.kind==="SOURCE_OCCURRENCE_MATERIALIZE").length!==1) throw new Error("SOV reissued");
-        const presentations = executions.filter(item=>item.record.command.kind==="PRESENTATION_DECIDE");
-        if(presentations.length!==2 || canonicalSerialize(presentations[0].artifact_envelopes)!==canonicalSerialize(presentations[1].artifact_envelopes)) throw new Error("Presentation issuance envelope changed");
-        const current = store.readCurrentSnapshot();
-        if(current.current_position_read_models.length!==1) throw new Error("duplicate Position current");
-        const read_model = current.current_position_read_models[0];
-        if(canonicalSerialize(current.candidate_details[candidateId])!==canonicalSerialize(read_model)) throw new Error("Candidate B current support missing");
-        const decision = restored.root.resolvers.presentation_decisions.resolve(read_model.presentation_decision_id);
-        if(decision.revision!==1 || decision.supersedes_presentation_decision_id!==null) throw new Error("rediscovery advanced revision");
-        writeFileSync(process.argv[3],canonicalSerialize({source,source_seal:canonicalHash(source),support,support_seal:support.integrity_hash,candidate,position_version,position_id:position_version.position_id,decision,read_model}));
-      })().catch(error=>{ console.error(error);process.exitCode=1; });
-    `, "utf8");
-    const child = spawnSync(process.execPath, [createRequire(import.meta.url).resolve("tsx/cli"), scriptPath, checkout, markerPath], { encoding: "utf8" });
-    assert.equal(child.status, 0, `${child.stdout}\n${child.stderr}`);
-    assert.equal(readFileSync(markerPath, "utf8"), canonicalSerialize(expected));
-    assert.equal(git(repository.remote, "rev-list", "--count", "main").trim(), "3");
-    const artifactPaths = git(checkout, "ls-files", "trusted-state/artifacts/objects").trim().split(/\r?\n/u);
-    const supportPath = artifactPaths.find((relativePath) => {
-      const envelope = canonicalDeserialize<{ artifact_kind: string }>(readFileSync(path.join(checkout, relativePath), "utf8"));
-      return envelope.artifact_kind === "SOV_DISCOVERY_SUPPORT";
-    })!;
-    assert.ok(supportPath);
-    const supportObjectPath = path.join(checkout, supportPath);
-    const originalBytes = readFileSync(supportObjectPath, "utf8");
-    writeFileSync(supportObjectPath, originalBytes.replace("VERIFIED_IDENTICAL", "FORGED_EQUIVALENCE"), "utf8");
-    git(checkout, "add", supportPath);
-    git(checkout, "-c", "user.name=Support Corruption Test", "-c", "user.email=invalid@fixture.test", "commit", "-m", "controlled invalid support HEAD");
-    const rejectedChild = spawnSync(process.execPath, [createRequire(import.meta.url).resolve("tsx/cli"), scriptPath, checkout, markerPath], { encoding: "utf8" });
-    assert.notEqual(rejectedChild.status, 0, "Corrupt committed support must prevent Process B activation");
-    assert.match(`${rejectedChild.stdout}\n${rejectedChild.stderr}`, /integrity|canonical|tamper|hash|mismatch/iu);
+    assert.equal(second.status, "FAILED");
+    assert.match(second.error ?? "", /Raw changed; identical normalized text is not sufficient/u);
+    assert.ok(second.committed_head);
+    const processB = await secondRoot.restore();
+    assert.equal(processB.source_execution_outcomes.at(-1)?.trusted_chain_status, "FAILED");
+    assert.deepEqual(processB.read_models, [originalModel]);
+    assert.deepEqual(processB.artifact_seals, originalState.artifact_seals);
+    assert.equal(Number(git(repository.remote, "rev-list", "--count", "main")),
+      Number(git(repository.remote, "rev-list", "--count", previousHead)) + 1);
   } finally {
     repository.remove();
   }
@@ -326,7 +424,7 @@ test("publish failure preserves trusted commit and retries persisted ReadModel o
   }
 });
 
-test("acquisition, validation, journal, and incomplete-chain failures commit no state", async () => {
+test("validated acquisition survives downstream failure while invalid inputs commit no state", async () => {
   const scenarios = [
     {
       name: "acquisition",
@@ -415,8 +513,16 @@ test("acquisition, validation, journal, and incomplete-chain failures commit no 
         scenario.mutate(fixture.input)
       );
       assert.notEqual(result.status, "COMMITTED", scenario.name);
-      assert.equal(git(repository.remote, "rev-parse", "main").trim(), before,
-        scenario.name);
+      const acquisitionWasValid = !["raw-persistence", "validation"].includes(scenario.name);
+      assert.equal(Boolean(result.committed_head), acquisitionWasValid, scenario.name);
+      const after = git(repository.remote, "rev-parse", "main").trim();
+      assert.equal(after === before, !acquisitionWasValid, scenario.name);
+      if (acquisitionWasValid) {
+        const restored = await rootFor(repository.remote).restore();
+        assert.equal(restored.source_execution_outcomes.length, 1);
+        assert.equal(restored.source_execution_outcomes[0]?.trusted_chain_status,
+          scenario.name === "acquisition" ? "NOT_RUN" : "FAILED");
+      }
     } finally {
       repository.remove();
     }
@@ -491,6 +597,7 @@ function rootFor(
   >[0]["fault_injector"]
 ) {
   return bootstrapZeroCostProductionCompositionRoot({
+    execution_mode: "TEST_ONLY",
     remote_url: remote,
     branch: "main",
     stream_id: "zero-cost-production-test",
@@ -499,7 +606,7 @@ function rootFor(
   });
 }
 
-function runFixture(suffix: string) {
+function runFixture(suffix: string, contentKind: "HTML" | "JSON" = "HTML") {
   const endpointUrl = "https://official.example.invalid/recruitment/2027";
   const admitted = admission({
     source_admission_id: `admission-zero-cost-${suffix}`,
@@ -512,7 +619,7 @@ function runFixture(suffix: string) {
     coverage_regions: [{ raw_text: original("贵州省") }],
     locator: endpointUrl,
     request_method: "GET",
-    content_kind: "HTML",
+    content_kind: contentKind,
     adapter_key: "zero-cost-test-official",
     decoded_text_encoding: UTF8_TEXT_ENCODING,
     collection_config: {
@@ -550,7 +657,9 @@ function runFixture(suffix: string) {
     admitted,
     adapter
   );
-  const bytes = new TextEncoder().encode(`official recruitment ${suffix}`);
+  const bytes = new TextEncoder().encode(contentKind === "JSON"
+    ? '{"jobs":[{"title":"法务岗"}],"total":1,"next":null}'
+    : `official recruitment ${suffix}`);
   const transport = {
     async execute(request: TransportRequest): Promise<TransportResponse> {
       const hash = createHash("sha256").update(bytes).digest("hex");
@@ -559,7 +668,7 @@ function runFixture(suffix: string) {
         responded_at: OBSERVED_AT,
         bytes: new Uint8Array(bytes),
         content_sha256: hash as never,
-        mime_type: "text/html",
+        mime_type: contentKind === "JSON" ? "application/json" : "text/html",
         http_status: 200,
         headers: {}
       };
@@ -822,8 +931,8 @@ function testAdapter(
       adapter_key: endpoint.adapter_key,
       name: "ZeroCostTestOfficialAdapter",
       version: "1.0.0",
-      supported_content_kinds: ["HTML"],
-      capabilities: ["SINGLE_PAGE", "HTML_EXTRACTION"]
+      supported_content_kinds: [endpoint.content_kind],
+      capabilities: endpoint.content_kind === "JSON" ? ["SINGLE_PAGE", "JSON_EXTRACTION"] : ["SINGLE_PAGE", "HTML_EXTRACTION"]
     },
     validateEndpoint(candidate) {
       return candidate.recruitment_endpoint_id === endpoint.recruitment_endpoint_id

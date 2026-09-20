@@ -14,9 +14,19 @@ that disposable clone. At validation time their expected-parent anchors are
 rebound to the original remote parent, all local persistence commits are
 squashed, and one ordinary fast-forward push publishes the complete state.
 
-The single commit contains source revisions, Raw objects and manifests,
-Snapshots, ExtractedRecords, the trusted journal and artifact ledger,
-PresentationReadModel projections, and the immutable production run manifest.
+For a successful business-chain run, the source execution and trusted journal
+share one authoritative commit. It contains source revisions, Raw objects and
+manifests, Snapshots, ExtractedRecords, the trusted journal and artifact ledger,
+PresentationReadModel projections, the immutable production run manifest, and
+a sealed source-execution outcome. A non-success acquisition commits only its
+verified source outcome and acquired evidence, without a business-chain run
+manifest. A downstream trusted-chain failure after verified acquisition can
+also commit an acquisition-only outcome. A crash or failed remote CAS is never
+reported as committed.
+If a continuous-request retry is denied after an earlier completed attempt,
+the root retains that attempt's captured response, Snapshot, and any extracted
+records, then commits a failed or partial acquisition outcome. It does not
+claim evidence for the denied retry itself.
 The final commit is rejected if it contains a deletion or a path outside the
 four approved production namespaces.
 
@@ -26,10 +36,24 @@ A successful run records:
 
 `CREATED → RUNNING → VALIDATING → COMMITTING → COMMITTED`
 
-Failures return `FAILED`, `EVIDENCE_BLOCKED`, or `PARTIAL`. A failed run does
-not publish the disposable checkout. A Presentation publish failure after the
-push leaves trusted state committed and can be retried directly from the
-persisted PresentationReadModel projection without executing business commands.
+Source-execution status is `SUCCESS`, `NOT_MODIFIED`, `CONFIRMED_EMPTY`,
+`SUSPICIOUS_EMPTY`, `PARTIAL`, or `FAILED`. A failed acquisition preserves prior
+opportunities and presentation. `NOT_MODIFIED` requires matching verified
+request locators and Raw hashes. `CONFIRMED_EMPTY` currently requires exact
+closed official JSON zero-result evidence, prior verified source content, and
+the existing P1 SourceRunMissingGuard classification. Weaker empty evidence
+stays suspicious. A Presentation publish failure after a successful push can
+be retried from the persisted ReadModel without re-executing business commands.
+
+`runProduction` owns the Trusted Chain binding and rejects a caller-supplied
+executor. The `run` injection seam is restricted to explicit `CANARY` or
+`TEST_ONLY` mode; canary mode cannot use continuous authorization. The production
+binding invokes existing processors and only resolver-backed SourceComposition
+and Candidate Evidence. If either is unavailable it does not invent facts and
+retains an evidence-blocked PresentationDecision.
+Production SourceOccurrence role follows the existing trusted invariant:
+records with RecruitmentContext are position-bearing; records without it are
+packages, not fabricated positions.
 
 ## Writer and recovery boundary
 
@@ -38,7 +62,9 @@ push also checks the remote expected parent and uses a normal non-force push;
 stale writers cannot merge, rebase, or overwrite the branch. Process B always
 starts from a fresh clone, verifies Source and Raw persistence, replays the
 existing trusted owners, and compares restored PresentationReadModel hashes to
-the committed run manifest.
+the committed run manifest. It verifies source-outcome seals, acquisition
+references, P1 guard assessments, empty/unchanged proofs, and business-run
+references before exposing restored source outcomes.
 
 ## Deferred work
 

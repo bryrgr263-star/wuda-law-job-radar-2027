@@ -9,7 +9,7 @@ import { AT, LATER, TARGET, request, createRemote, provenance } from "./continuo
 
 function root(remote: string, options: Partial<Parameters<typeof bootstrapZeroCostProductionCompositionRoot>[0]> = {}) {
   return bootstrapZeroCostProductionCompositionRoot({ remote_url: remote, branch: "main", stream_id: "continuous-root",
-    continuous_scope: "CONTROLLED_TEST", now: () => AT, ...options });
+    continuous_scope: "CONTROLLED_TEST", execution_mode: "TEST_ONLY", now: () => AT, ...options });
 }
 function input(remote: Awaited<ReturnType<typeof createRemote>>): ZeroCostProductionRunInput {
   const template = trustedFixture("continuous-root", "学历要求：本科及以上");
@@ -86,5 +86,10 @@ test("retry re-enters the current authorization gate; a confirmed failed attempt
     assert.deepEqual(restored.continuous_records.map(record => record.kind), ["GRANT", "RESERVE", "COMPLETE"]);
     assert.equal(restored.continuous_records.at(-1)?.payload.outcome, "FAILED");
     assert.equal(restored.continuous_authorizations[0]?.pending_attempt, null);
+    assert.equal(restored.source_execution_outcomes.length, 1);
+    assert.equal(restored.source_execution_outcomes[0]?.status, "FAILED");
+    assert.equal(restored.source_execution_outcomes[0]?.request_attempt_ids.length, 1);
+    assert.equal(restored.acquisition_count, 1);
+    assert.equal(restored.source_execution_outcomes[0]?.snapshot_ids.length, 1);
   } finally { remote.remove(); }
 });

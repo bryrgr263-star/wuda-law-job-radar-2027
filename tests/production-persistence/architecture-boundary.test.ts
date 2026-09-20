@@ -30,9 +30,12 @@ test("production persistence has no Legacy, Preview, Shadow, or Canary dependenc
   const violations: string[] = [];
   const forbidden = [
     /lib\/crawler/iu, /lib\/scoring/iu, /lib\/sync/iu, /lib\/jobs/iu,
+    /from\s+["'][^"']*\/(?:crawler|scoring|sync|jobs)["']/iu,
     /production-ingestion/iu, /preview/iu, /shadow/iu, /live-canary/iu,
     /match_?score/iu, /non_?law_?rule/iu, /is_?published/iu,
-    /\bjobs\b/iu, /\bsync_runs\b/iu
+    /\.from\(["']jobs["']\)/iu,
+    /\b(?:from|into|update|delete\s+from)\s+["']?jobs\b/iu,
+    /\bsync_runs\b/iu
   ];
   for (const file of await files(path.join(root, "lib", "production-persistence"))) {
     const source = await readFile(file, "utf8");

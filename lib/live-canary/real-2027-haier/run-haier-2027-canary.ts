@@ -46,6 +46,7 @@ async function main() {
     globalThis.fetch.bind(globalThis)
   );
   const root = bootstrapZeroCostProductionCompositionRoot({
+    execution_mode: "CANARY",
     remote_url: remotePath,
     branch: "main",
     stream_id: "real-2027-haier-trusted-chain",
