@@ -27,7 +27,8 @@ test("zero-cost production root has no legacy, preview, shadow, or paid dependen
   assert.doesNotMatch(source, /(?:match_score|non_law_rule|is_published)/iu);
   assert.doesNotMatch(source, /(?:CandidateProfile|Wuhan|LAW_MASTER_NON_LAW)/u);
   assert.doesNotMatch(source, /(?:preview|shadow|supabase|postgres)/iu);
-  assert.doesNotMatch(source, /(?:scheduler|JobBoard|app\/api)/iu);
+  assert.doesNotMatch(source, /(?:bootstrapProductionSchedulerBatch|JobBoard|app\/api)/iu);
+  assert.match(source, /readSchedulerBatchManifests/u);
 });
 
 test("production source imports do not point at test or live-canary modules", () => {

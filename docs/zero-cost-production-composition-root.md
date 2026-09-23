@@ -68,6 +68,7 @@ references before exposing restored source outcomes.
 
 ## Deferred work
 
-This boundary does not provide scheduling, GitHub Actions deployment, Web
-cutover, new source adapters, real 2027 source acquisition, or sensitive
-DOCUMENT_VERIFIED Candidate Evidence storage.
+The Production Scheduler Batch may invoke this root, but this boundary does not
+provide an external timer, GitHub Actions deployment, Web cutover, new source
+adapters, real 2027 source acquisition, or sensitive DOCUMENT_VERIFIED
+Candidate Evidence storage.

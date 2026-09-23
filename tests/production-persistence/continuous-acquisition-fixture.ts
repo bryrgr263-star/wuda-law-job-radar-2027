@@ -17,12 +17,14 @@ export const TARGET = "controlled-continuous-target";
 export const identity = { name: "Controlled Authorization Test", email: "controlled@invalid.local" };
 export const provenance = { scope: "PRODUCTION" as const, actor_id: "controlled-test", actor_role: "TEST_ONLY", evidence_references: ["fixture:continuous"] };
 
-export function fixture(collectionConfig: Partial<ReturnType<typeof endpoint>["collection_config"]> = {}) {
+export function fixture(collectionConfig: Partial<ReturnType<typeof endpoint>["collection_config"]> = {},
+  contentKind: "HTML" | "JSON" = "HTML") {
   const base = admission({ level: "B", automation_basis: "HUMAN_APPROVED_CONTINUOUS_SCOPE", robots: "UNKNOWN", terms: "UNKNOWN" });
-  const admitted = { ...base, continuous_acquisition_scope: { scope: "CONTROLLED_TEST" as const,
+  const admitted = { ...base, content_kind: contentKind, continuous_acquisition_scope: { scope: "CONTROLLED_TEST" as const,
     exact_targets: [{ allowlist_entry_id: TARGET, exact_url: URL }], min_interval_seconds: 60,
     effective_from: AT, approval_review_id: base.review_records[0]!.source_admission_review_id } };
-  const recruitmentEndpoint = endpoint(admitted, collectionConfig);
+  const recruitmentEndpoint = { ...endpoint(admitted, collectionConfig), content_kind: contentKind,
+    adapter_key: contentKind === "JSON" ? "p2-05-test-json" : "p2-05-test-only" };
   const organization = { organization_id: "controlled-org" as SourceDefinition["publisher_organization_id"],
     name: { original: { text: "Controlled organization", encoding: UTF8_TEXT_ENCODING } }, aliases: [] };
   const source: SourceDefinition = { source_definition_id: recruitmentEndpoint.source_definition_id,
@@ -36,7 +38,7 @@ export function fixture(collectionConfig: Partial<ReturnType<typeof endpoint>["c
   };
   append(organization.organization_id, { kind: "ORGANIZATION", payload: organization });
   append(recruitmentEndpoint.adapter_key, { kind: "ADAPTER_REGISTRATION", payload: {
-    adapter_key: recruitmentEndpoint.adapter_key, name: organization.name, supported_content_kinds: ["HTML"] } });
+    adapter_key: recruitmentEndpoint.adapter_key, name: organization.name, supported_content_kinds: [contentKind] } });
   append(source.source_definition_id, { kind: "SOURCE_DEFINITION", payload: source });
   const endpointVersion = append(recruitmentEndpoint.recruitment_endpoint_id, { kind: "RECRUITMENT_ENDPOINT", payload: recruitmentEndpoint });
   const admissionVersion = append(admitted.source_admission_id, { kind: "SOURCE_ADMISSION", payload: admitted });
@@ -57,7 +59,8 @@ export const request = { locator: URL, method: "GET" as const, headers: {}, para
 export function git(cwd: string, ...args: string[]) {
   return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 }
-export async function createRemote(collectionConfig: Partial<ReturnType<typeof endpoint>["collection_config"]> = {}) {
+export async function createRemote(collectionConfig: Partial<ReturnType<typeof endpoint>["collection_config"]> = {},
+  contentKind: "HTML" | "JSON" = "HTML") {
   const directory = mkdtempSync(path.join(os.tmpdir(), "continuous-controlled-"));
   const remote = path.join(directory, "remote.git"); const seed = path.join(directory, "seed");
   execFileSync("git", ["init", "--bare", "--quiet", remote]);
@@ -66,7 +69,7 @@ export async function createRemote(collectionConfig: Partial<ReturnType<typeof e
   git(seed, "add", "README.md");
   git(seed, "-c", `user.name=${identity.name}`, "-c", `user.email=${identity.email}`, "commit", "-qm", "Controlled initial state");
   git(seed, "remote", "add", "origin", remote);
-  const input = fixture(collectionConfig); const repository = new GitSourceRegistryPersistence({ repository_path: seed });
+  const input = fixture(collectionConfig, contentKind); const repository = new GitSourceRegistryPersistence({ repository_path: seed });
   for (const version of input.versions) await repository.appendVersion(version);
   git(seed, "add", "production-source-state");
   git(seed, "-c", `user.name=${identity.name}`, "-c", `user.email=${identity.email}`, "commit", "-qm", "Controlled source contract");

@@ -71,6 +71,7 @@ import {
 import { classifyTrustedAcquisition, type TrustedAcquisitionClassification,
   type TrustedAcquisitionObservation } from "./trusted-acquisition-evidence";
 import { executeProductionTrustedChainBinding } from "./production-trusted-chain-execution-binding";
+import { readSchedulerBatchManifests, type SchedulerBatchManifest } from "./scheduler-batch-manifest";
 import { pendingContinuousAttempt, type ContinuousRecord, type ContinuousScope, type ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
 
 const RUN_SCHEMA_VERSION = "zero-cost-production-run/1.0.0" as const;
@@ -173,6 +174,7 @@ export interface ZeroCostProductionCompositionRootOptions {
 }
 
 export interface ZeroCostProductionRestoreResult {
+  readonly scheduler_batches: readonly SchedulerBatchManifest[];
   readonly source_execution_outcomes: readonly SourceExecutionOutcome[];
   readonly continuous_records: readonly ContinuousRecord[];
   readonly continuous_authorizations: readonly ReturnType<InMemorySourceAdmissionRegister["resolveContinuousAuthorization"]>[];
@@ -947,6 +949,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
         const executions = journalStore.listVerifiedExecutions();
         const runs = readRunManifests(checkoutPath);
         assertSourceOutcomeRunBindings(sourceExecutionOutcomes, runs);
+        const schedulerBatches = readSchedulerBatchManifests(checkoutPath, sourceExecutionOutcomes, runs);
         for (const run of runs) {
           const ids = [...run.presentation_read_model_ids, ...(run.retained_read_model_ids ?? [])];
           const hashes = [...run.presentation_read_model_hashes, ...(run.retained_read_model_hashes ?? [])];
@@ -977,6 +980,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
         });
         const currentSnapshot = journalStore.readCurrentSnapshot();
         return {
+          scheduler_batches: schedulerBatches,
           source_execution_outcomes: structuredClone(sourceExecutionOutcomes),
           continuous_records: sourceRepository.listContinuousRecords(),
           continuous_authorizations: [...new Set(sourceRepository.listContinuousRecords().filter(record => record.kind === "GRANT")
