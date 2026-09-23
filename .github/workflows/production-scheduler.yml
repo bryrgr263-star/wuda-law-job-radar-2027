@@ -1,0 +1,85 @@
+name: Production Scheduler
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: production-scheduler-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 24.19.0
+  PNPM_VERSION: 11.25.0
+  AUTHORITATIVE_BRANCH: ${{ github.ref_name }}
+  AUTHORITATIVE_REMOTE_URL: ${{ github.server_url }}/${{ github.repository }}.git
+  PRODUCTION_STREAM_ID: ${{ vars.PRODUCTION_STREAM_ID }}
+  PRODUCTION_SCHEDULER_ACTIVATION: ${{ vars.PRODUCTION_SCHEDULER_ACTIVATION }}
+  PRODUCTION_ACTOR: github-actions:${{ github.actor }}
+  PRODUCTION_BATCH_ID: github-actions:${{ github.run_id }}:${{ github.run_attempt }}
+  PRODUCTION_AUTOMATION_REPORT_PATH: production-automation-report.json
+
+jobs:
+  run-production-scheduler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Require branch dispatch
+        shell: bash
+        run: test "$GITHUB_REF_TYPE" = "branch"
+
+      - name: Check out authoritative branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          runtime: node@${{ env.NODE_VERSION }}
+          install: false
+          cache: true
+
+      - name: Install deterministic dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure ephemeral Git credentials
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          cat > "$RUNNER_TEMP/git-askpass.sh" <<'EOF'
+          #!/usr/bin/env bash
+          case "$1" in
+            *Username*) printf '%s\n' 'x-access-token' ;;
+            *Password*) printf '%s\n' "$GITHUB_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          EOF
+          chmod 700 "$RUNNER_TEMP/git-askpass.sh"
+          echo "GIT_ASKPASS=$RUNNER_TEMP/git-askpass.sh" >> "$GITHUB_ENV"
+          echo "GIT_TERMINAL_PROMPT=0" >> "$GITHUB_ENV"
+
+      - name: Set deterministic execution time
+        shell: bash
+        run: echo "PRODUCTION_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')" >> "$GITHUB_ENV"
+
+      - name: Run verified Production Scheduler Batch
+        id: scheduler
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm production:scheduler:actions
+
+      - name: Upload diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: production-scheduler-${{ github.run_id }}-${{ github.run_attempt }}
+          path: production-automation-report.json
+          if-no-files-found: error
+          retention-days: 14
