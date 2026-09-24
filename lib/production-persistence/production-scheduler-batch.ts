@@ -45,36 +45,38 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
       const existing = startingState.scheduler_batches.find(batch => batch.batch_id === input.batch_id);
       if (existing) return { manifest: existing, manifest_commit: batchCommit(options, input.batch_id), reused: true };
       assertNoUnsettledSourceExecution(startingState);
-      const recoveredOutcomes = startingState.source_execution_outcomes.flatMap(outcome =>
-        outcome.continuous_authorization_ids.filter(authorizationId =>
-          outcome.source_execution_id === schedulerSourceExecutionId(input.batch_id, authorizationId))
-          .map(authorizationId => ({ outcome, authorization_id: authorizationId })));
-      const recoveredAuthorizationIds = new Set(recoveredOutcomes.map(item => item.authorization_id));
+      const recoveredOutcomes = startingState.source_execution_outcomes.filter(outcome =>
+        outcome.continuous_authorization_ids.length > 0
+        && outcome.source_execution_id === schedulerSourceExecutionId(input.batch_id, outcome.continuous_authorization_ids));
+      const recoveredAuthorizationIds = new Set(recoveredOutcomes.flatMap(outcome => outcome.continuous_authorization_ids));
       const initialHead = recoveredOutcomes.length
-        ? oldestCommittedParent(options, recoveredOutcomes.map(item => item.outcome.expected_parent))
+        ? oldestCommittedParent(options, recoveredOutcomes.map(outcome => outcome.expected_parent))
         : startingState.committed_head;
       const selected = await committedSelection(options, now(), scope);
       if (selected.committed_head !== startingState.committed_head && selected.deferred.length > 0) {
         throw new Error(`SCHEDULER_CONCURRENT_SOURCE_DEFERRED:${selected.deferred[0]!.reason}`);
       }
-      const committed: { readonly authorization_id: string; readonly source_execution_id: string; readonly result_commit: string }[] =
-        recoveredOutcomes.map(item => ({ authorization_id: item.authorization_id,
-          source_execution_id: item.outcome.source_execution_id,
-          result_commit: sourceOutcomeCommit(options, item.outcome.source_execution_id) }));
+      const committed: { readonly authorization_ids: readonly string[]; readonly source_execution_id: string; readonly result_commit: string }[] =
+        recoveredOutcomes.map(outcome => ({ authorization_ids: outcome.continuous_authorization_ids,
+          source_execution_id: outcome.source_execution_id,
+          result_commit: sourceOutcomeCommit(options, outcome.source_execution_id) }));
       const deferred: SchedulerDeferredSource[] = selected.deferred.filter(item =>
         !recoveredAuthorizationIds.has(item.authorization_id));
-      for (const target of selected.eligible) {
-        if (recoveredAuthorizationIds.has(target.authorization_id)) continue;
+      for (const targets of groupEndpointTargets(selected.eligible)) {
+        const target = targets[0]!;
+        const authorizationIds = targets.map(item => item.authorization_id).sort();
+        if (authorizationIds.every(id => recoveredAuthorizationIds.has(id))) continue;
+        if (authorizationIds.some(id => recoveredAuthorizationIds.has(id))) throw new Error("SCHEDULER_PARTIAL_GROUP_RECOVERY_DENIED");
         const adapter = options.resolve_adapter(target.adapter_key);
         if (!adapter) {
-          deferred.push(toDeferred(target, "ADAPTER_UNAVAILABLE"));
+          deferred.push(...targets.map(item => toDeferred(item, "ADAPTER_UNAVAILABLE")));
           continue;
         }
         if (adapter.descriptor.adapter_key !== target.adapter_key) throw new Error("SCHEDULER_ADAPTER_BINDING_INVALID");
-        const sourceExecutionId = schedulerSourceExecutionId(input.batch_id, target.authorization_id);
+        const sourceExecutionId = schedulerSourceExecutionId(input.batch_id, authorizationIds);
         const execute = () => root.runProduction({
           run_id: sourceExecutionId,
-          continuous_authorization_ids: [target.authorization_id],
+          continuous_authorization_ids: authorizationIds,
           source_versions: [],
           source_admission_id: target.source_admission_id,
           recruitment_endpoint_id: target.recruitment_endpoint_id,
@@ -90,15 +92,15 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
           const fresh = await root.restore();
           const already = fresh.source_execution_outcomes.find(outcome => outcome.source_execution_id === sourceExecutionId);
           if (already) {
-            committed.push({ authorization_id: target.authorization_id, source_execution_id: sourceExecutionId,
+            committed.push({ authorization_ids: authorizationIds, source_execution_id: sourceExecutionId,
               result_commit: sourceOutcomeCommit(options, sourceExecutionId) });
             continue;
           }
           const refreshed = await committedSelection(options, now(), scope);
-          const current = refreshed.eligible.find(item => item.authorization_id === target.authorization_id);
-          if (!current) {
+          const missing = authorizationIds.find(id => !refreshed.eligible.some(item => item.authorization_id === id));
+          if (missing) {
             const reason = refreshed.deferred.find(item =>
-              item.authorization_id === target.authorization_id)?.reason ?? "AUTHORIZATION_REVOKED";
+              item.authorization_id === missing)?.reason ?? "AUTHORIZATION_REVOKED";
             throw new Error(`SCHEDULER_CONCURRENT_SOURCE_DEFERRED:${reason}`);
           }
           result = await execute();
@@ -108,14 +110,14 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
             throw new Error("SCHEDULER_CONCURRENT_SOURCE_DEFERRED:CAS_DEFERRED");
           }
           const refreshed = await committedSelection(options, now(), scope);
-          const blocked = refreshed.deferred.find(item => item.authorization_id === target.authorization_id);
+          const blocked = refreshed.deferred.find(item => authorizationIds.includes(item.authorization_id));
           if (blocked) {
             deferred.push(blocked);
             continue;
           }
           throw new Error(`SCHEDULER_SOURCE_NOT_COMMITTED: ${result.error ?? result.status}`);
         }
-        committed.push({ authorization_id: target.authorization_id,
+        committed.push({ authorization_ids: authorizationIds,
           source_execution_id: sourceExecutionId, result_commit: result.committed_head });
       }
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -127,12 +129,14 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
         const byRun = new Map(state.runs.map(run => [run.run_id, run]));
         const sourceExecutions: SchedulerSourceExecutionReference[] = committed.map(item => {
           const outcome = byOutcome.get(item.source_execution_id);
-          if (!outcome || !outcome.continuous_authorization_ids.includes(item.authorization_id)) {
+          if (!outcome || canonicalHash([...outcome.continuous_authorization_ids].sort()) !== canonicalHash([...item.authorization_ids].sort())) {
             throw new Error("SCHEDULER_SOURCE_OUTCOME_MISSING");
           }
           return { source_definition_id: outcome.source_definition_id,
             recruitment_endpoint_id: outcome.recruitment_endpoint_id,
-            authorization_id: item.authorization_id,
+            ...(item.authorization_ids.length === 1
+              ? { authorization_id: item.authorization_ids[0]! }
+              : { authorization_ids: [...item.authorization_ids] }),
             source_execution_id: item.source_execution_id,
             result_commit: item.result_commit,
             outcome_status: outcome.status,
@@ -141,7 +145,8 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
         });
         const manifest = sealSchedulerBatchManifest({
           batch_id: input.batch_id,
-          scheduler_policy_version: SCHEDULER_POLICY_VERSION,
+          scheduler_policy_version: sourceExecutions.some(item => item.authorization_ids)
+            ? "production-scheduler-batch/2.0.0" : SCHEDULER_POLICY_VERSION,
           initial_head: initialHead,
           manifest_parent: state.committed_head,
           started_at: input.started_at,
@@ -192,7 +197,7 @@ function toDeferred(target: ScheduledSource, reason: SchedulerDeferredSource["re
 }
 
 function isCasConflict(error: string | null) {
-  return !!error && /CAS_MISMATCH|CONTINUOUS_CAS|stale info|non-fast-forward/u.test(error);
+  return !!error && /CAS_MISMATCH|CONTINUOUS_CAS|stale info|non-fast-forward|incorrect old value provided/u.test(error);
 }
 
 function batchCommit(options: ProductionSchedulerBatchOptions, batchId: string) {
@@ -203,8 +208,27 @@ function sourceOutcomeCommit(options: ProductionSchedulerBatchOptions, sourceExe
   return committedFileCommit(options, `production-runs/source-executions/${canonicalHash({ source_execution_id: sourceExecutionId })}.json`);
 }
 
-function schedulerSourceExecutionId(batchId: string, authorizationId: string) {
-  return `scheduler-source:${canonicalHash({ batch_id: batchId, authorization_id: authorizationId })}`;
+function schedulerSourceExecutionId(batchId: string, authorizationIds: readonly string[]) {
+  const sorted = [...authorizationIds].sort();
+  return `scheduler-source:${canonicalHash(sorted.length === 1
+    ? { batch_id: batchId, authorization_id: sorted[0] }
+    : { batch_id: batchId, authorization_ids: sorted })}`;
+}
+
+function groupEndpointTargets(targets: readonly ScheduledSource[]): readonly (readonly ScheduledSource[])[] {
+  const groups = new Map<string, ScheduledSource[]>();
+  for (const target of targets) {
+    const key = canonicalHash({ source_definition_id: target.source_definition_id,
+      recruitment_endpoint_id: target.recruitment_endpoint_id,
+      source_admission_id: target.source_admission_id, adapter_key: target.adapter_key });
+    const group = groups.get(key) ?? [];
+    if (group.some(item => item.exact_url === target.exact_url || item.authorization_id === target.authorization_id)) {
+      throw new Error("SCHEDULER_DUPLICATE_TARGET_BINDING");
+    }
+    group.push(target);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
 }
 
 function oldestCommittedParent(options: ProductionSchedulerBatchOptions, candidates: readonly string[]) {

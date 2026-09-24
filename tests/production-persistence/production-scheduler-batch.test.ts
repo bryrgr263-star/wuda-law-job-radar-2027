@@ -54,6 +54,8 @@ test("two committed controlled sources run independently; unchanged Run B reuses
     const afterA = await root.restore();
     assert.deepEqual(afterA.scheduler_batches.map(batch => batch.batch_id), ["controlled-run-a"]);
     assert.equal(afterA.source_execution_outcomes.length, 2);
+    assert.equal(afterA.source_execution_request_intents.length, 2);
+    assert.ok(afterA.source_execution_request_intents.every(intent => intent.targets.length === 1));
     assert.equal(afterA.presentation_decisions.length, 2);
     assert.equal(afterA.read_models.length, 2);
     const originalSeals = afterA.artifact_seals;
@@ -67,6 +69,7 @@ test("two committed controlled sources run independently; unchanged Run B reuses
     const afterB = await root.restore();
     assert.equal(afterB.scheduler_batches.length, 2);
     assert.equal(afterB.source_execution_outcomes.length, 4);
+    assert.equal(afterB.source_execution_request_intents.length, 4);
     assert.deepEqual(afterB.artifact_seals, originalSeals);
     assert.deepEqual(afterB.read_models, originalReadModels);
     assert.deepEqual(afterB.continuous_authorizations.map(item => item.grant?.authorization_version), originalGrants);

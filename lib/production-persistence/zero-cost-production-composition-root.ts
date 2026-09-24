@@ -71,6 +71,10 @@ import {
 import { classifyTrustedAcquisition, type TrustedAcquisitionClassification,
   type TrustedAcquisitionObservation } from "./trusted-acquisition-evidence";
 import { executeProductionTrustedChainBinding } from "./production-trusted-chain-execution-binding";
+import { sealSourceExecutionRequestPlan, type SourceExecutionPlannedTarget } from "./source-execution-request-plan";
+import { assertSourceExecutionIntentOutcome, readSourceExecutionRequestIntents,
+  sealSourceExecutionRequestIntent, writeSourceExecutionRequestIntent,
+  type SourceExecutionRequestIntent } from "./source-execution-request-intent";
 import { readSchedulerBatchManifests, type SchedulerBatchManifest } from "./scheduler-batch-manifest";
 import { pendingContinuousAttempt, type ContinuousRecord, type ContinuousScope, type ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
 
@@ -176,6 +180,7 @@ export interface ZeroCostProductionCompositionRootOptions {
 export interface ZeroCostProductionRestoreResult {
   readonly scheduler_batches: readonly SchedulerBatchManifest[];
   readonly source_execution_outcomes: readonly SourceExecutionOutcome[];
+  readonly source_execution_request_intents: readonly SourceExecutionRequestIntent[];
   readonly continuous_records: readonly ContinuousRecord[];
   readonly continuous_authorizations: readonly ReturnType<InMemorySourceAdmissionRegister["resolveContinuousAuthorization"]>[];
   readonly committed_head: string;
@@ -315,6 +320,12 @@ export function bootstrapZeroCostProductionCompositionRoot(
       let readModels: PresentationReadModel[] = [];
       let rawPersistenceForOutcome: GitRawObjectPersistence | null = null;
       let collectionAbortError: string | null = null;
+      let plannedTargets: readonly SourceExecutionPlannedTarget[] | null = null;
+      let observedCollection: TrustedAcquisitionObservation | null = null;
+      let materializedRecords: readonly ExtractedRecordV2[] = [];
+      let sourceArtifactId: string | null = null;
+      let sourceRevision: number | null = null;
+      let endpointArtifactId: string | null = null;
       let acquisitionEvidence: {
         readonly source_definition_id: string;
         readonly recruitment_endpoint_id: string;
@@ -339,6 +350,25 @@ export function bootstrapZeroCostProductionCompositionRoot(
           fencing_verifier: options.continuous_fencing_verifier }).listContinuousRecords();
         const attempts = currentRecords.slice(acquisitionEvidence.continuous_record_start_count)
           .filter(record => record.kind === "RESERVE").map(record => record.payload.attempt_id!);
+        const requestPlan = plannedTargets && observedCollection && sourceArtifactId && endpointArtifactId
+          ? sealSourceExecutionRequestPlan({ source_execution_id: input.run_id,
+            source_definition_id: acquisitionEvidence.source_definition_id, source_artifact_id: sourceArtifactId,
+            source_revision: sourceRevision!,
+            recruitment_endpoint_id: acquisitionEvidence.recruitment_endpoint_id, endpoint_artifact_id: endpointArtifactId,
+            targets: plannedTargets.map(target => ({ ...target,
+              observations: observedCollection!.request_results.flatMap((result, index) => {
+                if (result.request.locator !== target.exact_url) return [];
+                const attemptId = attempts[index];
+                const acquisitionRunId = acquisitionEvidence!.acquisition_run_ids[index];
+                if (!attemptId || !acquisitionRunId) throw new Error("SOURCE_REQUEST_PLAN_ATTEMPT_MISSING");
+                return [{ request_attempt_id: attemptId, acquisition_run_id: acquisitionRunId,
+                  snapshot_id: result.snapshot.snapshot_id,
+                  raw_blob_id: result.raw_blob?.raw_blob_id ?? null,
+                  raw_content_sha256: result.raw_blob?.raw_content_sha256 ?? null,
+                  extracted_record_ids: materializedRecords.filter(record =>
+                    record.snapshot_id === result.snapshot.snapshot_id).map(record => record.extracted_record_id),
+                  transport_status: result.response.status }];
+              }) })) }) : undefined;
         const outcome = sealSourceExecutionOutcome({
           source_execution_id: input.run_id,
           status: acquisitionEvidence.status,
@@ -358,7 +388,8 @@ export function bootstrapZeroCostProductionCompositionRoot(
           acquisition_bundle_hashes: acquisitionEvidence.acquisition_bundle_hashes,
           raw_blob_ids: rawBlobIds,
           snapshot_ids: snapshotIds,
-          extracted_record_ids: extractedRecordIds
+          extracted_record_ids: extractedRecordIds,
+          ...(requestPlan ? { request_plan: requestPlan } : {})
         });
         rawPersistenceForOutcome.prepareAtomicCommit(expectedParent);
         writeSourceExecutionOutcome(checkoutPath, outcome);
@@ -406,6 +437,10 @@ export function bootstrapZeroCostProductionCompositionRoot(
         if (!validation.valid) throw new Error(validation.issues.join("; "));
         const endpointVersion = currentVersion(sourceVersions, "RECRUITMENT_ENDPOINT",
           endpoint.recruitment_endpoint_id);
+        const sourceVersion = currentVersion(sourceVersions, "SOURCE_DEFINITION", endpoint.source_definition_id);
+        sourceArtifactId = sourceVersion.artifact_id;
+        sourceRevision = sourceVersion.revision;
+        endpointArtifactId = endpointVersion.artifact_id;
         const admissionVersion = currentVersion(sourceVersions, "SOURCE_ADMISSION",
           admission.source_admission_id);
         const allowlistVersions = sourceVersions.filter((version) => {
@@ -440,6 +475,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
         const previousOutcomes = await readSourceExecutionOutcomes(checkoutPath, previousAcquisitions,
           await sourceRepository.listVersions(), sourceRepository.listContinuousRecords(), manifest => rawPersistence.read({
             bucket: manifest.bucket_id, object_key: manifest.object_key }));
+        const previousIntents = readSourceExecutionRequestIntents(checkoutPath, await sourceRepository.listVersions(),
+          sourceRepository.listContinuousRecords());
+        assertCommittedIntentCoverage(previousIntents, previousOutcomes);
         assertSourceOutcomeRunBindings(previousOutcomes, readRunManifests(checkoutPath));
         const previousOutcome = previousOutcomes.filter(outcome => outcome.recruitment_endpoint_id === endpoint.recruitment_endpoint_id
           && canonicalSerialize(outcome.source_version_ids) === canonicalSerialize(currentSourceVersionIds)
@@ -502,10 +540,63 @@ export function bootstrapZeroCostProductionCompositionRoot(
           }
           return match;
         };
+        const plannedRequests = continuous ? [...input.adapter.plan(endpoint)] : null;
+        if (plannedRequests) {
+          const records = sourceRepository.listContinuousRecords();
+          const selected = new Set(input.continuous_authorization_ids);
+          plannedTargets = plannedRequests.map(request => {
+            if (request.recruitment_endpoint_id !== endpoint.recruitment_endpoint_id || request.method !== "GET"
+              || Object.keys(request.parameters).length) throw new Error("SOURCE_REQUEST_PLAN_INVALID");
+            const version = allowlistFor(request);
+            if (version.artifact.kind !== "OFFICIAL_ENDPOINT_ALLOWLIST"
+              || !version.artifact.payload.exact_path
+              || version.artifact.payload.endpoint_purpose !== admission.endpoint_purpose) {
+              throw new Error("ENDPOINT_PURPOSE_BINDING_MISMATCH");
+            }
+            const matches = records.filter(record => record.kind === "GRANT"
+              && selected.has(record.payload.grant!.authorization_id)
+              && record.payload.grant!.canonical_payload.exact_endpoint === request.locator
+              && record.payload.grant!.canonical_payload.bindings.target.artifact_id === version.artifact_id);
+            if (matches.length > 1) throw new Error("SOURCE_REQUEST_PLAN_AUTHORIZATION_AMBIGUOUS");
+            return { allowlist_entry_id: version.stream_id, allowlist_artifact_id: version.artifact_id,
+              exact_url: request.locator, authorization_id: matches[0]?.payload.grant?.authorization_id ?? null,
+              source_admission_artifact_id: admissionVersion.artifact_id,
+              endpoint_purpose: version.artifact.payload.endpoint_purpose,
+              request_policy: { method: "GET" as const, redirect: "DENY" as const, query: "DENY" as const },
+              observations: [] };
+          });
+          if (new Set(plannedTargets.map(target => target.exact_url)).size !== plannedTargets.length) {
+            throw new Error("SOURCE_REQUEST_PLAN_DUPLICATE_TARGET");
+          }
+          const approvedTargets = admission.continuous_acquisition_scope?.exact_targets.map(target => target.exact_url) ?? [];
+          if (canonicalSerialize(plannedTargets.map(target => target.exact_url).sort())
+              !== canonicalSerialize([...approvedTargets].sort())) {
+            throw new Error("SOURCE_REQUEST_PLAN_COVERAGE_MISMATCH");
+          }
+          if (canonicalSerialize(plannedTargets.flatMap(target => target.authorization_id ? [target.authorization_id] : []).sort())
+              !== canonicalSerialize([...selected].sort())) {
+            throw new Error("SOURCE_REQUEST_PLAN_AUTHORIZATION_MISMATCH");
+          }
+          const intent = sealSourceExecutionRequestIntent({ source_execution_id: input.run_id,
+            source_definition_id: endpoint.source_definition_id, source_artifact_id: sourceArtifactId!, source_revision: sourceRevision,
+            recruitment_endpoint_id: endpoint.recruitment_endpoint_id, endpoint_artifact_id: endpointArtifactId!,
+            source_admission_artifact_id: admissionVersion.artifact_id,
+            targets: plannedTargets.map(({ observations, ...target }) => target) });
+          const written = writeSourceExecutionRequestIntent(checkoutPath, intent);
+          if (written.appended) {
+            assertRemoteHead(remoteUrl, branch, expectedParent!);
+            git(checkoutPath, "add", "--", written.relative);
+            git(checkoutPath, "-c", `user.name=${commitIdentity.name}`,
+              "-c", `user.email=${commitIdentity.email}`, "commit", "-m", `source-request-intent:${input.run_id}`);
+            assertRemoteHead(remoteUrl, branch, expectedParent!);
+            git(checkoutPath, "push", "origin", `HEAD:refs/heads/${branch}`);
+            expectedParent = git(checkoutPath, "rev-parse", "HEAD").trim();
+          }
+        }
         const observedAdapter: RecruitmentAdapter = {
           descriptor: input.adapter.descriptor,
           validateEndpoint: candidate => input.adapter.validateEndpoint(candidate),
-          plan: candidate => input.adapter.plan(candidate),
+          plan: candidate => plannedRequests ?? input.adapter.plan(candidate),
           extract: source => {
             const records = input.adapter.extract(source);
             observedRecords.push(...records);
@@ -520,6 +611,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
           transport: {
             execute: async (request: HttpTransportRequest) => {
               allowlistFor(request);
+              if (plannedTargets && !plannedTargets.some(target => target.exact_url === request.locator)) {
+                throw new Error("SOURCE_REQUEST_PLAN_TARGET_NOT_DECLARED");
+              }
               if (continuous) {
                 const execution = await executeContinuousRequest({ repository_path: checkoutPath, branch,
                   authorization_ids: input.continuous_authorization_ids!, source_admission_id: input.source_admission_id,
@@ -553,7 +647,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
           adapter: observedAdapter
           });
         } catch (error) {
-          if (!continuous || capturedRequests.length === 0 || faultBoundary) throw error;
+          if (!continuous || capturedRequests.length === 0 || faultBoundary
+            || pendingContinuousAttempt(new GitSourceRegistryPersistence({ repository_path: checkoutPath,
+              fencing_verifier: options.continuous_fencing_verifier }).listContinuousRecords())) throw error;
           collectionAbortError = errorMessage(error);
           collection = {
             collection_run_id: input.run_id,
@@ -571,6 +667,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
             requests_made: capturedRequests.length
           };
         }
+        observedCollection = collection;
         const snapshots = [...collection.snapshots];
         const snapshotById = new Map(snapshots.map((snapshot) => {
           return [snapshot.snapshot_id, snapshot] as const;
@@ -580,6 +677,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
           if (!snapshot) throw new Error("ExtractedRecord Snapshot is unavailable");
           return toExtractedRecordV2(snapshot, record, input.adapter);
         });
+        materializedRecords = extractedRecords;
         for (let index = 0; index < collection.request_results.length; index += 1) {
           const requestResult = collection.request_results[index]!;
           const { request, response, snapshot, raw_blob: rawBlob } = requestResult;
@@ -933,6 +1031,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
         const sourceExecutionOutcomes = await readSourceExecutionOutcomes(checkoutPath, acquisitions,
           await sourceRepository.listVersions(), sourceRepository.listContinuousRecords(), manifest => rawPersistence.read({
             bucket: manifest.bucket_id, object_key: manifest.object_key }));
+        const intents = readSourceExecutionRequestIntents(checkoutPath, await sourceRepository.listVersions(),
+          sourceRepository.listContinuousRecords());
+        assertCommittedIntentCoverage(intents, sourceExecutionOutcomes);
         const journalStore = new GitAppendOnlyExecutionStore<TrustedChainCommand>({
           repository_path: checkoutPath,
           stream_id: streamId,
@@ -982,6 +1083,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
         return {
           scheduler_batches: schedulerBatches,
           source_execution_outcomes: structuredClone(sourceExecutionOutcomes),
+          source_execution_request_intents: structuredClone(intents),
           continuous_records: sourceRepository.listContinuousRecords(),
           continuous_authorizations: [...new Set(sourceRepository.listContinuousRecords().filter(record => record.kind === "GRANT")
             .map(record => record.payload.grant!.authorization_id))].map(id => admissionRegister.resolveContinuousAuthorization(id)),
@@ -1108,6 +1210,17 @@ function assertSourceOutcomeRunBindings(
       || canonicalSerialize(run.extracted_record_ids) !== canonicalSerialize(outcome.extracted_record_ids))) {
       throw new Error(`Source execution run references mismatch: ${outcome.source_execution_id}`);
     }
+  }
+}
+
+function assertCommittedIntentCoverage(intents: readonly SourceExecutionRequestIntent[],
+  outcomes: readonly SourceExecutionOutcome[]) {
+  const byExecution = new Map(intents.map(intent => [intent.source_execution_id, intent]));
+  for (const outcome of outcomes) {
+    if (!outcome.request_plan) continue;
+    const intent = byExecution.get(outcome.source_execution_id);
+    if (!intent) throw new Error("SOURCE_REQUEST_INTENT_MISSING");
+    assertSourceExecutionIntentOutcome(intent, outcome);
   }
 }
 

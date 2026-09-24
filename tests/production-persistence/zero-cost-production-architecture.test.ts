@@ -45,3 +45,25 @@ test("production execution owns its binding and rejects arbitrary caller chain e
   assert.match(binding, /PRESENTATION_DECIDE/u);
   assert.doesNotMatch(binding, /(?:match_score|non_law_rule|is_published|LAW_MASTER_NON_LAW)/u);
 });
+
+test("multi-target scheduling never substitutes adapter planning for per-request authorization", () => {
+  const scheduler = readFileSync(path.resolve(process.cwd(),
+    "lib/production-persistence/production-scheduler-batch.ts"), "utf8");
+  const plan = readFileSync(path.resolve(process.cwd(),
+    "lib/production-persistence/source-execution-request-plan.ts"), "utf8");
+  const intent = readFileSync(path.resolve(process.cwd(),
+    "lib/production-persistence/source-execution-request-intent.ts"), "utf8");
+  const gate = readFileSync(path.resolve(process.cwd(),
+    "lib/production-persistence/continuous-request-gate.ts"), "utf8");
+  for (const module of [scheduler, plan, intent, gate]) {
+    assert.doesNotMatch(module, /from\s+["'][^"']*(?:tests|live-canary|production-ingestion|crawler|scoring|sync|jobs)/u);
+    assert.doesNotMatch(module, /(?:match_score|non_law_rule|is_published|CandidateProfile)/u);
+  }
+  assert.match(source, /executeContinuousRequest/u);
+  assert.match(source, /SOURCE_REQUEST_PLAN_COVERAGE_MISMATCH/u);
+  assert.match(source, /writeSourceExecutionRequestIntent/u);
+  assert.match(gate, /reserveContinuousAttempt/u);
+  assert.match(gate, /EXACT_AUTHORIZATION_REFERENCE_REQUIRED/u);
+  assert.doesNotMatch(scheduler, /issueContinuousAuthorization|revokeContinuousAuthorization/u);
+  assert.doesNotMatch(plan, /issueContinuousAuthorization|executeContinuousOfficialRequest/u);
+});

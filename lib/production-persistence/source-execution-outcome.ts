@@ -7,15 +7,17 @@ import type { ContinuousRecord } from "../application/source-admission/continuou
 import type { AcquisitionPersistenceBundle, RawBlobManifest, SourcePersistenceVersion } from "./contracts";
 import { isClosedOfficialJsonEmpty, type TrustedAcquisitionClassification } from "./trusted-acquisition-evidence";
 import { SourceRunMissingGuard, type SourceRunId } from "../ingestion";
+import { assertSourceExecutionRequestPlanBindings, type SourceExecutionRequestPlan } from "./source-execution-request-plan";
 
 export const SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION = "production-source-execution-outcome/1.0.0" as const;
+export const MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION = "production-source-execution-outcome/2.0.0" as const;
 
 export type SourceExecutionStatus =
   | "SUCCESS" | "NOT_MODIFIED" | "CONFIRMED_EMPTY"
   | "SUSPICIOUS_EMPTY" | "PARTIAL" | "FAILED";
 
 export interface SourceExecutionOutcome {
-  readonly schema_version: typeof SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION;
+  readonly schema_version: typeof SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION | typeof MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION;
   readonly source_execution_id: string;
   readonly status: SourceExecutionStatus;
   readonly trusted_chain_status: "COMMITTED" | "NOT_RUN" | "FAILED";
@@ -35,20 +37,22 @@ export interface SourceExecutionOutcome {
   readonly raw_blob_ids: readonly string[];
   readonly snapshot_ids: readonly string[];
   readonly extracted_record_ids: readonly string[];
+  readonly request_plan?: SourceExecutionRequestPlan;
   readonly integrity_hash: string;
 }
 
 export function sealSourceExecutionOutcome(
   input: Omit<SourceExecutionOutcome, "schema_version" | "integrity_hash">
 ): SourceExecutionOutcome {
-  const content = { schema_version: SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, ...input };
+  const content = { schema_version: input.request_plan
+    ? MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION : SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, ...input };
   return { ...content, integrity_hash: canonicalHash(content) };
 }
 
 export function writeSourceExecutionOutcome(repositoryPath: string, outcome: SourceExecutionOutcome) {
   assertSourceExecutionShape(outcome);
   const { integrity_hash: integrityHash, ...content } = outcome;
-  if (outcome.schema_version !== SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION
+  if (![SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION].includes(outcome.schema_version)
     || integrityHash !== canonicalHash(content)) throw new Error("Source execution outcome seal mismatch");
   const directory = path.join(repositoryPath, "production-runs", "source-executions");
   mkdirSync(directory, { recursive: true });
@@ -93,7 +97,7 @@ export async function readSourceExecutionOutcomes(
     assertSourceExecutionShape(outcome);
     const { integrity_hash: integrityHash, ...content } = outcome;
     if (canonicalSerialize(outcome) !== bytes
-      || outcome.schema_version !== SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION
+      || ![SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION].includes(outcome.schema_version)
       || integrityHash !== canonicalHash(content)
       || name !== `${canonicalHash({ source_execution_id: outcome.source_execution_id })}.json`
       || seen.has(outcome.source_execution_id)) {
@@ -135,6 +139,8 @@ export async function readSourceExecutionOutcomes(
       }
       return bundle;
     });
+    if (outcome.request_plan) assertSourceExecutionRequestPlanBindings(outcome.request_plan,
+      outcome, versions, continuousRecords, linked);
     if (canonicalSerialize(linked.map(bundle => bundle.snapshot.snapshot_id)) !== canonicalSerialize(outcome.snapshot_ids)
       || canonicalSerialize(linked.flatMap(bundle => bundle.extracted_records.map(record => record.extracted_record_id)))
         !== canonicalSerialize(outcome.extracted_record_ids)
@@ -234,13 +240,16 @@ function assertSourceExecutionShape(outcome: SourceExecutionOutcome) {
     "source_admission_artifact_id", "continuous_authorization_ids", "request_attempt_ids",
     "expected_parent", "started_at", "completed_at", "reason_codes", "acquisition_evidence",
     "acquisition_run_ids", "acquisition_bundle_hashes", "raw_blob_ids", "snapshot_ids",
-    "extracted_record_ids", "integrity_hash"];
+    "extracted_record_ids", ...(outcome.request_plan ? ["request_plan"] : []), "integrity_hash"];
   const listFields = ["source_version_ids", "continuous_authorization_ids", "request_attempt_ids",
     "reason_codes", "acquisition_run_ids", "acquisition_bundle_hashes", "raw_blob_ids",
     "snapshot_ids", "extracted_record_ids"] as const;
   if (!outcome || typeof outcome !== "object"
     || Object.keys(outcome).sort().join(",") !== keys.sort().join(",")
     || !["SUCCESS", "NOT_MODIFIED", "CONFIRMED_EMPTY", "SUSPICIOUS_EMPTY", "PARTIAL", "FAILED"].includes(outcome.status)
+    || (outcome.request_plan
+      ? outcome.schema_version !== MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION
+      : outcome.schema_version !== SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION)
     || !["COMMITTED", "NOT_RUN", "FAILED"].includes(outcome.trusted_chain_status)
     || [outcome.source_execution_id, outcome.source_definition_id, outcome.recruitment_endpoint_id,
       outcome.source_admission_artifact_id, outcome.expected_parent, outcome.started_at,
