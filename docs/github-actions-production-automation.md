@@ -10,7 +10,7 @@ The production workflow is an execution boundary around the existing Production 
 
 ## Activation
 
-The workflow is manual-only. It fails closed unless the repository variable `PRODUCTION_SCHEDULER_ACTIVATION` is exactly `ENABLED`. The versioned production adapter registry must also contain an approved production adapter. The current registry is intentionally empty; Canary and test adapters are not production dependencies.
+The workflow is manual-only. It fails closed unless the repository variable `PRODUCTION_SCHEDULER_ACTIVATION` is exactly `ENABLED`. The production adapter registry contains only the Zhenghan and Haier official HTML adapters. Their versioned Source, Admission, allowlist, and revocable Continuous Authorization state is committed under `production-source-state/`; Canary and test modules are not production dependencies.
 
 `PRODUCTION_STREAM_ID` is a required repository variable. It must identify the committed Trusted Chain journal; there is no fallback stream. The activation variable and stream ID are configuration, not source authorization.
 
@@ -26,4 +26,4 @@ The entrypoint restores committed state before scheduler invocation and restores
 
 ## Current readiness
 
-The Actions execution boundary can be locally verified with controlled Git remotes. Real activation remains blocked until approved adapters and authoritative source/admission/continuous-authorization state are versioned on the authoritative branch. Remote GitHub Actions verification requires two successful manual runs after those prerequisites are approved.
+The Actions execution boundary is locally verified with controlled Git remotes. Source activation does not enable the workflow or authorize a request by itself. Remote GitHub Actions verification still requires two separately approved manual runs.
