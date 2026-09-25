@@ -93,7 +93,8 @@ test("failed HTTP acquisition commits only its sealed source outcome and restore
       async execute() {
         return { status: "FAILED", responded_at: OBSERVED_AT, http_status: 503,
           headers: {}, mime_type: null,
-          error: { code: "OFFLINE", message: "controlled HTTP failure", retryable: false } };
+          error: { code: "OFFICIAL_NETWORK_POLICY_STOP", message: "controlled policy stop", retryable: false,
+            policy_reason_codes: ["RESPONSE_SET_COOKIE_PRESENT"] } };
       }
     } });
     assert.equal(failed.status, "FAILED");
@@ -110,6 +111,38 @@ test("failed HTTP acquisition commits only its sealed source outcome and restore
     assert.deepEqual(fresh.read_models, []);
     Object.assign(fresh.source_execution_outcomes[0]!, { status: "SUCCESS" });
     assert.equal((await rootFor(repository.remote).restore()).source_execution_outcomes[0]?.status, "FAILED");
+    const processBPath = path.join(repository.local, "policy-stop-process-b.ts");
+    const resultPath = path.join(repository.local, "policy-stop-process-b.json");
+    writeFileSync(processBPath, `
+      import ${JSON.stringify(pathToFileURL(path.resolve("tests/helpers/network-guard.ts")).href)};
+      import { execFileSync } from "node:child_process";
+      import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+      import os from "node:os";
+      import path from "node:path";
+      import { GitRawObjectPersistence, bootstrapZeroCostProductionCompositionRoot } from ${JSON.stringify(pathToFileURL(path.resolve("lib/production-persistence/index.ts")).href)};
+      void (async () => {
+        const directory = mkdtempSync(path.join(os.tmpdir(), "policy-stop-process-b-"));
+        try {
+          const checkout = path.join(directory, "checkout");
+          execFileSync("git", ["clone", "--quiet", "-b", "main", ${JSON.stringify(repository.remote)}, checkout]);
+          const acquisitions = await new GitRawObjectPersistence({ repository_path: checkout }).listVerifiedAcquisitions();
+          const state = await bootstrapZeroCostProductionCompositionRoot({ remote_url: ${JSON.stringify(repository.remote)},
+            branch: "main", stream_id: "zero-cost-production-test" }).restore();
+          writeFileSync(${JSON.stringify(resultPath)}, JSON.stringify({ head: state.committed_head,
+            acquisition_count: state.acquisition_count,
+            snapshot: acquisitions[0]?.snapshot }));
+        } finally { rmSync(directory, { recursive: true, force: true }); }
+      })().catch(error => { console.error(error); process.exitCode = 1; });
+    `, "utf8");
+    const child = spawnSync(process.execPath, ["--import",
+      pathToFileURL(path.resolve("node_modules/tsx/dist/loader.mjs")).href, processBPath], { encoding: "utf8" });
+    assert.equal(child.status, 0, `${child.stdout}\n${child.stderr}`);
+    const restored = JSON.parse(readFileSync(resultPath, "utf8"));
+    assert.equal(restored.head, failed.committed_head);
+    assert.equal(restored.acquisition_count, 1);
+    assert.equal(restored.snapshot.transport_status, "FAILED");
+    assert.deepEqual(restored.snapshot.response_metadata.transport_error.policy_reason_codes,
+      ["RESPONSE_SET_COOKIE_PRESENT"]);
   } finally { repository.remove(); }
 });
 

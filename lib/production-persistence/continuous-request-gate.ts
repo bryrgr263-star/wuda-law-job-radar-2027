@@ -70,15 +70,37 @@ export async function executeContinuousOfficialRequest(request: HttpTransportReq
   }
   const response = await fetch(request.locator, { method: "GET", redirect: "manual", credentials: "omit",
     headers: {}, signal: AbortSignal.timeout(request.timeout_ms) });
-  const headers = Object.fromEntries(response.headers.entries());
-  if (response.status < 200 || response.status >= 300 || response.redirected || response.headers.has("set-cookie")) {
+  const mimeType = safeContentType(response.headers.get("content-type"));
+  const headers: Record<string, string> = {};
+  if (mimeType) headers["content-type"] = mimeType;
+  const policyReasons: string[] = [];
+  if (response.status < 200 || response.status >= 300) policyReasons.push("HTTP_STATUS_OUTSIDE_SUCCESS");
+  if (response.status >= 300 && response.status < 400) {
+    policyReasons.push("REDIRECT_RESPONSE");
+    const location = response.headers.get("location");
+    try {
+      if (!location) throw new Error("REDIRECT_LOCATION_MISSING");
+      if (new URL(location, request.locator).href !== request.locator) policyReasons.push("REDIRECT_TARGET_NOT_APPROVED");
+    } catch {
+      policyReasons.push("REDIRECT_TARGET_UNVERIFIABLE");
+    }
+  }
+  if (response.redirected) policyReasons.push("RESPONSE_REDIRECTED");
+  if (response.headers.has("set-cookie")) policyReasons.push("RESPONSE_SET_COOKIE_PRESENT");
+  if (policyReasons.length) {
     await response.body?.cancel();
     return { status: "FAILED", responded_at: now() as TransportResponse["responded_at"], http_status: response.status,
-      headers, mime_type: response.headers.get("content-type"), error: { code: "OFFICIAL_NETWORK_POLICY_STOP",
-        message: "HTTP, redirect, session or access requirement denied", retryable: false } };
+      headers, mime_type: mimeType, error: { code: "OFFICIAL_NETWORK_POLICY_STOP",
+        message: "HTTP, redirect, session or access requirement denied", retryable: false,
+        policy_reason_codes: policyReasons } };
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
   return { status: "SUCCESS", responded_at: now() as TransportResponse["responded_at"], bytes,
     content_sha256: createHash("sha256").update(bytes).digest("hex") as Extract<TransportResponse, { status: "SUCCESS" }>["content_sha256"],
-    http_status: response.status, headers, mime_type: response.headers.get("content-type") ?? "application/octet-stream" };
+    http_status: response.status, headers, mime_type: mimeType ?? "application/octet-stream" };
+}
+
+function safeContentType(contentType: string | null) {
+  if (!contentType || !/^[\w.+-]+\/[\w.+-]+(?:;\s*charset=[\w-]+)?$/iu.test(contentType)) return null;
+  return contentType;
 }

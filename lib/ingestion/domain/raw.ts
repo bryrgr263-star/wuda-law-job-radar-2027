@@ -31,6 +31,7 @@ export interface TransportError {
   readonly code: string;
   readonly message: string;
   readonly retryable: boolean;
+  readonly policy_reason_codes?: readonly string[];
 }
 
 export interface SuccessfulTransportResponse {
