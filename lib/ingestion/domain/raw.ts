@@ -37,6 +37,7 @@ export interface TransportError {
 export interface SuccessfulTransportResponse {
   readonly status: "SUCCESS";
   readonly responded_at: IsoDateTime;
+  readonly response_set_cookie_present?: boolean;
   readonly bytes: Uint8Array;
   readonly content_sha256: RawContentSha256;
   readonly mime_type: string;
@@ -47,6 +48,7 @@ export interface SuccessfulTransportResponse {
 export interface FailedTransportResponse {
   readonly status: "FAILED";
   readonly responded_at: IsoDateTime;
+  readonly response_set_cookie_present?: boolean;
   readonly http_status: number | null;
   readonly headers: TransportHeaders;
   readonly mime_type: string | null;
@@ -74,6 +76,7 @@ export interface SnapshotRequestMetadata {
 
 export interface SnapshotResponseMetadata {
   readonly http_status: number | null;
+  readonly response_set_cookie_present?: boolean;
   readonly headers: TransportHeaders;
   readonly mime_type: string | null;
   readonly content_length: number | null;

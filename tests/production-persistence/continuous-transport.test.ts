@@ -7,12 +7,11 @@ import { AT, request, fixture } from "./continuous-acquisition-fixture";
 
 const transportRequest = { ...request, recruitment_endpoint_id: fixture().endpoint.recruitment_endpoint_id,
   requested_at: AT as never, timeout_ms: 1000 };
-test("native official transport explicitly prevents redirects, cookies, login/access interaction and browser fallback", async () => {
+test("native official transport explicitly prevents redirects, login/access interaction and browser fallback", async () => {
   const original = globalThis.fetch; let dispatched = 0;
   try {
     for (const response of [new Response(null, { status: 302, headers: { location: "https://unapproved.invalid/redirect" } }),
-      new Response(null, { status: 401 }), new Response("captcha", { status: 403 }),
-      new Response("session", { status: 200, headers: { "set-cookie": "session=x" } })]) {
+      new Response(null, { status: 401 }), new Response("captcha", { status: 403 })]) {
       globalThis.fetch = async (_url, options) => { dispatched += 1;
         assert.equal(options?.redirect, "manual"); assert.equal(options?.credentials, "omit");
         assert.equal(options?.method, "GET"); assert.deepEqual(options?.headers, {}); assert.equal(options?.body, undefined);
@@ -21,7 +20,7 @@ test("native official transport explicitly prevents redirects, cookies, login/ac
       assert.equal(result.status, "FAILED");
       if (result.status === "FAILED") assert.equal(result.error.retryable, false);
     }
-    assert.equal(dispatched, 4);
+    assert.equal(dispatched, 3);
   } finally { globalThis.fetch = original; }
 });
 test("native transport rejects URL variants and sensitive request fields before any fetch", async () => {
@@ -47,14 +46,12 @@ test("official policy stop records each observable branch without retaining resp
   const cases = [
     { response: new Response(null, { status: 302, headers: { location: "https://unapproved.invalid/?token=secret-redirect" } }),
       reasons: ["HTTP_STATUS_OUTSIDE_SUCCESS", "REDIRECT_RESPONSE", "REDIRECT_TARGET_NOT_APPROVED"] },
-    { response: new Response(null, { status: 401 }), reasons: ["HTTP_STATUS_OUTSIDE_SUCCESS"] },
+    { response: new Response(null, { status: 401 }),
+      reasons: ["HTTP_STATUS_OUTSIDE_SUCCESS", "AUTHENTICATION_REQUIRED"] },
     { response: new Response(null, { status: 403 }), reasons: ["HTTP_STATUS_OUTSIDE_SUCCESS"] },
     { response: redirected, reasons: ["RESPONSE_REDIRECTED"] },
     { response: new Response(null, { status: 302 }),
-      reasons: ["HTTP_STATUS_OUTSIDE_SUCCESS", "REDIRECT_RESPONSE", "REDIRECT_TARGET_UNVERIFIABLE"] },
-    { response: new Response("ordinary page", { status: 200, headers: {
-      "set-cookie": "session=secret-cookie", link: "<https://example.invalid/?token=secret-link>",
-      "content-type": "text/html; charset=utf-8" } }), reasons: ["RESPONSE_SET_COOKIE_PRESENT"] }
+      reasons: ["HTTP_STATUS_OUTSIDE_SUCCESS", "REDIRECT_RESPONSE", "REDIRECT_TARGET_UNVERIFIABLE"] }
   ];
   try {
     for (const { response, reasons } of cases) {
@@ -72,15 +69,19 @@ test("official policy stop records each observable branch without retaining resp
   } finally { globalThis.fetch = original; }
 });
 
-test("manual redirect and response cookie remain blocked even when the URL is same-origin", async () => {
+test("manual redirect remains blocked even when the response sets a cookie on the same origin", async () => {
   const original = globalThis.fetch;
   try {
     globalThis.fetch = async () => new Response(null, { status: 301,
-      headers: { location: "https://example.invalid/canonical" } });
+      headers: { location: "https://example.invalid/canonical", "set-cookie": "session=secret-cookie" } });
     const result = await executeContinuousOfficialRequest(transportRequest, () => AT);
     assert.equal(result.status, "FAILED");
-    if (result.status === "FAILED") assert.deepEqual(result.error.policy_reason_codes,
-      ["HTTP_STATUS_OUTSIDE_SUCCESS", "REDIRECT_RESPONSE", "REDIRECT_TARGET_NOT_APPROVED"]);
+    if (result.status === "FAILED") {
+      assert.deepEqual(result.error.policy_reason_codes,
+        ["HTTP_STATUS_OUTSIDE_SUCCESS", "REDIRECT_RESPONSE", "REDIRECT_TARGET_NOT_APPROVED"]);
+      assert.equal(result.response_set_cookie_present, true);
+      assert.doesNotMatch(JSON.stringify(result), /secret-cookie/u);
+    }
   } finally { globalThis.fetch = original; }
 });
 
@@ -95,6 +96,54 @@ test("accepted exact response persists only safe content metadata", async () => 
     const result = await executeContinuousOfficialRequest(transportRequest, () => AT);
     assert.equal(result.status, "SUCCESS");
     assert.deepEqual(result.headers, { "content-type": "text/html; charset=utf-8" });
+    assert.equal(result.response_set_cookie_present, false);
     assert.doesNotMatch(JSON.stringify(result), /secret-link|secret-location/u);
+  } finally { globalThis.fetch = original; }
+});
+
+test("HTTP 200 response cookie is discarded while its safe observation survives Snapshot capture", async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async (_url, options) => {
+      assert.equal(options?.credentials, "omit");
+      assert.equal(options?.redirect, "manual");
+      assert.deepEqual(options?.headers, {});
+      return new Response("public recruitment page", { status: 200, headers: {
+        "set-cookie": "session=secret-cookie; HttpOnly", "content-type": "text/html; charset=utf-8",
+        location: "https://example.invalid/?token=secret-location",
+        link: "<https://example.invalid/?token=secret-link>" } });
+    };
+    const result = await executeContinuousOfficialRequest(transportRequest, () => AT);
+    assert.equal(result.status, "SUCCESS");
+    if (result.status !== "SUCCESS") return;
+    assert.equal(result.response_set_cookie_present, true);
+    const capture = new RawCaptureService(new InMemoryRawBlobRepository(), new InMemorySnapshotRepository());
+    const { snapshot, raw_blob: rawBlob } = capture.record(transportRequest, result);
+    assert.equal(snapshot.response_metadata.response_set_cookie_present, true);
+    assert.equal(snapshot.transport_status, "SUCCESS");
+    assert.ok(rawBlob);
+    assert.doesNotMatch(JSON.stringify({ result, snapshot }), /secret-cookie|secret-location|secret-link/u);
+  } finally { globalThis.fetch = original; }
+});
+
+test("explicit authentication and challenge signals fail closed even with HTTP 200 and a response cookie", async () => {
+  const original = globalThis.fetch;
+  try {
+    const cases = [
+      { response: new Response("login required", { status: 401, headers: {
+        "www-authenticate": "Bearer token=secret-auth", "set-cookie": "session=secret-cookie" } }),
+      reasons: ["HTTP_STATUS_OUTSIDE_SUCCESS", "AUTHENTICATION_REQUIRED"] },
+      { response: new Response("challenge", { status: 200, headers: {
+        "cf-mitigated": "challenge", "set-cookie": "session=secret-cookie" } }),
+      reasons: ["CHALLENGE_RESPONSE_PRESENT"] }
+    ];
+    for (const { response, reasons } of cases) {
+      globalThis.fetch = async () => response;
+      const result = await executeContinuousOfficialRequest(transportRequest, () => AT);
+      assert.equal(result.status, "FAILED");
+      if (result.status !== "FAILED") continue;
+      assert.deepEqual(result.error.policy_reason_codes, reasons);
+      assert.doesNotMatch(JSON.stringify(result), /secret-auth|secret-cookie/u);
+    }
   } finally { globalThis.fetch = original; }
 });

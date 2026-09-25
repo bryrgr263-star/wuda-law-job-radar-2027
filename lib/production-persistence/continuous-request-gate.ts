@@ -71,6 +71,7 @@ export async function executeContinuousOfficialRequest(request: HttpTransportReq
   const response = await fetch(request.locator, { method: "GET", redirect: "manual", credentials: "omit",
     headers: {}, signal: AbortSignal.timeout(request.timeout_ms) });
   const mimeType = safeContentType(response.headers.get("content-type"));
+  const responseSetCookiePresent = response.headers.has("set-cookie");
   const headers: Record<string, string> = {};
   if (mimeType) headers["content-type"] = mimeType;
   const policyReasons: string[] = [];
@@ -86,18 +87,21 @@ export async function executeContinuousOfficialRequest(request: HttpTransportReq
     }
   }
   if (response.redirected) policyReasons.push("RESPONSE_REDIRECTED");
-  if (response.headers.has("set-cookie")) policyReasons.push("RESPONSE_SET_COOKIE_PRESENT");
+  if (response.status === 401 || response.headers.has("www-authenticate")) policyReasons.push("AUTHENTICATION_REQUIRED");
+  if (response.headers.get("cf-mitigated")?.toLowerCase() === "challenge") policyReasons.push("CHALLENGE_RESPONSE_PRESENT");
   if (policyReasons.length) {
     await response.body?.cancel();
     return { status: "FAILED", responded_at: now() as TransportResponse["responded_at"], http_status: response.status,
-      headers, mime_type: mimeType, error: { code: "OFFICIAL_NETWORK_POLICY_STOP",
+      headers, mime_type: mimeType, response_set_cookie_present: responseSetCookiePresent,
+      error: { code: "OFFICIAL_NETWORK_POLICY_STOP",
         message: "HTTP, redirect, session or access requirement denied", retryable: false,
         policy_reason_codes: policyReasons } };
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
   return { status: "SUCCESS", responded_at: now() as TransportResponse["responded_at"], bytes,
     content_sha256: createHash("sha256").update(bytes).digest("hex") as Extract<TransportResponse, { status: "SUCCESS" }>["content_sha256"],
-    http_status: response.status, headers, mime_type: mimeType ?? "application/octet-stream" };
+    http_status: response.status, headers, mime_type: mimeType ?? "application/octet-stream",
+    response_set_cookie_present: responseSetCookiePresent };
 }
 
 function safeContentType(contentType: string | null) {

@@ -42,6 +42,9 @@ export class RawCaptureService {
         request_metadata: requestMetadata(request),
         response_metadata: {
           http_status: response.http_status,
+          ...(response.response_set_cookie_present === undefined ? {} : {
+            response_set_cookie_present: response.response_set_cookie_present
+          }),
           headers: sanitizeHeaders(response.headers),
           mime_type: response.mime_type,
           content_length: null,
@@ -72,6 +75,9 @@ export class RawCaptureService {
       request_metadata: requestMetadata(request),
       response_metadata: {
         http_status: response.http_status,
+        ...(response.response_set_cookie_present === undefined ? {} : {
+          response_set_cookie_present: response.response_set_cookie_present
+        }),
         headers: sanitizeHeaders(response.headers),
         mime_type: response.mime_type,
         content_length: response.bytes.byteLength,

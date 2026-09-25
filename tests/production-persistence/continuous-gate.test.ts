@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { createHash } from "node:crypto";
 import { GitSourceRegistryPersistence } from "../../lib/production-persistence/git-source-registry-persistence";
-import { executeContinuousRequest } from "../../lib/production-persistence/continuous-request-gate";
+import { executeContinuousOfficialRequest, executeContinuousRequest } from "../../lib/production-persistence/continuous-request-gate";
 import { canonicalSerialize, canonicalHash } from "../../lib/ingestion/normalization/canonical-artifact-registry";
 import { bootstrapZeroCostProductionCompositionRoot } from "../../lib/production-persistence/zero-cost-production-composition-root";
 import { createSourcePersistenceVersion } from "../../lib/production-persistence/contracts";
@@ -65,6 +65,42 @@ test("gate dispatch observes committed reservation; HTTP failure still completes
       { ...request, recruitment_endpoint_id: remote.input.endpoint.recruitment_endpoint_id, requested_at: LATER as never, timeout_ms: 1000 });
     assert.equal(sent, 2);
   } finally { remote.remove(); }
+});
+
+test("response Cookie never reaches the next request; each send needs a fresh reservation and cadence", async () => {
+  const remote = await createRemote(); const original = globalThis.fetch;
+  try {
+    const id = await issued(remote); let sent = 0;
+    globalThis.fetch = async (locator, options) => {
+      sent += 1;
+      assert.equal(locator, request.locator);
+      assert.equal(options?.credentials, "omit");
+      assert.equal(options?.redirect, "manual");
+      assert.deepEqual(options?.headers, {});
+      return new Response("public recruitment page", { status: 200,
+        headers: { "set-cookie": "session=secret-cookie", "content-type": "text/html" } });
+    };
+    const controlledTransport = { execute: (input: Parameters<typeof executeContinuousOfficialRequest>[0]) =>
+      executeContinuousOfficialRequest(input, () => AT) };
+    const first = await executeContinuousRequest(gate(remote.clone(), id, { controlled_transport: controlledTransport }),
+      { ...request, recruitment_endpoint_id: remote.input.endpoint.recruitment_endpoint_id,
+        requested_at: AT as never, timeout_ms: 1000 });
+    assert.equal(first.response.status, "SUCCESS");
+    assert.equal(first.response.response_set_cookie_present, true);
+    await assert.rejects(() => executeContinuousRequest(gate(remote.clone(), id, { controlled_transport: controlledTransport }),
+      { ...request, recruitment_endpoint_id: remote.input.endpoint.recruitment_endpoint_id,
+        requested_at: AT as never, timeout_ms: 1000 }), /CADENCE/);
+    assert.equal(sent, 1);
+    const second = await executeContinuousRequest(gate(remote.clone(), id, { now: () => LATER,
+      controlled_transport: controlledTransport }), { ...request,
+      recruitment_endpoint_id: remote.input.endpoint.recruitment_endpoint_id,
+      requested_at: LATER as never, timeout_ms: 1000 });
+    assert.equal(second.response.status, "SUCCESS");
+    assert.equal(sent, 2);
+    const records = new GitSourceRegistryPersistence({ repository_path: remote.clone() }).listContinuousRecords();
+    assert.deepEqual(records.map(record => record.kind), ["GRANT", "RESERVE", "COMPLETE", "RESERVE", "COMPLETE"]);
+    assert.doesNotMatch(JSON.stringify(records), /secret-cookie/u);
+  } finally { globalThis.fetch = original; remote.remove(); }
 });
 test("CAS loser and historical ACTIVE clone never dispatch, including revocation committed before dispatch", async () => {
   const remote = await createRemote(); try {

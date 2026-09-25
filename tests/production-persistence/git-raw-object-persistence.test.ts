@@ -73,6 +73,19 @@ test("RawBlob uses deterministic SHA-256 paths and exact replay is idempotent", 
   }
 });
 
+test("safe response Cookie observation survives sealed Git acquisition replay", async () => {
+  const repository = createRepository();
+  try {
+    const fixture = rawFixture("cookie-observation", textBytes("public recruitment page"), true);
+    const persistence = new GitRawObjectPersistence({ repository_path: repository.path });
+    await persistFixture(new ProductionRawObjectBoundary(persistence, persistence), fixture);
+    const [restored] = await new GitRawObjectPersistence({ repository_path: repository.path }).listVerifiedAcquisitions();
+    assert.equal(restored?.snapshot.response_metadata.response_set_cookie_present, true);
+    assert.deepEqual(restored?.snapshot, fixture.snapshot);
+    assert.doesNotMatch(git(repository.path, "log", "-p", "--all"), /secret-cookie/u);
+  } finally { repository.remove(); }
+});
+
 test("Git text conversion cannot alter committed RawBlob bytes", async () => {
   const repository = createRepository();
   try {
@@ -532,7 +545,7 @@ async function assertCrashOutcome(
   }
 }
 
-function rawFixture(suffix: string, bytes: Uint8Array) {
+function rawFixture(suffix: string, bytes: Uint8Array, responseSetCookiePresent?: boolean) {
   const trusted = trustedFixture(`git-raw-${suffix}`);
   const endpoint = structuredClone(trusted.source.endpoint);
   const hash = sha256(bytes) as RawContentSha256;
@@ -555,7 +568,8 @@ function rawFixture(suffix: string, bytes: Uint8Array) {
     content_sha256: hash,
     mime_type: "application/octet-stream",
     http_status: 200,
-    headers: {}
+    headers: {},
+    ...(responseSetCookiePresent === undefined ? {} : { response_set_cookie_present: responseSetCookiePresent })
   });
   const rawBlob = captured.raw_blob as RawBlob;
   const snapshot = captured.snapshot as Snapshot & { readonly transport_status: "SUCCESS" };
