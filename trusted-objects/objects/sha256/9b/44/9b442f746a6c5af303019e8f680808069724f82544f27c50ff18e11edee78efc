@@ -1,0 +1,1338 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+        <title>海尔招聘-海尔官方招聘网站</title>
+        <meta name="description" content="海尔招聘，由海尔集团人力资源部整合开发，提供最新最全的海尔招聘信息，诚邀具有创业激情与梦想的各界精英加入海尔生态圈。" />
+        <meta name="keywords" content="海尔招聘，海尔社招，海尔校招，海尔岗位，未来合伙人，海尔官方网站，海尔官方招聘" />
+        <link rel="shortcut icon" href="/favicon.ico"/>
+        <link rel="bookmark" href="/favicon.ico"/>
+        
+        <script type="text/javascript" src="/static/default/plus/jquery-1.11.3.min.js" ></script>
+        
+        <link rel="stylesheet" href="/static/default/plus/layui/css/layui_cb.css" />
+        <script type="text/javascript" src="/static/default/plus/layui/layui.js" ></script>
+        <!-- 滚动条插件 -->
+        <script type="text/javascript" src="/static/default/plus/jquery.slimscroll.min.js" ></script>
+        
+        <link rel="stylesheet" href="/static/default/basecss/basic.css" />
+        <script type="text/javascript" src="/static/default/basejs/basic.js?version=1790171466" ></script>
+        
+        		<link rel="stylesheet" href="/static/new_iconfont/iconfont.css?version=1790171466" />
+        <!-- <link rel="stylesheet" href="/static/default/iconfont/iconfont.css?version=1790171466" /> -->
+                
+        <!--<script type="text/javascript" src="/??static/default/basejs/basic.js,static/default/basejs/pdform.js,static/default/basejs/fuzzySearch.js,static/default/plus/toastr-master/toastr.js"></script>
+        -->
+        <link rel="stylesheet" href="/static/default/plus/toastr-master/toastr.css">
+        <script type="text/javascript" src="/static/default/plus/jquery.cookie.js" ></script>
+        <link rel="stylesheet" href="/static/default/plus/formselects/formselects.css?version=1790171466" />
+        <script type="text/javascript" src="/static/default/plus/formselects/formselects.js?version=1790171466" ></script>
+        <script type="text/javascript" src="/static/default/basejs/pdform.js?version=1790171466" ></script>
+        <script type="text/javascript" src="/static/default/basejs/fuzzySearch.js?version=1790171466" ></script>
+        <script src="/static/default/plus/toastr-master/toastr.js"></script>
+        <script type="text/javascript" src="/static/default/plus/chuangba_plus/searchModule/js/searchModule.js?version=1790171466" ></script>
+        <script src="/static/mobile/js/vue.min.js?version=1790171466"></script>
+        
+        
+        <script type="text/javascript">
+            var OfficialEnvironment=false;
+            // 正式环境
+                        OfficialEnvironment=true;
+                        // 跳转iam账号中心登录
+                    </script>
+    </head>
+    <body>
+ 
+
+
+<script>
+    var beganUrl = '/client'
+</script>
+<link rel="stylesheet" href="/static/default/pagecss/normal.css?version=1790171466" />
+<script type="text/javascript" src="/static/default/pagejs/normal.js?version=1790171466"></script>
+
+<!--<link rel="stylesheet" href="/static/default/pagecss/policy.css?version=1790171466" />-->
+
+
+
+<!--  -->
+<link rel="stylesheet" href="/static/default/basecss/header.css" />
+<script type="text/javascript" src="/static/default/basejs/header.js"></script>
+<!--  -->
+<div class="header-client-new ">
+    <!-- 头部菜单 START -->
+    <div class="headerbox">
+        <!-- logo -->
+        <div class="logo">
+                        <img src="/static/default/image/sanduan/logo4_177_46.png" />
+                    </div>
+
+        <div class="other">
+            <!-- nav -->
+            <ul class="navbox">
+                <li class="nav_1">
+                    <a href="/client.html">首页</a>
+                </li>
+                <li class="nav_1 has_child_options">
+                    <ul class="child_list">
+                        <li><a class="child_a_link" href="/client/campus/activityindex.html">岗位投递</a></li>
+                        <li><a class="child_a_link" href="/client/campus/dynamic.html">招聘动态</a></li>
+                        <li><a class="child_a_link" href="/client/campus/activitycalendar.html">活动日历</a></li>
+                    </ul>
+                    <a class="parent_a_link" href="javascript:;">
+                        应届生招聘
+                        <i class="iconfont icon-below-line"></i>
+                    </a>
+                </li>
+                                <li class="nav_1">
+                    <a href="/client/practice/jobs.html">实习生招聘</a>
+                </li>
+                <li class="nav_1">
+                    <a href="/client/campus/guihuaju.html">校企俱乐部</a>
+                </li>
+                <li class="nav_1">
+                    <a href="/client/campus/budetail.html">了解海尔</a>
+                </li>
+                            </ul>
+
+            <!-- Login -->
+            <div class="login">
+                                <div class="no_login">
+                    <a href="/client/login/index.html" id="login_item">登录</a>
+                    /
+                    <a href="https://iama.haier.net/terminal/?show-register-reset=true&client_id=baaec20b9dab4551aa03366d8862b806&source=https%3A%2F%2Fmaker.haier.net%2F%2Fclient#registerAccount">注册</a>
+                </div>
+                            </div>
+        </div>
+    </div>
+    <!-- 头部菜单 END -->
+
+</div>
+<script>
+    function show_switch() {
+        if ($("#switch_li").attr("style") == "" || $("#switch_li").attr("style") == "display: list-item;") {
+            $("#switch_li").hide();
+        } else {
+            $("#switch_li").show();
+        }
+    }
+    $(".has_login").mouseover(function(){
+        $(this).addClass("active");
+        $(".ucenter_info_list").addClass("active");
+        $("#uinfoicon").attr("class", "iconfont icon-top-line");
+        $(".ucenter_info_list").show();
+    });
+    $(".ucenter_info_list,.has_login").mouseout(function(){
+        $(this).removeClass("active");
+        $("#uinfoicon").attr("class", "iconfont icon-below-line");
+        $(".has_login").removeClass("active");
+        $(".ucenter_info_list").hide();
+    });
+</script>
+<link rel="stylesheet" href="/static/default/pagecss/client/ai_assistant.css?version=1790171466">
+<div class="module_right_for_ai_icon">
+    <img src="/static/default/image/client/ai_assistant/icon.png" class="module_right_ai_icon_img" />
+    <div class="module_right_ai_icon_text">智能助手</div>
+</div>
+<div class="module_right_for_ai_icon nologin cb-hide">
+    <span class="module_right_ai_icon_nologin_close">
+        <i class="iconfont icon-close-line"></i>
+    </span>
+    <div class="module_right_ai_icon_nologin_top">
+        <img src="/static/default/image/client/ai_assistant/icon.png" class="module_right_ai_icon_nologin_top_img" />
+        <div class="module_right_ai_icon_text_text">
+            登录后小助手将为你提供服务
+        </div>
+    </div>
+    <div class="module_right_ai_icon_login_btn">
+        立即登录
+    </div>
+</div>
+<div class="client_ai_chat_right_box cb-hide">
+    <span class="slide_icon">
+        <i class="iconfont icon-arrow-right-1"></i>
+    </span>
+    <div class="top_title">
+        智能招聘助手
+    </div>
+    <div class="client_ai_chat_right_content">
+        <div class="client_ai_chat_right_tip">
+            Tip：内容由AI生成，仅供参考
+        </div>
+        <div class="client_ai_chat_right_list" :class="userInputFileObj ? 'has_file' : ''">
+            <template v-for="(item, index) in chatDataList">
+                <div class="client_ai_chat_right_item left" v-if="item.role != 'user'">
+                    <div class="ai_title">
+                        <img src="/static/default/image/client/ai_assistant/icon.png" class="ai_title_img" />
+                        <div class="ai_title_text">
+                            智能助手
+                        </div>
+                    </div>
+                    <div class="chat_item_content ai" v-if="item.content.type == 'default1'">
+                        <div class="chat_item_content_texts">
+                            <div class="chat_item_content_text">
+                                Hi，{{userName}} 有什么需要帮助的?<br />
+                                我可以为内部员工提供以下服务:
+                            </div>
+                            <div class="chat_item_content_blocks">
+                                <div class="chat_item_content_block_item">
+                                    <span @click="userClickSendMessage('内部职位推荐')">内部职位推荐 <img src="/static/default/image/client/ai_assistant/link_icon.png" alt=""></span>
+                                </div>
+                                <div class="chat_item_content_block_item">
+                                    <span @click="userClickSendMessage('转岗咨询')">转岗咨询 <img src="/static/default/image/client/ai_assistant/link_icon.png" alt=""></span>
+                                </div>
+                                <div class="chat_item_content_block_item">
+                                    <span @click="userClickSendMessage('产业介绍')">产业介绍 <img src="/static/default/image/client/ai_assistant/link_icon.png" alt=""></span>
+                                </div>
+                            </div>
+                            <div class="chat_item_content_text">
+                                若对回答的内容不满意，您可以留下您的完整问题，小助手会持续优化
+                            </div>
+                        </div>
+                        <div class="chat_item_content_btns">
+                        </div>
+                    </div>
+                    <div class="chat_item_content ai" v-if="item.content.type == 'default2'">
+                        <div class="chat_item_content_texts">
+                            <div class="chat_item_content_text">
+                                Hi，{{userName}} 请选择您的身份，<br />
+                                我将为您提供更精准的服务：<span class="cb-a1" @click="userClickSendMessage('校园人才')">校园人才</span> | <span class="cb-a1" @click="userClickSendMessage('社招人才')">社招人才</span>
+                            </div>
+                        </div>
+                        <div class="chat_item_content_btns">
+                        </div>
+                    </div>
+                    <div class="chat_item_content ai" v-if="item.content.type == 'default3'">
+                        <div class="chat_item_content_texts">
+                            <div class="chat_item_content_text">
+                                Hi，{{userName}} 有什么需要帮助的?<br />
+                                我可以为您提供以下服务:
+                            </div>
+                            <div class="chat_item_content_blocks">
+                                                                <div class="chat_item_content_block_item">
+                                    <span @click="userClickSendMessage('产业介绍', 'industry_intro')">产业介绍 <img src="/static/default/image/client/ai_assistant/link_icon.png" alt=""></span>
+                                </div>
+                                <div class="chat_item_content_block_item">
+                                    <span @click="userClickSendMessage('校园招聘活动咨询')">校园招聘活动咨询 <img src="/static/default/image/client/ai_assistant/link_icon.png" alt=""></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat_item_content_btns">
+                        </div>
+                    </div>
+                    <div class="chat_item_content ai" v-if="item.content.type == 'text'">
+                        <div class="chat_item_content_texts">
+                            <div class="chat_item_content_text" v-html="contentToHtml(item.content.content)"></div>
+                        </div>
+                        <div class="chat_item_content_btns">
+                            <img :src="item.like_type == 1 ? '/static/default/image/sanduan/ai/chat_good_1.png' : '/static/default/image/sanduan/ai/chat_good.png'" class="cb-p-r-12 chat_item_content_btn good" @click="chatGood(index, item)">
+                            <img :src="item.like_type == 2 ? '/static/default/image/sanduan/ai/chat_bad_1.png' : '/static/default/image/sanduan/ai/chat_bad.png'" class="chat_item_content_btn bad" @click="chatBad(index, item)">
+                        </div>
+                    </div>
+                    <div class="chat_item_content ai" v-if="item.content.type == 'job_recommend'">
+                        <div class="chat_item_content_texts">
+                            <div class="chat_item_content_text" v-if="item.content.content.job">
+                                基于{{item.content.content.job}}的职位，为您推荐以下职位：
+                            </div>
+                            <div class="chat_item_content_text" v-else-if="item.content.content.name">
+                                <!-- 基于{{item.content.content.name}}的简历，为您推荐以下职位： -->
+                                结合您的简历信息，建议可以考虑以下职位：
+                            </div>
+                            <div class="chat_item_content_blocks">
+                                <div class="chat_item_content_block_item job" v-for="jobItem in item.content.content.positions" @click="jobItemClick(jobItem.url)">
+                                    <div class="ai_job_info">
+                                        <div class="ai_job_info_title">
+                                            {{jobItem.research}}
+                                        </div>
+                                        <div class="ai_job_info_desc">
+                                            {{jobItem.department}} | {{jobItem.city}}
+                                        </div>
+                                    </div>
+                                    <img src="/static/default/image/client/ai_assistant/link_icon.png" alt="">
+                                </div>
+                            </div>
+                            <div class="chat_item_content_text">
+                                点击职位名称可获取更多职位信息。
+                            </div>
+                            <div class="chat_item_content_text">
+                                所有岗位均为AI推荐，请全面考虑后再进行投递，须注意推荐的岗位与结果无任何关联。
+                            </div>
+                        </div>
+                        <div class="chat_item_content_btns">
+                            <img :src="item.like_type == 1 ? '/static/default/image/sanduan/ai/chat_good_1.png' : '/static/default/image/sanduan/ai/chat_good.png'" class="cb-p-r-12 chat_item_content_btn good" @click="chatGood(index, item)">
+                            <img :src="item.like_type == 2 ? '/static/default/image/sanduan/ai/chat_bad_1.png' : '/static/default/image/sanduan/ai/chat_bad.png'" class="chat_item_content_btn bad" @click="chatBad(index, item)">
+                        </div>
+                    </div>
+                    <div class="chat_item_content ai" v-if="item.content.type == 'industry_list'">
+                        <div class="chat_item_content_texts">
+                            <div class="chat_item_content_text">
+                                您要咨询的产业信息：
+                            </div>
+                            <div class="chat_item_content_industry_list">
+                                <div class="chat_item_content_industry_item" v-for="industryItem in item.content.content.list" @click="userClickSendMessage(industryItem.name, 'industry_intro')">
+                                    {{industryItem.name}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat_item_content_btns">
+                            <img :src="item.like_type == 1 ? '/static/default/image/sanduan/ai/chat_good_1.png' : '/static/default/image/sanduan/ai/chat_good.png'" class="cb-p-r-12 chat_item_content_btn good" @click="chatGood(index, item)">
+                            <img :src="item.like_type == 2 ? '/static/default/image/sanduan/ai/chat_bad_1.png' : '/static/default/image/sanduan/ai/chat_bad.png'" class="chat_item_content_btn bad" @click="chatBad(index, item)">
+                        </div>
+                    </div>
+                    <div class="chat_item_content ai" v-if="item.content.type == 'industry_intro'">
+                        <div class="chat_item_content_texts">
+                            <div class="chat_item_content_text" v-html="contentToHtml(item.content.content.description)"></div>
+                        </div>
+                        <div class="chat_item_content_btns">
+                            <img :src="item.like_type == 1 ? '/static/default/image/sanduan/ai/chat_good_1.png' : '/static/default/image/sanduan/ai/chat_good.png'" class="cb-p-r-12 chat_item_content_btn good" @click="chatGood(index, item)">
+                            <img :src="item.like_type == 2 ? '/static/default/image/sanduan/ai/chat_bad_1.png' : '/static/default/image/sanduan/ai/chat_bad.png'" class="chat_item_content_btn bad" @click="chatBad(index, item)">
+                        </div>
+                    </div>
+                </div>
+                <template v-else-if="item.role == 'user'">
+                    <template v-if="item.content.type == 'text'">
+                        <div class="client_ai_chat_right_item right">
+                            <div class="chat_item_content user">
+                                <div v-html="item.content.content" class="chat_item_content_text user_text" >
+                                </div>
+                            </div>
+                            <img :src="userAvatar" class="user_avatar_img" />
+                        </div>
+                    </template>
+                    <template v-else-if="item.content.type == 'file'">
+                        <div class="client_ai_chat_right_item right">
+                            <div class="chat_item_content user">
+                                <div class="chat_item_content_text user_text">
+                                    <div class="user_file">
+                                        <img src="/static/default/image/client/ai_assistant/word.png" class="user_file_img" v-if="['docx', 'doc'].includes(item.content.files[0].name.split('.').pop())" />
+                                        <img src="/static/default/image/client/ai_assistant/pdf.png" class="user_file_img" v-else-if="['pdf'].includes(item.content.files[0].name.split('.').pop())" />
+                                        <img src="/static/default/image/client/ai_assistant/image.png" class="user_file_img" v-else-if="['jpg', 'jpeg', 'png'].includes(item.content.files[0].name.split('.').pop())" />
+                                        <div class="user_file_text">
+                                            {{item.content.files[0].name}} ・ <span class="color999">{{item.content.files[0].sizeLabel}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <img :src="userAvatar" class="user_avatar_img" />
+                        </div>
+                        <div class="client_ai_chat_right_item right">
+                            <div class="chat_item_content user">
+                                <div v-html="item.content.content" class="chat_item_content_text user_text" >
+                                </div>
+                            </div>
+                            <span class="user_avatar_img"></span>
+                        </div>
+                    </template>
+                </template>
+            </template>
+            <div class="client_ai_chat_right_item left" v-show="isLoading">
+                <div class="ai_title">
+                    <img src="/static/default/image/client/ai_assistant/icon.png" class="ai_title_img" />
+                    <div class="ai_title_text">
+                        智能助手
+                    </div>
+                </div>
+                <div class="chat_item_content">
+                    <div class="chat_item_content_text">
+                        <div class="loading_dots">
+                            <span class="loading_dot"></span>
+                            <span class="loading_dot"></span>
+                            <span class="loading_dot"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="client_ai_chat_right_input_block">
+            <div class="client_ai_chat_right_input">
+                <textarea name="user_input" placeholder="请输入" class="client_ai_chat_right_input_textarea" :class="userInputFileObj ? 'has_file' : ''" v-model="userInput" @keyup.enter="sendMessage" @keydown.enter.prevent="sendMessage"></textarea>
+                <img src="/static/default/image/client/ai_assistant/select_file.png" class="client_ai_chat_right_input_select_file_img" @click="handleFileUploadClick">
+                <template v-if="!aiIsEntering && userInput.trim() !== ''">
+                    <img src="/static/default/image/client/ai_assistant/send_icon2.png" class="client_ai_chat_right_input_send_img" @click="sendMessage">
+                </template>
+                <template v-else>
+                    <img src="/static/default/image/client/ai_assistant/send_icon1.png" class="client_ai_chat_right_input_send_img" disabled>
+                </template>
+                <div class="user_input_files" v-if="userInputFileObj">
+                    <div class="user_input_file_item">
+                        <img src="/static/default/image/client/ai_assistant/word.png" class="user_input_file_item_img" v-if="['docx', 'doc'].includes(userInputFileObj.name.split('.').pop())" />
+                        <img src="/static/default/image/client/ai_assistant/pdf.png" class="user_input_file_item_img" v-else-if="['pdf'].includes(userInputFileObj.name.split('.').pop())" />
+                        <img src="/static/default/image/client/ai_assistant/image.png" class="user_input_file_item_img" v-else-if="['jpg', 'jpeg', 'png'].includes(userInputFileObj.name.split('.').pop())" />
+                        <div class="user_input_file_item_text">
+                            <div class="user_input_file_item_text_name">
+                                {{userInputFileObj.name}}
+                            </div>
+                            <div class="color999 cb-f-12">
+                                <span>
+                                    {{userInputFileObj.name.split('.').pop()}}
+                                </span>
+                                <span class="cb-p-r-2 cb-p-l-2">・</span>
+                                <span>
+                                    {{userInputFileObj.size_label}}
+                                </span>
+                            </div>
+                        </div>
+                        <img src="/static/default/image/client/ai_assistant/del_file_icon.png" class="user_input_file_item_delete_img" @click="userInputFileObj = null">
+                    </div>
+                </div>
+            </div>
+            <input 
+                type="file"
+                class="chat_input_block_input_file"
+                ref="fileInput"
+                style="display: none;"
+                @change="handleFileChange"
+            />
+        </div>
+        <!-- 跳转到底部按钮 -->
+        <div class="scroll-to-bottom-btn" v-show="showScrollToBottomBtn" @click="scrollToBottom(0)">
+            <i class="iconfont icon-arrow-down"></i>
+        </div>
+    </div>
+</div>
+<script src="/static/default/plus/fetch-event-source.umd.js"></script>
+<script src="/static/default/plus/showdown-2.1.0.min.js"></script>
+<!-- 复制功能 -->
+<!-- <script src="/static/default/plus/clipboard.min.js"></script> -->
+<script>
+    $(function () {
+        // 点击立即登录
+        $(".module_right_for_ai_icon.nologin .module_right_ai_icon_login_btn").click(function () {
+            location.href = "/client/login/index/redirect_url/%252Fclient%252Fcampus%252Fcustomizedptjobdetail%252Fsid%252F64%252Frid%252F61.html";
+        });
+        // 点击关闭登录弹窗
+        $(".module_right_for_ai_icon.nologin .module_right_ai_icon_nologin_close").click(function () {
+            $(".module_right_for_ai_icon").removeClass("cb-hide");
+            $(".module_right_for_ai_icon.nologin").addClass("cb-hide");
+        });
+        // 点击智能助手图标，展开智能助手对话框
+        $(".module_right_for_ai_icon:not(.nologin)").click(function () {
+            if (!clientAiChatRightContentVm.userId) {
+                $(this).addClass("cb-hide");
+                // 如果用户未登录，则弹出登录弹窗
+                $(".module_right_for_ai_icon.nologin").removeClass("cb-hide");
+                return false;
+            }
+            $(".module_right_for_ai_icon").addClass("cb-hide");
+            $("body").css("width", "calc(100% - 400px)");
+            $(".header-client-new.fixed-top").css("width", "calc(100% - 400px)");
+            $(".header-client-new.fixed-top .headerbox").css("width", "100%");
+            $(".client_ai_chat_right_box").removeClass("cb-hide");
+            clientAiChatRightContentVm.userInput = "";
+            clientAiChatRightContentVm.userInputFileObj = null;
+            $("textarea[name='user_input']").focus();
+            clientAiChatRightContentVm.getHistoryList();
+            // 检查滚动状态
+            setTimeout(function() {
+                var chatListDom = $(".client_ai_chat_right_list");
+                var scrollTop = chatListDom.scrollTop();
+                var scrollHeight = chatListDom[0].scrollHeight;
+                var clientHeight = chatListDom.height();
+                var isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                clientAiChatRightContentVm.showScrollToBottomBtn = !isAtBottom;
+            }, 100);
+        });
+        // 点击收起按钮，收起智能助手对话框
+        $(".client_ai_chat_right_box .slide_icon").click(function () {
+            $(".module_right_for_ai_icon:not(.nologin)").removeClass("cb-hide");
+            $("body").css("width", "100%");
+            $(".header-client-new.fixed-top").css("width", "100%");
+            $(".header-client-new.fixed-top .headerbox").css("width", "1200px");
+            $(".client_ai_chat_right_box").addClass("cb-hide");
+        });
+        var loginUserAvatar = "/static/default/image/sanduan/headimg.png";
+        // 内部人才默认内容
+        var agent1DefaultConetnt = {
+            role: "default",
+            actions: "",
+            content: {
+                type: "default1",
+                content: ""
+            },
+            like_type: 0,
+        };
+        // 非内部人才默认内容
+        var agent2DefaultConetnt = {
+            role: "default",
+            actions: "",
+            content: {
+                type: "default2",
+                content: ""
+            },
+            like_type: 0,
+        };
+        // 校园人才默认内容
+        var agent3DefaultConetnt = {
+            role: "default",
+            actions: "",
+            content: {
+                type: "default3",
+                content: ""
+            },
+            like_type: 0,
+        };
+        var industryList = [
+            "海尔集团",
+            "智家",
+            "卡奥斯",
+            "盈康一生",
+            "海纳云",
+            "海创汇",
+            "卡泰驰",
+            "新能源",
+            "海尔学校",
+            "众淼",
+            "雷神",
+        ];
+        var clientAiChatRightContentVm = new Vue({
+            el: ".client_ai_chat_right_content",
+            data: {
+                baseApiUrl: "",
+                userId: "",
+                userName: "",
+                userAvatar: loginUserAvatar,
+                // 这是一个布尔值，用于表示AI是否正在"打字"（即正在逐字显示回复）。当 aiIsEntering 为 true 时，表示AI正在输出回复。
+                aiIsEntering: false,
+                isLoading: false,
+                conversationId: "",
+                lastConversationContent: "",
+                userInput: "",
+                userInputFileObj: null,
+                userClickSendMessageString: "",
+                userStop: false,
+                chatDataList: [],
+                chatHistoryList: [],
+                clipboard: null,
+                abortController: null,
+                tool: "",
+                scrollTimer: null,
+                showdown: new showdown.Converter(),
+                showScrollToBottomBtn: false, // 新增：控制底部按钮的显示
+            },
+            mounted() {
+                var appThis = this;
+                $(".ai_assistant_chat_box").removeClass("cb-hide");
+                this.chatDataList = [
+                    agent3DefaultConetnt
+                ];
+                // this.initClipboard();
+                // 添加滚动监听
+                this.initScrollListener();
+                // 初始化时检查滚动状态
+                this.$nextTick(function() {
+                    var chatListDom = $(".client_ai_chat_right_list");
+                    var scrollTop = chatListDom.scrollTop();
+                    var scrollHeight = chatListDom[0].scrollHeight;
+                    var clientHeight = chatListDom.height();
+                    var isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                    this.showScrollToBottomBtn = !isAtBottom;
+                }.bind(this));
+                // 添加图片点击事件委托
+                $(document).on('click', '.clickable-image', function() {
+                    var imgSrc = $(this).attr('src');
+                    appThis.showImagePreview(imgSrc);
+                });
+            },
+            beforeDestroy() {
+                if (this.clipboard) {
+                    this.clipboard.destroy();
+                }
+                // 清理 AbortController
+                if (this.abortController) {
+                    this.abortController.abort();
+                }
+                // 清理滚动定时器
+                if (this.scrollTimer) {
+                    clearTimeout(this.scrollTimer);
+                }
+                // 清理滚动监听器
+                $(".client_ai_chat_right_list").off('scroll');
+            },
+            filters: {
+                // 添加一个过滤器用于截取日期字符串
+                cutDate: function (value) {
+                    if (!value) return '';
+                    // 如果字符串长度超过10，截取前10个字符
+                    return value.length > 10 ? value.substring(0, 10) : value;
+                }
+            },
+            watch: {
+                // 监听聊天数据变化，检查滚动状态
+                chatDataList: {
+                    handler: function() {
+                        var appThis = this;
+                        this.$nextTick(function() {
+                            var chatListDom = $(".client_ai_chat_right_list");
+                            var scrollTop = chatListDom.scrollTop();
+                            var scrollHeight = chatListDom[0].scrollHeight;
+                            var clientHeight = chatListDom.height();
+                            var isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                            appThis.showScrollToBottomBtn = !isAtBottom;
+                        });
+                    },
+                    deep: true
+                }
+            },
+            methods: {
+                // 初始化滚动监听
+                initScrollListener() {
+                    var appThis = this;
+                    var chatListDom = $(".client_ai_chat_right_list");
+                    
+                    chatListDom.on('scroll', function() {
+                        var scrollTop = $(this).scrollTop();
+                        var scrollHeight = this.scrollHeight;
+                        var clientHeight = $(this).height();
+                        
+                        // 判断是否在底部（允许1px的误差）
+                        var isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                        
+                        // 更新按钮显示状态
+                        appThis.showScrollToBottomBtn = !isAtBottom;
+                    });
+                },
+                // 初始化clipboard复制
+                initClipboard() {
+                    // 销毁之前的实例
+                    if (this.clipboard) {
+                        this.clipboard.destroy();
+                    }
+
+                    // 创建新实例，设置为复制HTML内容
+                    this.clipboard = new ClipboardJS(".copy_btn", {
+                        // 自定义复制内容
+                        text: function (trigger) {
+                            // 获取目标元素
+                            const targetId = trigger.getAttribute("data-clipboard-target");
+                            const target = document.querySelector(targetId);
+                            // 返回文本内容
+                            return target.textContent;
+                        }
+                    });
+
+                    // 成功回调
+                    this.clipboard.on("success", (e) => {
+                        layer.msg("复制成功");
+                        e.clearSelection();
+                    });
+
+                    // 失败回调
+                    this.clipboard.on("error", (e) => {
+                        layer.msg("复制失败，请手动复制！", function () { });
+                        console.error("复制失败:", e);
+                    });
+                },
+                // 职位点击
+                jobItemClick: function (url) {
+                    window.open(url, "_blank");
+                },
+                // 获取历史记录
+                getHistoryList: function () {
+                    var appThis = this;
+                    cb_ajax("/ajax/aiassistor/messages", { conversation_id: appThis.conversationId, page: 1, limit: 10000 }, function (res) {
+                        if (res.status == 1) {
+                            // 在原来chatDataList后面追加res.data.list
+                            var queryChatDataList = [];
+                            res.data.list.forEach(function (item) {
+                                var itemObj = item;
+                                itemObj.content = JSON.parse(item.content);
+                                queryChatDataList.push(itemObj);
+                            });
+                            appThis.chatDataList = appThis.chatDataList.concat(queryChatDataList ?? []);
+                            appThis.scrollToBottom(0);
+                        } else {
+                            layer.msg("获取聊天对话详情失败，请稍后再试！", function () { });
+                            return false;
+                        }
+                    }, { hasBlock: 0 , type: "GET"});
+                },
+                // 内容转换为html
+                contentToHtml: function (value) {
+                    // 先使用showdown将markdown转换为html
+                    var html = this.showdown.makeHtml(value);
+                    // 使用正则表达式为所有img标签添加点击事件的类和属性
+                    html = html.replace(/<img([^>]*)>/g, '<img$1 class="clickable-image" />');
+                    return html;
+                },
+                // 用户发送消息
+                sendMessage: function () {
+                    var appThis = this;
+                    if (this.aiIsEntering) return;
+                    // 防止重复发送空消息
+                    if (!this.userClickSendMessageString && !this.userInput.trim() && !this.userInputFileObj) {
+                        return;
+                    }
+                    var jsonObj = null;
+                    if (this.userClickSendMessageString) {
+                        jsonObj = {
+                            type: "text",
+                            content: this.userClickSendMessageString,
+                            fileName: "",
+                            fileSizeLabel: ""
+                        }
+                    } else if (this.userInputFileObj && this.userInput.trim() != "") {
+                        jsonObj = {
+                            type: "file",
+                            content: this.userInput.trim(),
+                            fileName: "",
+                            fileSizeLabel: "",
+                            files: [
+                                {
+                                    name: this.userInputFileObj.name,
+                                    url: this.userInputFileObj.savepath,
+                                    sizeLabel: this.userInputFileObj.size_label
+                                }
+                            ]
+                        };
+                    } else {
+                        jsonObj = {
+                            type: "text",
+                            content: this.userInput.trim(),
+                            fileName: "",
+                            fileSizeLabel: ""
+                        }
+                        if (industryList.includes(this.userInput.trim()) || this.userInput.trim() == "产业介绍") {
+                            appThis.tool = "industry_intro";
+                        }
+                    }
+                    if (jsonObj.content) {
+                        this.aiIsEntering = true;
+                        // 根据chatDataList里面的值有无type为user的记录，判断当前聊天是否需要新生成一个聊天历史记录，且放在最前面。
+                        if (!this.chatDataList.some(item => item.role == "user")) {
+                            this.chatHistoryList.unshift({
+                                assistant_type: this.leftMenuAgentActive,
+                                title: jsonObj.type == "file" ? jsonObj.fileName : jsonObj.content,
+                            });
+                        }
+                        this.chatDataList.push({
+                            role: "user",
+                            actions: "",
+                            content: jsonObj
+                        });
+                        appThis.saveChatMsg({
+                            role: "user",
+                            content: JSON.stringify(jsonObj),
+                            actions: ""
+                        });
+                        this.showLoading();
+                        this.userStop = false;
+                        appThis.scrollToBottom(0);
+                        this.chatQuery(jsonObj);
+                        this.userInput = "";
+                        this.userInputFileObj = null;
+                        this.userClickSendMessageString = "";
+                    }
+                },
+                // 用户点击，主动帮用户发送消息
+                userClickSendMessage: function (text, type = "") {
+                    if (text.trim() == "校园职位推荐") {
+                        var userObj = {
+                            type: "text",
+                            content: "校园职位推荐",
+                            fileName: "",
+                            fileSizeLabel: ""
+                        }
+                        this.chatDataList.push({
+                            role: "user",
+                            actions: "",
+                            content: userObj
+                        });
+                        this.saveChatMsg({
+                            role: "user",
+                            content: JSON.stringify(userObj),
+                            actions: ""
+                        });
+                        var aiObj = {
+                            type: "text",
+                            content: "请上传简历或者输入意向职位名称，我将为您推荐合适职位。"
+                        };
+                        this.chatDataList.push({
+                            role: "ai",
+                            actions: "",
+                            content: aiObj
+                        });
+                        this.saveChatMsg({
+                            role: "ai",
+                            content: JSON.stringify(aiObj),
+                            actions: ""
+                        });
+                        this.scrollToBottom(0);
+                        return false;
+                    } else if (text.trim() == "校园招聘活动咨询") {
+                        var userObj = {
+                            type: "text",
+                            content: "校园招聘活动咨询",
+                            fileName: "",
+                            fileSizeLabel: ""
+                        }
+                        this.chatDataList.push({
+                            role: "user",
+                            actions: "",
+                            content: userObj
+                        });
+                        this.saveChatMsg({
+                            role: "user",
+                            content: JSON.stringify(userObj),
+                            actions: ""
+                        });
+                        var aiObj = {
+                            type: "text",
+                            content: "请输入您想咨询的问题，如今年校园活动的开始时间。"
+                        };
+                        this.chatDataList.push({
+                            role: "ai",
+                            actions: "",
+                            content: aiObj
+                        });
+                        this.saveChatMsg({
+                            role: "ai",
+                            content: JSON.stringify(aiObj),
+                            actions: ""
+                        });
+                        this.scrollToBottom(0);
+                        return false;
+                    } else {
+                        if (type == "industry_intro") {
+                            this.tool = "industry_intro";
+                        }
+                    }
+                    if (!this.aiIsEntering) {
+                        this.userClickSendMessageString = text;
+                        this.sendMessage();
+                    }
+                },
+                // 对话聊天
+                chatQuery: function (jsonObj) {
+                    var appThis = this;
+                    // 创建 AbortController 来控制连接
+                    appThis.abortController = new AbortController();
+                    FetchEventSource.fetchEventSource(appThis.baseApiUrl + "/ajax/aiassistor/sendmessage", {
+                        method: "POST",
+                        // 添加此配置，使连接在页面隐藏（浏览器tab页切换）时保持打开，否则切换tab页面时，连接会断开，再切换回来时会再次创建连接
+                        openWhenHidden: true,
+                        headers: {},
+                        signal: appThis.abortController.signal,
+                        body: JSON.stringify({
+                            message: jsonObj.content,
+                            assistant_type: "wenda",
+                            tool: appThis.tool ?? "",
+                            files: jsonObj.files ?? []
+                        }),
+                        onmessage(res) {
+                            // console.log(res, "res");
+                            if (!appThis.userStop) {
+                                appThis.handleResponseData(res);
+                            }
+                        },
+                        onerror(err) {
+                            console.error("错误：", err);
+                            layer.msg("连接失败，请稍后再试！", function () { });
+                            appThis.resetChatState();
+                            // 抛出异常来阻止自动重试
+                            throw err;
+                        },
+                        onclose() {
+                            console.log("连接关闭");
+                            if (appThis.lastConversationContent) {
+                                appThis.scrollToBottom(0);
+                                appThis.saveChatMsg({
+                                    role: "ai",
+                                    content: JSON.stringify({
+                                        type: "text",
+                                        content: appThis.lastConversationContent
+                                    }),
+                                    actions: ""
+                                });
+                                appThis.resetChatState();
+                            }
+                        }
+                    });
+                },
+                // 处理返回的数据
+                handleResponseData: function (res) {
+                    var appThis = this;
+                    var resData = JSON.parse(res.data);
+                    if (resData && resData.type == "stream" && resData.content) {
+                        // 第一次收到消息，则隐藏loading
+                        if (appThis.lastConversationContent == "") {
+                            appThis.hideLoading();
+                        }
+                        // 收到ai的回复后，逐步显示给用户
+                        appThis.lastConversationContent += resData.content;
+                        // 判断最后一句是ai的还是用户的，如果是ai的，则对最后一句的content进行替换
+                        if (appThis.chatDataList[appThis.chatDataList.length - 1].role == "ai") {
+                            appThis.chatDataList[appThis.chatDataList.length - 1].content.content = appThis.lastConversationContent;
+                        } else {
+                            appThis.chatDataList.push({
+                                role: "ai",
+                                content: {
+                                    type: "text",
+                                    content: appThis.lastConversationContent
+                                },
+                                actions: "",
+                                like_type: 0
+                            });
+                        }
+                        appThis.scrollToBottom(0);
+                    } else if (resData && resData.type == "stream_end") {
+                    } else if (resData && resData.type == "final") {
+                        if (resData.content.reason) {
+                            appThis.chatDataList.push({
+                                role: "ai",
+                                content: {
+                                    type: "text",
+                                    content: resData.content.reason
+                                },
+                                actions: "",
+                                like_type: 0
+                            });
+                            appThis.saveChatMsg({
+                                role: "ai",
+                                content: JSON.stringify({
+                                    type: "text",
+                                    content: resData.content.reason
+                                }),
+                                actions: ""
+                            });
+                        } else if (resData.content.type == "industry_list") {
+                            // 产业列表
+                            appThis.chatDataList.push({
+                                role: "ai",
+                                content: {
+                                    type: "industry_list",
+                                    content: resData.content
+                                },
+                                actions: "",
+                                like_type: 0
+                            });
+                            appThis.saveChatMsg({
+                                role: "ai",
+                                content: JSON.stringify({
+                                    type: "industry_list",
+                                    content: resData.content
+                                }),
+                                actions: ""
+                            });
+                        } else if (resData.content.type == "industry_intro") {
+                            // 产业介绍
+                            appThis.chatDataList.push({
+                                role: "ai",
+                                content: {
+                                    type: "industry_intro",
+                                    content: resData.content
+                                },
+                                actions: "",
+                                like_type: 0
+                            });
+                            appThis.saveChatMsg({
+                                role: "ai",
+                                content: JSON.stringify({
+                                    type: "industry_intro",
+                                    content: resData.content
+                                }),
+                                actions: ""
+                            });
+                        } else {
+                            appThis.chatDataList.push({
+                                role: "ai",
+                                content: {
+                                    type: "job_recommend",
+                                    content: resData.content
+                                },
+                                actions: "",
+                                like_type: 0
+                            });
+                            appThis.saveChatMsg({
+                                role: "ai",
+                                content: JSON.stringify({
+                                    type: "job_recommend",
+                                    content: resData.content
+                                }),
+                                actions: ""
+                            });
+                        }
+                        appThis.resetChatState();
+                        appThis.scrollToBottom(0);
+                    } else if (resData && resData.type == "error") {
+                        console.log(resData.error, "resData.error");
+                        appThis.chatDataList.push({
+                            role: "ai",
+                            content: {
+                                type: "text",
+                                content: resData.error
+                            },
+                            actions: "",
+                            like_type: 0
+                        });
+                        appThis.saveChatMsg({
+                            role: "ai",
+                            content: JSON.stringify({
+                                type: "text",
+                                content: resData.error
+                            }),
+                            actions: ""
+                        });
+                        appThis.resetChatState();
+                        appThis.scrollToBottom(0);
+                    }
+                },
+                // 用户停止输出
+                userClickStop: function () {
+                    var appThis = this;
+                    appThis.userStop = true;
+                    appThis.resetChatState();
+                    // 使用 AbortController 停止连接
+                    if (appThis.abortController) {
+                        appThis.abortController.abort();
+                    }
+                },
+                // 滚动到底部（带防抖）
+                scrollToBottom: function (height) {
+                    var appThis = this;
+                    // 清除之前的定时器
+                    if (appThis.scrollTimer) {
+                        clearTimeout(appThis.scrollTimer);
+                    }
+                    // 设置新的定时器，防抖处理
+                    appThis.scrollTimer = setTimeout(function () {
+                        var chatListDom = $(".client_ai_chat_right_list");
+                        var scrollHeight = chatListDom[0].scrollHeight;
+                        var containerHeight = chatListDom.height();
+                        chatListDom.animate({
+                            scrollTop: scrollHeight - containerHeight + height
+                        }, 200, function() {
+                            // 滚动完成后检查是否需要显示按钮
+                            var scrollTop = chatListDom.scrollTop();
+                            var currentScrollHeight = chatListDom[0].scrollHeight;
+                            var currentClientHeight = chatListDom.height();
+                            var isAtBottom = scrollTop + currentClientHeight >= currentScrollHeight - 1;
+                            appThis.showScrollToBottomBtn = !isAtBottom;
+                        });
+                    }, 200);
+                },
+                showLoading: function () {
+                    this.isLoading = true;
+                },
+                hideLoading: function () {
+                    this.isLoading = false;
+                },
+                // 重置聊天状态
+                resetChatState: function () {
+                    this.hideLoading();
+                    this.tool = "";
+                    this.aiIsEntering = false;
+                    this.lastConversationContent = '';
+                    this.userInputFileObj = null;
+                    this.userInput = '';
+                    this.userClickSendMessageString = '';
+                },
+                // 点赞/取消点赞
+                chatGood: function (index, item) {
+                    var appThis = this;
+                    cb_ajax("/ajax/aiassistor/likemessage", { message_id: item.id, like_type: item.like_type == 1 ? 0 : 1 }, function (res) {
+                        if (res.status == 1) {
+                            if (item.like_type == 1) {
+                                appThis.chatDataList[index].like_type = 0;
+                            } else {
+                                appThis.chatDataList[index].like_type = 1;
+                            }
+                        } else {
+                            layer.msg("操作失败，请稍后再试！", function () { });
+                            return false;
+                        }
+                    }, { hasBlock: 0 });
+                },
+                // 点踩/取消踩
+                chatBad: function (index, item) {
+                    var appThis = this;
+                    cb_ajax("/ajax/aiassistor/likemessage", { message_id: item.id, like_type: item.like_type == 2 ? 0 : 2 }, function (res) {
+                        if (res.status == 1) {
+                            if (item.like_type == 2) {
+                                appThis.chatDataList[index].like_type = 0;
+                            } else {
+                                appThis.chatDataList[index].like_type = 2;
+                            }
+                        } else {
+                            layer.msg("操作失败，请稍后再试！", function () { });
+                            return false;
+                        }
+                    }, { hasBlock: 0 });
+                },
+                // 通过后端接口保存聊天消息
+                saveChatMsg: function (data) {
+                    var appThis = this;
+                    var postData = {
+                        conversation_id: this.conversationId,
+                        assistant_type: "wenda",
+                        role: data.role,
+                        content: data.content,
+                        actions: data.actions ?? ""
+                    };
+                    cb_ajax("/ajax/aiassistor/savemessage", postData, function (res) {
+                        if (res.status == 1) {
+                            // 保存成功后，将chatDataList里id为空的，role跟postData的role相同的记录的id设置为res.data.id
+                            if (res.data.message_id) {
+                                appThis.chatDataList.forEach(function (item) {
+                                    if (!item.id && item.role == postData.role) {
+                                        item.id = res.data.message_id;
+                                    }
+                                });
+                            }
+                        }
+                    }, { hasLoad: 0, hasBlock: 0 });
+                },
+                // 文件上传
+                handleFileUploadClick: function () {
+                    this.$refs.fileInput.click();
+                },
+                // 文件选择
+                handleFileChange: function (event) {
+                    var appThis = this;
+                    var file = event.target.files[0];
+                    if (!file) return;
+
+                    // 检查文件类型
+                    var fileExtension = file.name.split(".").pop().toLowerCase();
+                    var allowedExtensions = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
+
+                    if (!allowedExtensions.includes(fileExtension)) {
+                        layer.msg("请上传正确的文件格式，目前支持pdf、doc、docx、jpg、jpeg、png格式");
+                        this.$refs.fileInput.value = ""; // 清空文件选择
+                        return false;
+                    }
+
+                    // 检查文件大小（10MB）
+                    if (file.size > 10 * 1024 * 1024) {
+                        layer.msg("文件大小不能超过10MB");
+                        this.$refs.fileInput.value = "";
+                        return false;
+                    }
+
+                    // 创建 FormData
+                    var formData = new FormData();
+                    formData.append("file", file);
+
+                    // 显示加载中
+                    var load2 = layui.layer.load(2);
+
+                    // 发送上传请求
+                    $.ajax({
+                        url: "/ajax/upload/cloudupload.html",
+                        type: "POST",
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function (res) {
+                            if (res.status == 1) {
+                                // layer.msg("上传成功");
+                                appThis.userInputFileObj = res.data;
+                                appThis.scrollToBottom(0);
+                            } else {
+                                // 显示错误信息
+                                layer.msg(res.msg || "上传失败");
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            layer.msg("上传失败，请稍后重试");
+                        },
+                        complete: function () {
+                            // 清理工作
+                            layui.layer.close(load2);
+                            appThis.$refs.fileInput.value = ""; // 清空文件选择，允许重新选择同一文件
+                        }
+                    });
+                },
+                // 添加图片预览方法
+                showImagePreview: function(imgSrc) {
+                    // 创建一个临时图片对象来获取图片的原始尺寸
+                    var img = new Image();
+                    img.src = imgSrc;
+                    
+                    img.onload = function() {
+                        var imgWidth = img.width;
+                        var imgHeight = img.height;
+                        
+                        // 获取屏幕尺寸
+                        var screenWidth = window.innerWidth;
+                        var screenHeight = window.innerHeight;
+                        
+                        // 计算图片在屏幕上的最大显示尺寸
+                        var maxWidth = screenWidth * 0.9; // 最大宽度为屏幕宽度的90%
+                        var maxHeight = screenHeight * 0.9; // 最大高度为屏幕高度的90%
+                        
+                        // 计算缩放比例
+                        var scale = Math.min(
+                            maxWidth / imgWidth,
+                            maxHeight / imgHeight,
+                            1 // 如果图片本身就比最大尺寸小，则不放大
+                        );
+                        
+                        // 计算最终显示尺寸
+                        var displayWidth = Math.round(imgWidth * scale);
+                        var displayHeight = Math.round(imgHeight * scale);
+                        
+                        // 使用layer弹窗显示图片
+                        layer.open({
+                            type: 1,
+                            title: false,
+                            closeBtn: 1,
+                            area: [displayWidth + 'px', displayHeight + 'px'], // 设置弹窗尺寸
+                            skin: 'layui-layer-nobg', // 没有背景色
+                            shadeClose: true,
+                            content: '<div class="image-preview-container" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">' +
+                                    '<img src="' + imgSrc + '" style="max-width:100%;max-height:100%;object-fit:contain;">' +
+                                    '</div>',
+                        });
+                    };
+                }
+            }
+        });
+    });
+</script>
+<script type="text/javascript">
+  function cal_rem() {
+    var dev_width = document.documentElement.clientWidth || document.body.clientWidth;
+    document.documentElement.style.fontSize = (dev_width / 1920) * 100 + "px";
+  }
+  cal_rem();
+  window.onresize = function () {
+    cal_rem();
+  };
+</script>
+<style type="text/css">
+	body {
+		overflow-x: hidden;
+	}
+	.gray_btn {
+        color: #666 ;
+        background-color: #e1e1e1 ;
+		display: inline-block;
+		width: 0.98rem;
+		font-size: 0.23rem;
+		line-height: 0.4rem;
+		text-align: center;
+		letter-spacing: 3px;
+		border-radius: 0.2rem;
+		-webkit-border-radius: 0.2rem;
+		-moz-border-radius: 0.2rem;
+		-o-border-radius: 0.2rem;
+		-ms-border-radius: 0.2rem;
+		margin-top: 0.45rem;
+    }
+    .btn_container {
+        text-align: center;
+    }
+
+    .btn_desc {
+        white-space: nowrap; 
+        font-size: 14px;
+        color: #3371ff;
+        overflow: hidden;
+        text-overflow: ellipsis; 
+    }
+</style>
+<div class="campus_joblist_wrap joblist_detail_wrap">
+	<div class="detail_cnt">
+		<div class="job_name">法务</div>
+		<div class="job_intro">上海市 青岛市 | 职能类</div>
+		<div class="job_subtitle">职位描述</div>
+		<div>
+			1、根据业务实际需要，拟订相应合同文本，并根据业务发展情况和经营过程中反应的问题不断优化；<br />
+2、负责部门文档管理，包括法务管理业务相关的各类文件、资料、档案等（含纸质、电子等形式）；<br />
+3、参与项目相关的日常沟通联络，往来函件的整理；<br />
+4、负责处理发生的的诉讼纠纷，庭前材料准备及方案论证，庭后编写报告并形成法律风险建议书下发业务部门；<br />
+5、对各部门进行法律培训，提高员工风险防范意识，同时普及基础法律知识。		</div>
+		<div class="job_subtitle">职位要求</div>
+		<div>
+			一、基础要求：<br />
+1、2027届应届毕业生，本科及以上学历，英语六级及以上；<br />
+2、法律等相关专业；<br />
+<br />
+二、技能要求：<br />
+1、有法律职业资格，精通民法、民事诉讼法、劳动法及劳动仲裁相关法规；<br />
+2、熟悉常用OFFICE办公软件；<br />
+3、对英语熟悉，看懂英语文件；<br />
+<br />
+三、素质要求：<br />
+1、性格外向、善于沟通、执行力强，表达能力好；<br />
+2、身体健康，品行端正，无任何不良行为记录或诚信记录。		</div>
+		
+		<div class="btn_container">
+							<a href="javascript:;" class="job_btn">投递</a>
+					</div>
+		
+	</div>
+</div>
+
+
+<script>
+	$(function(){
+        var isLogin = 0;
+        $('.job_btn').click(function(){
+            if (isLogin) {
+				cb_load('/client/campus/deliverresumepop/bu/38/id/60/fid/12/rid/61.html');
+				/*
+				cb_ajax('/client/campus/deliverresume/bu/38/id/60/fid/12/rid/61.html', [], function (data) {
+					if (data.status == 0 && !data.url) {
+						toastr.error(data.msg);
+					} else {
+						setTimeout(function(){
+							location.href = '/client/campus/deliverresume/bu/38/id/60/fid/12/rid/61.html';
+						}, 1);
+					}
+				}, {hasBlock: 0});
+				*/
+                //location.href = '/client/campus/deliverresume/bu/38/id/60/fid/12/rid/61.html';
+            } else {
+				location.href ='/client/login/index.html';
+            }
+        });
+	});
+</script>
+<div class="module_lessie_right cb-hide"></div>
+<div class="module_lessie_bottom cb-hide">
+    <div class="bg"></div>
+    <div class="content">
+        <div class="iconimg"></div>
+        <p class="font1">温馨提示：</p>
+        <p class="font2">为提升系统使用体验，请使用<a href="javascript:;" onclick="cb_download('/uploads/Chrome.exe')">谷歌</a>、<a href="javascript:;" onclick="cb_download('/uploads/Firefox.exe')">火狐</a>或者IE9及以上的浏览器。</p>
+    </div>
+    <i class="iconfont icon-close-line btnclose"></i>
+</div>
+<script>
+$(function(){
+    if(!$.support.leadingWhitespace){
+        $(".module_lessie_right").show();
+        $(".module_lessie_bottom").show();
+        $(".module_lessie_incontent").show(); 
+    }
+    $(".module_lessie_right").click(function(){
+        $(".module_lessie_right").animate({"right":"-130px"},"fast");
+        $(".module_lessie_bottom").animate({"bottom":"0"},"fast");
+    })
+    $(".module_lessie_bottom .btnclose").click(function(){
+        $(".module_lessie_right").animate({"right":"0px"},"fast");
+        $(".module_lessie_bottom").animate({"bottom":"-188px"},"fast");
+    })
+})
+</script>															 
+<div class=" cb-p-b-30 footerCnt footer_components_box" style="">
+	<div class="cb-g cb-p-t-30">
+		<p class="cb-text-c">
+			<a class="cb-inline cb-link-default" href="/client/home/aboutcb.html">关于我们</a>
+			<a class="cb-inline cb-text-default" href="javascript:;">&nbsp;|&nbsp;</a>
+			<a class="cb-inline cb-link-default" href="/client/home/partners.html">合作伙伴</a>
+			<a class="cb-inline cb-text-default" href="javascript:;">&nbsp;|&nbsp;</a>
+			<a class="cb-inline cb-link-default" href="/client/home/regagreement.html">注册协议</a>
+			<a class="cb-inline cb-text-default" href="javascript:;">&nbsp;|&nbsp;</a>
+			<a class="cb-inline cb-link-default" href="/client/home/contactus.html">联系我们</a>
+		</p>
+		<p class="cb-text-c cb-text-default cb-margin-top-sm">鲁ICP备09096283 Copyright ©2020 海尔集团 版权所有</p>
+	</div>
+</div>
+
+<script crossorigin="anonymous" src="//r.haier.net/assets/prod/dts-fe/kitchengod/0.2.51/index.js?scode=S00840"></script>
+</body>
+</html> 
