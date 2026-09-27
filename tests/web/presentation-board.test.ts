@@ -59,7 +59,8 @@ test("public API and page loader share the current repository without special Ru
   const jobs = await jobsPromise;
   assert.deepEqual(body.opportunities.map((item: { presentation_decision_id: string }) => item.presentation_decision_id).sort(),
     jobs.map((job) => job.decisionId).sort());
-  const detail = await api.handle(new Request(`http://presentation.local/api/presentation/v1/opportunities/${encodeURIComponent(jobs[0].candidateId)}`));
+  const candidateId = body.opportunities.find((item: { position_id: string }) => item.position_id === jobs[0].positionId).opportunity_candidate_id;
+  const detail = await api.handle(new Request(`http://presentation.local/api/presentation/v1/opportunities/${encodeURIComponent(candidateId)}`));
   assert.equal(detail.status, 200);
   const source = readFileSync("lib/presentation-web/loader.ts", "utf8");
   assert.doesNotMatch(source, /readFile|Run.?1|revision.?2|RELEVANCE_ASSESSMENT_MISSING|\.json["']/);

@@ -7,12 +7,12 @@ export const BOARD_STATUS_LABELS: Record<BoardStatus, string> = {
 
 export interface PresentationDisplayJob {
   readonly positionId: string;
-  readonly candidateId: string;
   readonly decisionId: string;
   readonly readModelId: string;
   readonly revision: number | null;
   readonly status: BoardStatus;
   readonly reasonCodes: readonly string[];
+  readonly reasonVisibility?: "COMPLETE" | "REDACTED";
   readonly employer: string;
   readonly title: string;
   readonly location: string;
@@ -41,13 +41,25 @@ function link(value: PresentationField<string>): string | null {
   } catch { return null; }
 }
 
-export function toPresentationDisplayJob(model: PresentationReadModel): PresentationDisplayJob {
+export type PresentationDisplayInput = Pick<PresentationReadModel,
+  "decision_revision" | "presentation_status" | "reason_codes" | "employer" | "position_title" | "locations"
+  | "recruitment_year" | "recruitment_batch" | "announcement_link" | "application_link"> & {
+    readonly position_id: string | null;
+    readonly presentation_decision_id: string;
+    readonly presentation_read_model_id: string;
+    readonly updated_at: string;
+    readonly requirement_summary: PresentationField<readonly {
+      readonly dimension: string; readonly subject_scope: string; readonly polarity: string; readonly certainty: string;
+    }[]>;
+  };
+
+export function toPresentationDisplayInputJob(model: PresentationDisplayInput): PresentationDisplayJob {
   if (!model.position_id || model.presentation_status === "NOT_DISPLAY") {
     throw new Error("Read-only public position collection required");
   }
   const summary = model.requirement_summary.state === "AVAILABLE" ? model.requirement_summary.value : null;
   return {
-    positionId: model.position_id, candidateId: model.opportunity_candidate_id,
+    positionId: model.position_id,
     decisionId: model.presentation_decision_id, readModelId: model.presentation_read_model_id,
     revision: model.decision_revision, status: model.presentation_status,
     reasonCodes: [...model.reason_codes], employer: field(model.employer) ?? "尚未取得",
@@ -59,6 +71,10 @@ export function toPresentationDisplayJob(model: PresentationReadModel): Presenta
     announcementLink: link(model.announcement_link), applicationLink: link(model.application_link),
     updatedAt: model.updated_at
   };
+}
+
+export function toPresentationDisplayJob(model: PresentationReadModel): PresentationDisplayJob {
+  return toPresentationDisplayInputJob(model);
 }
 
 function compare(left: string, right: string) { return left < right ? -1 : left > right ? 1 : 0; }

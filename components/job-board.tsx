@@ -23,7 +23,8 @@ export function JobDetails({ job }: { job: PresentationDisplayJob }) {
       <div><dt>要求摘要</dt><dd>{job.requirement}</dd></div><div><dt>更新时间</dt><dd>{job.updatedAt}</dd></div>
     </dl>
     <details><summary>查看决策追溯信息</summary><p>决策：{job.decisionId}</p><p>版本：{job.revision ?? "尚未取得"}</p>
-      <p>ReadModel：{job.readModelId}</p><p>原因：{job.reasonCodes.join("、") || "未列明"}</p></details>
+      <p>ReadModel：{job.readModelId}</p><p>原因：{job.reasonCodes.join("、") || "未列明"}</p>
+      {job.reasonVisibility === "REDACTED" && <p>部分追溯原因未公开</p>}</details>
     <OfficialLinks job={job} />
   </>;
 }
