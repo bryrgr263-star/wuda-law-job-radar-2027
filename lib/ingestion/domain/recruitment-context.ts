@@ -995,7 +995,7 @@ function semanticText(value: TraceableText | undefined) {
 }
 
 function compareCanonical(left: unknown, right: unknown) {
-  return stableSerialize(left).localeCompare(stableSerialize(right));
+  return stableSerialize(left).localeCompare(stableSerialize(right), "en-US");
 }
 
 function uniqueSorted(values: readonly string[]) {
