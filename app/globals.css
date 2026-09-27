@@ -147,3 +147,6 @@ footer strong { color: white; } footer p { margin: 5px 0 0; }
   .job-card { grid-template-columns: 1fr; }.job-card-side { border-left: 0; border-top: 1px solid var(--line); }.deadline { align-self: flex-start; }.rule-grid { grid-template-columns: 1fr; }.detail-grid { grid-template-columns: 1fr; }.detail-grid div { border-right: 0; }.detail-grid div:nth-last-child(-n+2) { border-bottom: 1px solid var(--line); }.detail-grid div:last-child { border-bottom: 0; }
   footer { align-items: flex-start; gap: 20px; flex-direction: column; }
 }
+.presentation-board .job-title-button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.presentation-board .section-heading .secondary-button { color: var(--navy); border: 1px solid var(--line); background: white; }
+.presentation-board .detail-modal p, .presentation-board .detail-modal dd { overflow-wrap: anywhere; }
