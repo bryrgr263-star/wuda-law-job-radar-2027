@@ -346,6 +346,18 @@ test("Presentation V2 comparison and current selection remain within the existin
   assert.doesNotMatch(api, /buildPresentationSemanticProjection|createPresentationDecisionBoundary|\.decide\(/u);
 });
 
+test("production composition preparation adds no business owner, legacy dependency, or completeness assertion", async () => {
+  const preparation = await readFile(path.join(repositoryRoot, "lib", "production-persistence", "production-source-composition-input.ts"), "utf8");
+  assert.doesNotMatch(preparation, /new Map|new WeakSet|createCanonicalArtifactRegistryAuthority|CandidateProfile|match_score|non_law_rule|is_published|crawler|scoring|live-canary|read-only-api|fetch\(/u);
+  assert.match(preparation, /inventory_completeness_status: "OPEN_UNRESOLVED"/u);
+  assert.doesNotMatch(preparation, /inventory_completeness_status: "CLOSED"|OFFICIAL_AUTHORITATIVE/u);
+  const binding = await readFile(path.join(repositoryRoot, "lib", "production-persistence", "production-trusted-chain-execution-binding.ts"), "utf8");
+  assert.match(binding, /kind: "SOURCE_COMPOSITION_MATERIALIZE"/u);
+  assert.match(binding, /composition\?\.status === "COMPLETE"/u);
+  assert.match(binding, /requirement_set\.completeness\.status === "COMPLETE" && candidateEvidence/u);
+  assert.doesNotMatch(binding, /CANDIDATE_EVIDENCE_ISSUE|CANDIDATE_EVIDENCE_MATERIALIZE_SYNTHETIC|new .*Tracker/u);
+});
+
 test("core business layers do not depend on namespaced adapter metadata", async () => {
   const forbiddenLayers = new Set([
     "normalization",

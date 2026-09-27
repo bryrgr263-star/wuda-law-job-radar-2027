@@ -11,6 +11,8 @@ import type {
 import { ELIGIBILITY_ASSESSMENT_RULE_VERSION, PREDICATE_RESOLUTION_RULE_VERSION as predicateRuleVersion } from "../ingestion";
 import type { PositionBoundRequirementSetMaterializationResult } from "../ingestion/pipeline/position-bound-requirement-set";
 import type { ZeroCostProductionTrustedRunContext } from "./zero-cost-production-composition-root";
+import { prepareProductionSourceCompositionInput } from "./production-source-composition-input";
+import type { SourceCompositionResult } from "../ingestion";
 
 export async function executeProductionTrustedChainBinding(context: ZeroCostProductionTrustedRunContext) {
   for (const candidate of context.source_occurrences) {
@@ -38,7 +40,12 @@ export async function executeProductionTrustedChainBinding(context: ZeroCostProd
     const opportunity = await context.execute({ kind: "PBOV_MATERIALIZE",
       position_version_id: position.position_version.position_version_id,
       source_references: [{ source_occurrence_version_id: sourceId }] }) as PositionBoundOpportunityTrackingResult;
-    const composition = uniqueTrustedComposition(context, opportunity.opportunity_version.opportunity_version_id);
+    const opportunityVersionId = opportunity.opportunity_version.opportunity_version_id;
+    const composition = uniqueTrustedComposition(context, opportunityVersionId)
+      ?? await context.execute({ kind: "SOURCE_COMPOSITION_MATERIALIZE", input: {
+        opportunity_version_id: opportunityVersionId,
+        composition_input: prepareProductionSourceCompositionInput(context, opportunityVersionId)
+      } }) as SourceCompositionResult;
     const relevance = composition ? await context.execute({ kind: "LEGAL_RELEVANCE_ASSESS", input: {
       opportunity_version_id: opportunity.opportunity_version.opportunity_version_id,
       source_composition_id: composition.source_composition_id,
@@ -107,7 +114,8 @@ function uniqueTrustedComposition(
       const composition = context.resolvers.source_compositions.resolve(id as never);
       return composition?.opportunity_version_id === opportunityVersionId ? [composition] : [];
     });
-  return compositions.length === 1 ? compositions[0]! : null;
+  if (compositions.length > 1) throw new Error("EVIDENCE_BLOCKED: ambiguous trusted SourceComposition selection");
+  return compositions[0] ?? null;
 }
 
 function uniqueTrustedCandidateEvidence(context: ZeroCostProductionTrustedRunContext) {
