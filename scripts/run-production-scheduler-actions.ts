@@ -49,15 +49,23 @@ async function main() {
       expected_starting_sha: checkoutHead
     });
     const report = {
-      status: result.batch_status === "FAILED" ? "FAILED" : "COMPLETED",
+      status: result.effective_batch_status === "SUCCESS" ? "COMPLETED" : "FAILED",
       starting_sha: result.starting_sha,
       ending_sha: result.ending_sha,
       batch_id: result.batch_id,
       batch_status: result.batch_status,
+      effective_batch_status: result.effective_batch_status,
       source_execution_ids: result.source_execution_ids,
-      source_outcomes: result.manifest.source_executions.map(item => ({
-        source_execution_id: item.source_execution_id, status: item.outcome_status
-      })),
+      source_outcomes: result.manifest.source_executions.map(item => {
+        const diagnostic = result.source_diagnostics.find(value =>
+          value.source_execution_id === item.source_execution_id);
+        return { source_execution_id: item.source_execution_id,
+          acquisition_status: item.outcome_status,
+          trusted_chain_status: diagnostic?.trusted_chain_status ?? "UNKNOWN",
+          status: item.effective_status ?? (diagnostic?.trusted_chain_status === "FAILED"
+            ? "FAILED" : item.outcome_status),
+          trusted_chain_failure: diagnostic?.trusted_chain_failure ?? null };
+      }),
       position_ids: result.position_ids,
       presentation_decision_ids: result.presentation_decision_ids,
       presentation_read_model_ids: result.presentation_read_model_ids,
@@ -68,7 +76,7 @@ async function main() {
     };
     writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.log(JSON.stringify(report));
-    if (result.batch_status === "FAILED") process.exitCode = 1;
+    if (result.effective_batch_status !== "SUCCESS") process.exitCode = 1;
   } catch (error) {
     const report: SafeFailureReport = { status: "FAILED", error_code: safeErrorCode(error) };
     writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");

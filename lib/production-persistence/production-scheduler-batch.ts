@@ -11,8 +11,10 @@ import { enumerateScheduledSources, type ScheduledSource } from "./scheduler-sou
 import {
   appendSchedulerBatchManifest,
   deriveSchedulerBatchStatus,
+  effectiveSourceExecutionStatus,
   sealSchedulerBatchManifest,
   SCHEDULER_POLICY_VERSION,
+  TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION,
   type SchedulerBatchManifest,
   type SchedulerDeferredSource,
   type SchedulerSourceExecutionReference
@@ -127,12 +129,12 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
         if (concurrent) return { manifest: concurrent, manifest_commit: batchCommit(options, input.batch_id), reused: true };
         const byOutcome = new Map(state.source_execution_outcomes.map(outcome => [outcome.source_execution_id, outcome]));
         const byRun = new Map(state.runs.map(run => [run.run_id, run]));
-        const sourceExecutions: SchedulerSourceExecutionReference[] = committed.map(item => {
+        const resolved = committed.map(item => {
           const outcome = byOutcome.get(item.source_execution_id);
           if (!outcome || canonicalHash([...outcome.continuous_authorization_ids].sort()) !== canonicalHash([...item.authorization_ids].sort())) {
             throw new Error("SCHEDULER_SOURCE_OUTCOME_MISSING");
           }
-          return { source_definition_id: outcome.source_definition_id,
+          return { outcome, reference: { source_definition_id: outcome.source_definition_id,
             recruitment_endpoint_id: outcome.recruitment_endpoint_id,
             ...(item.authorization_ids.length === 1
               ? { authorization_id: item.authorization_ids[0]! }
@@ -141,11 +143,19 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
             result_commit: item.result_commit,
             outcome_status: outcome.status,
             outcome_integrity_hash: outcome.integrity_hash,
-            presentation_read_model_ids: byRun.get(item.source_execution_id)?.presentation_read_model_ids ?? [] };
+            presentation_read_model_ids: byRun.get(item.source_execution_id)?.presentation_read_model_ids ?? [] } };
         });
+        const hasTrustedFailure = resolved.some(item => item.outcome.trusted_chain_status === "FAILED"
+          || (item.outcome.status === "SUCCESS" && item.outcome.trusted_chain_status !== "COMMITTED"));
+        const sourceExecutions: SchedulerSourceExecutionReference[] = resolved.map(({ outcome, reference }) => ({
+          ...reference,
+          ...(hasTrustedFailure ? { trusted_chain_status: outcome.trusted_chain_status,
+            effective_status: effectiveSourceExecutionStatus(outcome) } : {})
+        }));
         const manifest = sealSchedulerBatchManifest({
           batch_id: input.batch_id,
-          scheduler_policy_version: sourceExecutions.some(item => item.authorization_ids)
+          scheduler_policy_version: hasTrustedFailure ? TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION
+            : sourceExecutions.some(item => item.authorization_ids)
             ? "production-scheduler-batch/2.0.0" : SCHEDULER_POLICY_VERSION,
           initial_head: initialHead,
           manifest_parent: state.committed_head,
@@ -154,7 +164,7 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
           actor: input.actor,
           source_executions: sourceExecutions,
           deferred_sources: deferred,
-          batch_status: deriveSchedulerBatchStatus(sourceExecutions.map(item => item.outcome_status), deferred.length),
+          batch_status: deriveSchedulerBatchStatus(sourceExecutions.map(item => item.effective_status ?? item.outcome_status), deferred.length),
           presentation_publish_readiness: sourceExecutions.some(item => item.presentation_read_model_ids.length)
             ? "READY" : "NO_NEW_MODEL",
           public_website_published: false

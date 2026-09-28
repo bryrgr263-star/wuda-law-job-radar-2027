@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   appendSchedulerBatchManifest,
   deriveSchedulerBatchStatus,
+  effectiveSourceExecutionStatus,
   readSchedulerBatchManifests,
   sealSchedulerBatchManifest
 } from "../../lib/production-persistence/scheduler-batch-manifest";
@@ -18,6 +19,38 @@ test("batch status is derived only from retained source outcomes and deferrals",
   assert.equal(deriveSchedulerBatchStatus(["PARTIAL", "FAILED"], 0), "FAILED");
   assert.equal(deriveSchedulerBatchStatus(["SUCCESS"], 1), "PARTIAL");
   assert.equal(deriveSchedulerBatchStatus([], 1), "FAILED");
+});
+
+test("effective source status treats a trusted-chain failure as failure without changing acquisition evidence", () => {
+  const outcome = { status: "SUCCESS", trusted_chain_status: "FAILED" } as Parameters<typeof effectiveSourceExecutionStatus>[0];
+  assert.equal(effectiveSourceExecutionStatus(outcome), "FAILED");
+  assert.equal(outcome.status, "SUCCESS");
+  assert.equal(deriveSchedulerBatchStatus(["NOT_MODIFIED", effectiveSourceExecutionStatus(outcome)], 0), "PARTIAL");
+  assert.equal(deriveSchedulerBatchStatus([effectiveSourceExecutionStatus(outcome)], 0), "FAILED");
+});
+
+test("v3 batch seal rejects a successful aggregate when its trusted-chain source failed", () => {
+  const base = {
+    batch_id: "trusted-failure-batch",
+    scheduler_policy_version: "production-scheduler-batch/3.0.0" as const,
+    initial_head: "a".repeat(40), manifest_parent: "a".repeat(40),
+    started_at: AT, completed_at: AT, actor: "scheduler",
+    source_executions: [{ source_definition_id: "source", recruitment_endpoint_id: "endpoint",
+      authorization_id: "authorization", source_execution_id: "execution",
+      result_commit: "b".repeat(40), outcome_status: "SUCCESS" as const,
+      trusted_chain_status: "FAILED" as const, effective_status: "FAILED" as const,
+      outcome_integrity_hash: "c".repeat(64), presentation_read_model_ids: [] }],
+    deferred_sources: [], presentation_publish_readiness: "NO_NEW_MODEL" as const,
+    public_website_published: false as const
+  };
+  assert.throws(() => sealSchedulerBatchManifest({ ...base, batch_status: "SUCCESS" }), /SEAL_INVALID/u);
+  assert.throws(() => sealSchedulerBatchManifest({ ...base,
+    source_executions: [{ ...base.source_executions[0]!, effective_status: "SUCCESS" as const }],
+    batch_status: "SUCCESS" }), /SCHEMA_INVALID/u);
+  const manifest = sealSchedulerBatchManifest({ ...base, batch_status: "FAILED" });
+  assert.equal(manifest.schema_version, "production-scheduler-batch/3.0.0");
+  assert.equal(manifest.source_executions[0]?.outcome_status, "SUCCESS");
+  assert.equal(manifest.source_executions[0]?.effective_status, "FAILED");
 });
 
 test("append-only batch manifest is sealed, restart-readable, idempotent and collision-safe", async () => {

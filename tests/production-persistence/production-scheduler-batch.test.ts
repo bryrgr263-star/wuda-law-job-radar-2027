@@ -145,6 +145,39 @@ test("failure, partial and suspicious-empty source outcomes remain isolated and 
   } finally { repository.remove(); }
 });
 
+test("a trusted-chain failure cannot turn successful acquisition into a successful batch", async () => {
+  const repository = await twoSourceRemote();
+  try {
+    let clock = AT;
+    let changed = false;
+    const options = { remote_url: repository.remote, branch: "main", stream_id: "scheduler-trusted-failure",
+      execution_mode: "TEST_ONLY" as const, continuous_scope: "CONTROLLED_TEST" as const,
+      controlled_continuous_transport: { async execute(request: { locator: string }): Promise<TransportResponse> {
+        const bytes = new TextEncoder().encode(`Controlled source ${request.locator}${changed && request.locator === SECOND_URL ? " changed" : ""}`);
+        return { status: "SUCCESS", bytes, content_sha256: createHash("sha256").update(bytes).digest("hex") as never,
+          responded_at: clock as never, mime_type: "text/html", http_status: 200, headers: {} };
+      } }, now: () => clock, commit_identity: identity };
+    const root = bootstrapZeroCostProductionCompositionRoot(options);
+    await root.issueContinuousAuthorization({ allowlist_entry_id: TARGET, effective_from: AT,
+      min_interval_seconds: 60, actor: "controlled-reviewer" });
+    await root.issueContinuousAuthorization({ allowlist_entry_id: SECOND_TARGET, effective_from: AT,
+      min_interval_seconds: 60, actor: "controlled-reviewer" });
+    const scheduler = bootstrapProductionSchedulerBatch({ ...options, resolve_adapter: controlledAdapter });
+    const first = await scheduler.runBatch({ batch_id: "trusted-chain-first", actor: "scheduler", started_at: AT });
+    assert.equal(first.manifest.batch_status, "SUCCESS");
+    clock = LATER;
+    changed = true;
+    const result = await scheduler.runBatch({ batch_id: "trusted-chain-failure", actor: "scheduler", started_at: LATER });
+    const restored = await root.restore();
+    assert.equal(result.manifest.batch_status, "PARTIAL");
+    assert.deepEqual(result.manifest.source_executions.map(item => item.outcome_status), ["NOT_MODIFIED", "SUCCESS"]);
+    assert.deepEqual(result.manifest.source_executions.map(item => item.effective_status), ["NOT_MODIFIED", "FAILED"]);
+    assert.equal(restored.source_execution_outcomes.at(-1)?.trusted_chain_failure?.stage, "SOURCE_DISCOVERY_SUPPORT_VERIFY");
+    assert.equal(restored.source_execution_outcomes.at(-1)?.trusted_chain_failure?.error_code, "SOV_DISCOVERY_SUPPORT_RAW_CHANGED");
+    assert.equal(restored.scheduler_batches.at(-1)?.batch_status, result.manifest.batch_status);
+  } finally { repository.remove(); }
+});
+
 test("official closed JSON empty reaches CONFIRMED_EMPTY only through Production Root and P1 guard", async () => {
   const repository = await jsonSourceRemote();
   try {

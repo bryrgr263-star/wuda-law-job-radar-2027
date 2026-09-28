@@ -10,6 +10,8 @@ import type {
   SchedulerBatchManifest,
   SchedulerBatchStatus
 } from "../production-persistence/scheduler-batch-manifest";
+import { deriveSchedulerBatchStatus, effectiveSourceExecutionStatus } from "../production-persistence/scheduler-batch-manifest";
+import type { SourceExecutionOutcome, TrustedChainFailureDiagnostic } from "../production-persistence/source-execution-outcome";
 
 export type PublicationHandoffStatus = "NOT_REQUIRED" | "READY" | "PUBLISHED" | "RETRY_REQUIRED";
 
@@ -25,9 +27,13 @@ export interface ProductionSchedulerAutomationResult {
   readonly ending_sha: string;
   readonly batch_id: string;
   readonly batch_status: SchedulerBatchStatus;
+  readonly effective_batch_status: SchedulerBatchStatus;
   readonly manifest_commit: string;
   readonly manifest: SchedulerBatchManifest;
   readonly source_execution_ids: readonly string[];
+  readonly source_diagnostics: readonly { readonly source_execution_id: string;
+    readonly trusted_chain_status: SourceExecutionOutcome["trusted_chain_status"];
+    readonly trusted_chain_failure: TrustedChainFailureDiagnostic | null }[];
   readonly position_ids: readonly string[];
   readonly presentation_decision_ids: readonly string[];
   readonly presentation_read_model_ids: readonly string[];
@@ -63,14 +69,28 @@ export async function executeProductionSchedulerAutomation(
     return model;
   });
   const publicationHandoff = await handoffPublication(restored, after.read_models, publisher);
+  const byOutcome = new Map(after.source_execution_outcomes.map(outcome => [outcome.source_execution_id, outcome]));
+  const effectiveBatchStatus = deriveSchedulerBatchStatus(restored.source_executions.map(item => {
+    const outcome = byOutcome.get(item.source_execution_id);
+    if (!outcome) throw new Error("ACTIONS_POST_PUSH_SOURCE_OUTCOME_MISSING");
+    return effectiveSourceExecutionStatus(outcome);
+  }), restored.deferred_sources.length);
   return Object.freeze({
     starting_sha: before.committed_head,
     ending_sha: after.committed_head,
     batch_id: restored.batch_id,
     batch_status: restored.batch_status,
+    effective_batch_status: effectiveBatchStatus,
     manifest_commit: scheduled.manifest_commit,
     manifest: structuredClone(restored),
     source_execution_ids: restored.source_executions.map(item => item.source_execution_id),
+    source_diagnostics: restored.source_executions.map(item => {
+      const outcome = byOutcome.get(item.source_execution_id);
+      if (!outcome) throw new Error("ACTIONS_POST_PUSH_SOURCE_OUTCOME_MISSING");
+      return { source_execution_id: item.source_execution_id,
+        trusted_chain_status: outcome.trusted_chain_status,
+        trusted_chain_failure: outcome.trusted_chain_failure ?? null };
+    }),
     position_ids: [...new Set(selectedModels.flatMap(model => model.position_id ? [model.position_id] : []))],
     presentation_decision_ids: [...new Set(selectedModels.map(model => model.presentation_decision_id))],
     presentation_read_model_ids: readModelIds,

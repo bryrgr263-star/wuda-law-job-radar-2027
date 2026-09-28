@@ -41,5 +41,21 @@ test("source outcome writer is sealed, idempotent for identical bytes, and colli
     assert.throws(() => writeSourceExecutionOutcome(directory, {
       ...outcome, integrity_hash: "0".repeat(64)
     }), /seal mismatch/u);
+    const failedChain = sealSourceExecutionOutcome({ ...content,
+      source_execution_id: "controlled-trusted-failure",
+      status: "SUCCESS", trusted_chain_status: "FAILED",
+      acquisition_evidence: { ...content.acquisition_evidence, status: "SUCCESS" },
+      trusted_chain_failure: { stage: "SOURCE_DISCOVERY_SUPPORT_VERIFY",
+        error_code: "SOV_DISCOVERY_SUPPORT_RAW_CHANGED", subject_id: "source-occurrence-version:test:1" }
+    });
+    assert.equal(failedChain.schema_version, "production-source-execution-outcome/3.0.0");
+    writeSourceExecutionOutcome(directory, failedChain);
+    assert.throws(() => writeSourceExecutionOutcome(directory, {
+      ...failedChain, trusted_chain_failure: { ...failedChain.trusted_chain_failure!, subject_id: "different" }
+    }), /seal mismatch/u);
+    assert.throws(() => writeSourceExecutionOutcome(directory, sealSourceExecutionOutcome({
+      ...content, source_execution_id: "invalid-diagnostic", trusted_chain_status: "NOT_RUN",
+      trusted_chain_failure: failedChain.trusted_chain_failure
+    })), /schema mismatch/u);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

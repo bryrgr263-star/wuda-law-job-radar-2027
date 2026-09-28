@@ -196,6 +196,8 @@ test("production Actions entrypoint is fail-closed and contains no Canary or Leg
   const combined = `${entrypoint}\n${registry}\n${automation}`;
   assert.match(combined, /PRODUCTION_SCHEDULER_ACTIVATION/u);
   assert.match(entrypoint, /ACTIONS_CHECKOUT_HEAD_MISMATCH/u);
+  assert.match(entrypoint, /result\.effective_batch_status !== "SUCCESS"/u);
+  assert.match(entrypoint, /trusted_chain_failure/u);
   assert.doesNotMatch(combined, /live-canary|crawler|scoring|sync-jobs|jobs\.ts|match_score|non_law_rule/iu);
   assert.doesNotMatch(combined, /CandidateProfile|candidate_evidence/iu);
   assert.doesNotMatch(combined, /from "\.\.\/production-persistence"/u);

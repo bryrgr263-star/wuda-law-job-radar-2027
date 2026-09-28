@@ -340,9 +340,12 @@ export function bootstrapZeroCostProductionCompositionRoot(
         readonly acquisition_run_ids: readonly string[];
         readonly acquisition_bundle_hashes: readonly string[];
       } | null = null;
+      let trustedFailureSubjectId: string | null = null;
+      let trustedFailureStage: "SOURCE_DISCOVERY_SUPPORT_VERIFY" | "POST_ACQUISITION_EXECUTION" = "POST_ACQUISITION_EXECUTION";
       const retainedModels: PresentationReadModel[] = [];
       const retainedOutcomes: NonNullable<ZeroCostCommittedRunManifest["retained_outcome_references"]>[number][] = [];
-      const commitAcquisitionOutcome = async (trustedChainStatus: SourceExecutionOutcome["trusted_chain_status"]) => {
+      const commitAcquisitionOutcome = async (trustedChainStatus: SourceExecutionOutcome["trusted_chain_status"],
+        failure?: NonNullable<SourceExecutionOutcome["trusted_chain_failure"]>) => {
         if (!acquisitionEvidence || !rawPersistenceForOutcome || !expectedParent) {
           throw new Error("Verified acquisition evidence is unavailable for source outcome commit");
         }
@@ -389,7 +392,8 @@ export function bootstrapZeroCostProductionCompositionRoot(
           raw_blob_ids: rawBlobIds,
           snapshot_ids: snapshotIds,
           extracted_record_ids: extractedRecordIds,
-          ...(requestPlan ? { request_plan: requestPlan } : {})
+          ...(requestPlan ? { request_plan: requestPlan } : {}),
+          ...(failure ? { trusted_chain_failure: failure } : {})
         });
         rawPersistenceForOutcome.prepareAtomicCommit(expectedParent);
         writeSourceExecutionOutcome(checkoutPath, outcome);
@@ -828,12 +832,16 @@ export function bootstrapZeroCostProductionCompositionRoot(
           });
           if (current && proposal && !proposal.version_created
               && (current.snapshot.snapshot_id !== snapshot.snapshot_id || current.extracted_record.extracted_record_id !== record.extracted_record_id)) {
+            trustedFailureStage = "SOURCE_DISCOVERY_SUPPORT_VERIFY";
+            trustedFailureSubjectId = current.version.source_occurrence_version_id;
             const verified = await trusted.root.execute({
               kind: "SOURCE_DISCOVERY_SUPPORT_VERIFY",
               input: { schema_version: SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION, sov_id: current.version.source_occurrence_version_id,
                 snapshot_id: snapshot.snapshot_id, extracted_record_id: record.extracted_record_id, source_role: sourceInput.source_role }
             }, metadata) as { readonly support: { readonly support_id: string } };
             sourceOccurrences.push({ ...current, discovery_support_id: verified.support.support_id });
+            trustedFailureStage = "POST_ACQUISITION_EXECUTION";
+            trustedFailureSubjectId = null;
             continue;
           }
           sourceOccurrences.push(await trusted.root.execute({
@@ -982,7 +990,13 @@ export function bootstrapZeroCostProductionCompositionRoot(
             }
           } catch {
             try {
-              await commitAcquisitionOutcome("FAILED");
+              await commitAcquisitionOutcome("FAILED", {
+                stage: trustedFailureStage,
+                error_code: trustedFailureStage === "SOURCE_DISCOVERY_SUPPORT_VERIFY"
+                  && errorMessage(error) === "Raw changed; identical normalized text is not sufficient mismatch; support reuse rejected"
+                  ? "SOV_DISCOVERY_SUPPORT_RAW_CHANGED" : "TRUSTED_CHAIN_EXECUTION_FAILED",
+                subject_id: trustedFailureSubjectId ?? input.run_id
+              });
               squashAndCommit(checkoutPath, expectedParent, input.run_id, commitIdentity, true);
               committedHead = git(checkoutPath, "rev-parse", "HEAD").trim();
               assertRemoteHead(remoteUrl, branch, expectedParent);

@@ -10,6 +10,7 @@ import type { SourceExecutionOutcome, SourceExecutionStatus } from "./source-exe
 export const SCHEDULER_BATCH_SCHEMA_VERSION = "production-scheduler-batch/1.0.0" as const;
 export const SCHEDULER_POLICY_VERSION = "production-scheduler-batch/1.0.0" as const;
 export const MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION = "production-scheduler-batch/2.0.0" as const;
+export const TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION = "production-scheduler-batch/3.0.0" as const;
 
 export type SchedulerBatchStatus = "SUCCESS" | "PARTIAL" | "FAILED";
 export type SchedulerDeferredReason = "CADENCE_DENIED" | "PENDING_GATE_DENIED"
@@ -21,6 +22,8 @@ interface SchedulerSourceExecutionBase {
   readonly source_execution_id: string;
   readonly result_commit: string;
   readonly outcome_status: SourceExecutionStatus;
+  readonly trusted_chain_status?: SourceExecutionOutcome["trusted_chain_status"];
+  readonly effective_status?: SourceExecutionStatus;
   readonly outcome_integrity_hash: string;
   readonly presentation_read_model_ids: readonly string[];
 }
@@ -38,9 +41,11 @@ export interface SchedulerDeferredSource {
 }
 
 export interface SchedulerBatchManifest {
-  readonly schema_version: typeof SCHEDULER_BATCH_SCHEMA_VERSION | typeof MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION;
+  readonly schema_version: typeof SCHEDULER_BATCH_SCHEMA_VERSION | typeof MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION
+    | typeof TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION;
   readonly batch_id: string;
-  readonly scheduler_policy_version: typeof SCHEDULER_POLICY_VERSION | typeof MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION;
+  readonly scheduler_policy_version: typeof SCHEDULER_POLICY_VERSION | typeof MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION
+    | typeof TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION;
   readonly initial_head: string;
   readonly manifest_parent: string;
   readonly started_at: string;
@@ -61,10 +66,22 @@ export function deriveSchedulerBatchStatus(statuses: readonly SourceExecutionSta
   return acceptable > 0 ? "PARTIAL" : "FAILED";
 }
 
+export function effectiveSourceExecutionStatus(outcome: SourceExecutionOutcome): SourceExecutionStatus {
+  return effectiveStatus(outcome.status, outcome.trusted_chain_status);
+}
+
+function effectiveStatus(status: SourceExecutionStatus,
+  trustedChainStatus: SourceExecutionOutcome["trusted_chain_status"]): SourceExecutionStatus {
+  if (trustedChainStatus === "FAILED" || (status === "SUCCESS" && trustedChainStatus !== "COMMITTED")) return "FAILED";
+  return status;
+}
+
 export function sealSchedulerBatchManifest(input: Omit<SchedulerBatchManifest, "schema_version" | "integrity_hash">): SchedulerBatchManifest {
   const content = {
-    schema_version: input.source_executions.some(item => item.authorization_ids)
-      ? MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION : SCHEDULER_BATCH_SCHEMA_VERSION,
+    schema_version: input.source_executions.some(item => item.effective_status)
+      ? TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION
+      : input.source_executions.some(item => item.authorization_ids)
+        ? MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION : SCHEDULER_BATCH_SCHEMA_VERSION,
     batch_id: input.batch_id,
     scheduler_policy_version: input.scheduler_policy_version,
     initial_head: input.initial_head,
@@ -162,7 +179,8 @@ function assertSchedulerBatchManifest(manifest: SchedulerBatchManifest) {
     "started_at", "completed_at", "actor", "source_executions", "deferred_sources", "batch_status",
     "presentation_publish_readiness", "public_website_published", "integrity_hash"];
   if (!manifest || typeof manifest !== "object" || Object.keys(manifest).sort().join(",") !== keys.sort().join(",")
-    || ![SCHEDULER_BATCH_SCHEMA_VERSION, MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION].includes(manifest.schema_version)
+    || ![SCHEDULER_BATCH_SCHEMA_VERSION, MULTI_TARGET_SCHEDULER_BATCH_SCHEMA_VERSION,
+      TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION].includes(manifest.schema_version)
     || manifest.scheduler_policy_version !== manifest.schema_version
     || [manifest.batch_id, manifest.initial_head, manifest.manifest_parent, manifest.started_at,
       manifest.completed_at, manifest.actor].some(value => typeof value !== "string" || !value.trim())
@@ -178,10 +196,18 @@ function assertSchedulerBatchManifest(manifest: SchedulerBatchManifest) {
     || completedAt < startedAt) throw new Error("SCHEDULER_BATCH_TIME_INVALID");
   const { integrity_hash: hash, ...content } = manifest;
   if (hash !== canonicalHash(content)
-    || manifest.batch_status !== deriveSchedulerBatchStatus(manifest.source_executions.map(item => item.outcome_status), manifest.deferred_sources.length)
+    || manifest.batch_status !== deriveSchedulerBatchStatus(manifest.source_executions.map(item =>
+      manifest.schema_version === TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION
+        ? item.effective_status ?? "FAILED" : item.outcome_status), manifest.deferred_sources.length)
     || manifest.presentation_publish_readiness !== (manifest.source_executions.some(item => item.presentation_read_model_ids.length)
       ? "READY" : "NO_NEW_MODEL")) throw new Error("SCHEDULER_BATCH_SEAL_INVALID");
   for (const reference of manifest.source_executions) assertSourceExecutionReference(reference);
+  if (manifest.schema_version === TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION
+    ? manifest.source_executions.some(item => !item.effective_status || !item.trusted_chain_status
+      || item.effective_status !== effectiveStatus(item.outcome_status, item.trusted_chain_status))
+    : manifest.source_executions.some(item => item.effective_status || item.trusted_chain_status)) {
+    throw new Error("SCHEDULER_BATCH_SCHEMA_INVALID");
+  }
   for (const reference of manifest.deferred_sources) assertDeferredSource(reference);
   const executionIds = manifest.source_executions.map(item => item.source_execution_id);
   const authorizationIds = [...manifest.source_executions.flatMap(item => item.authorization_ids ?? [item.authorization_id!]),
@@ -194,7 +220,8 @@ function assertSchedulerBatchManifest(manifest: SchedulerBatchManifest) {
 
 function assertSourceExecutionReference(reference: SchedulerSourceExecutionReference) {
   const keys = ["source_definition_id", "recruitment_endpoint_id", reference.authorization_ids ? "authorization_ids" : "authorization_id", "source_execution_id",
-    "result_commit", "outcome_status", "outcome_integrity_hash", "presentation_read_model_ids"];
+    "result_commit", "outcome_status", "outcome_integrity_hash", "presentation_read_model_ids",
+    ...(reference.trusted_chain_status ? ["trusted_chain_status", "effective_status"] : [])];
   if (!reference || typeof reference !== "object"
     || Object.keys(reference).sort().join(",") !== keys.sort().join(",")
     || [reference.source_definition_id, reference.recruitment_endpoint_id,
@@ -206,6 +233,10 @@ function assertSourceExecutionReference(reference: SchedulerSourceExecutionRefer
       : typeof reference.authorization_id !== "string" || !reference.authorization_id.trim())
     || !["SUCCESS", "NOT_MODIFIED", "CONFIRMED_EMPTY", "SUSPICIOUS_EMPTY", "PARTIAL", "FAILED"]
       .includes(reference.outcome_status)
+    || (reference.trusted_chain_status
+      ? !["COMMITTED", "NOT_RUN", "FAILED"].includes(reference.trusted_chain_status)
+        || !reference.effective_status || !["SUCCESS", "NOT_MODIFIED", "CONFIRMED_EMPTY", "SUSPICIOUS_EMPTY", "PARTIAL", "FAILED"].includes(reference.effective_status)
+      : !!reference.effective_status)
     || !Array.isArray(reference.presentation_read_model_ids)
     || reference.presentation_read_model_ids.some(id => typeof id !== "string" || !id.trim())
     || new Set(reference.presentation_read_model_ids).size !== reference.presentation_read_model_ids.length) {
@@ -238,6 +269,9 @@ function assertManifestReferences(repositoryPath: string, manifest: SchedulerBat
     const outcomePath = `production-runs/source-executions/${canonicalHash({ source_execution_id: reference.source_execution_id })}.json`;
     if (!outcome || outcome.integrity_hash !== reference.outcome_integrity_hash
       || outcome.status !== reference.outcome_status
+      || (manifest.schema_version === TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION
+        && (outcome.trusted_chain_status !== reference.trusted_chain_status
+          || effectiveSourceExecutionStatus(outcome) !== reference.effective_status))
       || outcome.source_definition_id !== reference.source_definition_id
       || outcome.recruitment_endpoint_id !== reference.recruitment_endpoint_id
       || canonicalSerialize([...outcome.continuous_authorization_ids].sort())
