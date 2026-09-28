@@ -28,6 +28,7 @@ import {
   materializeSourceOccurrenceVersion,
   prepareSourceOccurrenceMaterialization,
   SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION,
+  SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2,
   type ExtractedRecord,
   type ExtractedRecordV2,
   type IsoDateTime,
@@ -836,7 +837,10 @@ export function bootstrapZeroCostProductionCompositionRoot(
             trustedFailureSubjectId = current.version.source_occurrence_version_id;
             const verified = await trusted.root.execute({
               kind: "SOURCE_DISCOVERY_SUPPORT_VERIFY",
-              input: { schema_version: SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION, sov_id: current.version.source_occurrence_version_id,
+              input: { schema_version: current.snapshot.content_hash === snapshot.content_hash
+                || endpoint.adapter_key !== "cn-zhenghan-2027-official-html"
+                ? SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION : SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2,
+                sov_id: current.version.source_occurrence_version_id,
                 snapshot_id: snapshot.snapshot_id, extracted_record_id: record.extracted_record_id, source_role: sourceInput.source_role }
             }, metadata) as { readonly support: { readonly support_id: string } };
             sourceOccurrences.push({ ...current, discovery_support_id: verified.support.support_id });

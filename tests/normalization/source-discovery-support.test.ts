@@ -3,6 +3,8 @@ import "../helpers/network-guard";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   bootstrapTrustedChainCompositionRoot,
   createExtractedRecordV2,
@@ -18,26 +20,41 @@ import { AS_OF, OBSERVED_AT, trustedFixture } from "../pipeline/position-bound-p
 
 const metadata = { actor: "support-test", recorded_at: AS_OF };
 
-function context(suffix = "restoration-v2-rediscovery-blocker") {
+function context(suffix = "restoration-v2-rediscovery-blocker", raw?: {
+  readonly first: Uint8Array; readonly next: Uint8Array; readonly locator: string; readonly adapter_key: string
+}) {
   const fixture = trustedFixture(suffix);
-  const bytes = new TextEncoder().encode(`trusted-chain-raw-${suffix}`);
+  const bytes = raw?.first ?? new TextEncoder().encode(`trusted-chain-raw-${suffix}`);
+  const nextBytes = raw?.next ?? bytes;
+  const endpoint = raw ? { ...fixture.source.endpoint, locator: raw.locator, adapter_key: raw.adapter_key }
+    : fixture.source.endpoint;
+  const firstHash = createHash("sha256").update(bytes).digest("hex");
+  const nextHash = createHash("sha256").update(nextBytes).digest("hex");
   assert.equal(fixture.source.snapshot.transport_status, "SUCCESS");
-  const snapshot = { ...fixture.source.snapshot, content_length: bytes.length,
-    response_metadata: { ...fixture.source.snapshot.response_metadata, content_length: bytes.length } };
+  const snapshot = { ...fixture.source.snapshot, raw_blob_id: `sha256:${firstHash}` as typeof fixture.source.snapshot.raw_blob_id,
+    content_hash: firstHash as typeof fixture.source.snapshot.content_hash, content_length: bytes.length,
+    request_metadata: { ...fixture.source.snapshot.request_metadata,
+      locator: raw?.locator ?? fixture.source.snapshot.request_metadata.locator },
+    response_metadata: { ...fixture.source.snapshot.response_metadata, content_length: bytes.length,
+      mime_type: raw ? "text/html; charset=UTF-8" : fixture.source.snapshot.response_metadata.mime_type } };
   const record = createExtractedRecordV2(snapshot, fixture.source.extracted_record);
   const secondSnapshot = { ...structuredClone(snapshot),
     snapshot_id: `${snapshot.snapshot_id}-rediscovery` as typeof snapshot.snapshot_id,
+    raw_blob_id: `sha256:${nextHash}` as typeof snapshot.raw_blob_id,
+    content_hash: nextHash as typeof snapshot.content_hash,
+    content_length: nextBytes.length,
+    response_metadata: { ...snapshot.response_metadata, content_length: nextBytes.length },
     observed_at: AS_OF,
     request_metadata: { ...snapshot.request_metadata, requested_at: AS_OF } };
   const secondRecord = createExtractedRecordV2(secondSnapshot, record);
   const reference = { artifact_id: "fixture:source-reference", integrity_hash: canonicalHash("fixture:source-reference") };
   const evidence = (eventSnapshot: typeof snapshot, eventRecord: typeof record) => ({
     scope: "SYNTHETIC_TEST" as const,
-    endpoint: fixture.source.endpoint,
+    endpoint,
     snapshot: eventSnapshot,
     extracted_record: eventRecord,
-    raw_blob: { raw_blob_id: eventSnapshot.raw_blob_id!, bytes: new Uint8Array(bytes),
-      sha256: eventSnapshot.content_hash!, byte_length: bytes.length,
+    raw_blob: { raw_blob_id: eventSnapshot.raw_blob_id!, bytes: new Uint8Array(eventSnapshot.snapshot_id === secondSnapshot.snapshot_id ? nextBytes : bytes),
+      sha256: eventSnapshot.content_hash!, byte_length: eventSnapshot.content_length!,
       content_type: eventSnapshot.response_metadata.mime_type! },
     acquisition: { acquisition_run_id: `fixture:${eventSnapshot.snapshot_id}`, status: "SUCCESS" as const,
       integrity_hash: canonicalHash(eventSnapshot), complete: true },
@@ -82,19 +99,72 @@ function context(suffix = "restoration-v2-rediscovery-blocker") {
       initial_disposition: { status: "RETAINED" as const, reason_codes: ["OFFICIAL_RECRUITMENT_DISCOVERED"],
         evidence_ids: ["fixture:synthetic-support"], decided_at: AS_OF } }
   };
-  return { fixture, snapshot, record, secondSnapshot, secondRecord, firstEvidence, secondEvidence,
+  return { fixture, endpoint, snapshot, record, secondSnapshot, secondRecord, firstEvidence, secondEvidence,
     journal, executions, supportCommand, registration };
 }
 
-async function issuedContext() {
-  const state = context();
+async function issuedContext(raw?: Parameters<typeof context>[1]) {
+  const state = context(undefined, raw);
   const { root } = await bootstrapTrustedChainCompositionRoot({ scope: "SYNTHETIC_TEST", restoration_journal: state.journal });
   const original = await root.execute({ kind: "SOURCE_OCCURRENCE_MATERIALIZE", input: {
-    source_role: "POSITION_BEARING", endpoint: state.fixture.source.endpoint,
+    source_role: "POSITION_BEARING", endpoint: state.endpoint,
     snapshot: state.snapshot, extracted_record: state.record
   } }, { actor: "original-issuer", recorded_at: OBSERVED_AT });
   return { ...state, root, original };
 }
+
+function committedRaw(sha256: string) {
+  return new Uint8Array(readFileSync(path.join(process.cwd(), "trusted-objects", "objects", "sha256",
+    sha256.slice(0, 2), sha256.slice(2, 4), sha256)));
+}
+
+for (const [locator, firstHash, nextHash] of [
+  ["https://www.zhenghan.com/news/2782.html", "35a4e0d74ec51da3014632c6d7c1010bc469eac907e3aeaf056e6b31799b1665", "cf85b01309aa9da0286fe1aceb3aaa7788397d1844c1cfed3b47819e574276d9"],
+  ["https://www.zhenghan.com/news/2790.html", "76a8a32361e1b5adccce54c9f32593fe79a98b3f2e05656e1323c5aef50bf0e4", "cd045bfc9415bfd52b76dc2f890098b15f95f67d33c8a9307f2414a59d5934cb"]
+] as const) {
+  test(`v2 support proves only terminal cache metadata changed for committed ${locator}`, async () => {
+    const state = await issuedContext({ first: committedRaw(firstHash), next: committedRaw(nextHash), locator,
+      adapter_key: "cn-zhenghan-2027-official-html" });
+    const command = { ...state.supportCommand, input: { ...state.supportCommand.input,
+      schema_version: "trusted-sov-discovery-support/2.0.0" as const } };
+    const issued = await state.root.execute(command, metadata) as { support: SOVDiscoverySupport };
+    assert.equal(issued.support.schema_version, "trusted-sov-discovery-support/2.0.0");
+    assert.equal(issued.support.discovery.raw_sha256, nextHash);
+    assert.equal(issued.support.equivalence.raw_equivalence?.original_raw_sha256, firstHash);
+    assert.equal(issued.support.equivalence.raw_equivalence?.next_raw_sha256, nextHash);
+    assert.equal(issued.support.equivalence.raw_equivalence?.result, "VERIFIED_TERMINAL_CACHE_TRAILER_ONLY");
+    assert.equal(state.root.resolvers.source_occurrences.resolve(state.supportCommand.input.sov_id)?.version.revision, 1);
+    const restored = await bootstrapTrustedChainCompositionRoot({ scope: "SYNTHETIC_TEST", restoration_journal: state.journal });
+    assert.deepEqual(restored.root.resolvers.source_occurrences.resolveSupport(issued.support.support_id), issued.support);
+  });
+}
+
+test("v2 support rejects changed recruitment content even when extracted semantics appear unchanged", async () => {
+  const first = committedRaw("35a4e0d74ec51da3014632c6d7c1010bc469eac907e3aeaf056e6b31799b1665");
+  const next = committedRaw("cf85b01309aa9da0286fe1aceb3aaa7788397d1844c1cfed3b47819e574276d9");
+  const changed = new TextEncoder().encode(new TextDecoder().decode(next).replace("争议解决律师", "非法律岗位"));
+  assert.notDeepEqual(changed, next);
+  const state = await issuedContext({ first, next: changed,
+    locator: "https://www.zhenghan.com/news/2782.html", adapter_key: "cn-zhenghan-2027-official-html" });
+  const command = { ...state.supportCommand, input: { ...state.supportCommand.input,
+    schema_version: "trusted-sov-discovery-support/2.0.0" as const } };
+  await assert.rejects(state.root.execute(command, metadata), (error: unknown) =>
+    error instanceof SOVDiscoverySupportError && error.code === "REVIEW_REQUIRED");
+  assert.equal(state.executions.length, 1);
+});
+
+test("v2 support rejects an unrecognized trailing clause after the cache metadata", async () => {
+  const first = committedRaw("35a4e0d74ec51da3014632c6d7c1010bc469eac907e3aeaf056e6b31799b1665");
+  const next = committedRaw("cf85b01309aa9da0286fe1aceb3aaa7788397d1844c1cfed3b47819e574276d9");
+  const changed = new Uint8Array(Buffer.concat([Buffer.from(next), Buffer.from("\n<!-- Additional recruitment condition -->")]));
+  const state = await issuedContext({ first, next: changed,
+    locator: "https://www.zhenghan.com/news/2782.html", adapter_key: "cn-zhenghan-2027-official-html" });
+  const command = { ...state.supportCommand, input: { ...state.supportCommand.input,
+    schema_version: "trusted-sov-discovery-support/2.0.0" as const } };
+  await assert.rejects(state.root.execute(command, metadata), (error: unknown) =>
+    error instanceof SOVDiscoverySupportError && error.code === "REVIEW_REQUIRED");
+  assert.equal(state.executions.length, 1);
+});
 
 test("Case A: exact rediscovery issues support, retains original SOV, and reuses original envelope", async () => {
   const state = await issuedContext();

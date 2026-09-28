@@ -20,6 +20,7 @@ import {
 import {
   SOVDiscoverySupportError,
   SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION,
+  SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2,
   assertSOVDiscoverySupportIntegrity,
   validatedDiscoverySupport,
   type DiscoverySupportScope,
@@ -98,7 +99,8 @@ implements TrustedSourceOccurrenceVersionResolver {
 
   async processDiscoverySupport(command: SOVDiscoverySupportCommand) {
     const options = this.#supportOptions;
-    if (!options?.readDiscovery || command.schema_version !== SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION) {
+    if (!options?.readDiscovery || ![SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION,
+      SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2].includes(command.schema_version)) {
       throw new SOVDiscoverySupportError("EVIDENCE_BLOCKED", "Root-owned persisted discovery reader and supported contract are required");
     }
     const original = this.resolve(command.sov_id);
@@ -116,7 +118,7 @@ implements TrustedSourceOccurrenceVersionResolver {
     if (next.snapshot.snapshot_id !== command.snapshot_id || next.extracted_record.extracted_record_id !== command.extracted_record_id) {
       throw new SOVDiscoverySupportError("EVIDENCE_BLOCKED", "Discovery reader returned a different exact event");
     }
-    const support = validatedDiscoverySupport(original, first, next, options.scope);
+    const support = validatedDiscoverySupport(original, first, next, options.scope, command.schema_version);
     if (this.#versionIdsByOccurrence.get(original.occurrence.source_occurrence_id)?.at(-1) !== command.sov_id) {
       throw new SOVDiscoverySupportError("STALE_SUPPORT_WRITER", "SOV advanced while discovery support was being verified");
     }
