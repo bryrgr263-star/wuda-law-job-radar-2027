@@ -16,6 +16,9 @@ const manifestSchema = z.object({ schema_version: z.literal("public-presentation
 const pointerSchema = z.object({ schema_version: z.literal("public-presentation-pointer/1.0.0"),
   release_id: hashSchema, manifest_hash: hashSchema, authoritative_sha: shaSchema, snapshot_hash: hashSchema }).strict();
 export type PublicReleaseManifest = z.infer<typeof manifestSchema>;
+export function parsePublicReleaseManifest(value: unknown): PublicReleaseManifest {
+  return manifestSchema.parse(value);
+}
 const buildReceiptSchema = z.object({ schema_version: z.literal("public-build-receipt/1.0.0"),
   scope: z.enum(["PRODUCTION", "TEST_ONLY"]), authoritative_sha: shaSchema, implementation_sha: shaSchema,
   snapshot_hash: hashSchema, manifest_hash: hashSchema }).strict();
