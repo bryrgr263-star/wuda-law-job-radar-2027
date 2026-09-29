@@ -2,6 +2,8 @@ name: Production Scheduler
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *"
 
 permissions:
   contents: write

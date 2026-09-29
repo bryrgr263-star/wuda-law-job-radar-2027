@@ -171,12 +171,13 @@ test("revoked authorization is not enumerated or requested by the Actions bounda
   }
 });
 
-test("workflow is manual, deterministic, minimally privileged and isolated from Legacy", () => {
+test("workflow has one conservative daily wake-up plus manual dispatch and stays isolated from Legacy", () => {
   const workflow = readFileSync(path.join(process.cwd(), ".github/workflows/production-scheduler.yml"), "utf8");
   assert.match(workflow, /workflow_dispatch:/u);
+  assert.match(workflow, /^\s{2}schedule:\s*$\n\s{4}- cron:\s*"17 2 \* \* \*"\s*$/mu);
+  assert.equal([...workflow.matchAll(/^- cron:|^\s+- cron:/gmu)].length, 1);
   assert.match(workflow, /AUTHORITATIVE_BRANCH:.*github\.ref_name/u);
   assert.match(workflow, /PRODUCTION_STREAM_ID:\s*\$\{\{ vars\.PRODUCTION_STREAM_ID \}\}/u);
-  assert.doesNotMatch(workflow, /^\s*schedule:/mu);
   assert.match(workflow, /contents:\s*write/u);
   assert.match(workflow, /cancel-in-progress:\s*false/u);
   assert.match(workflow, /uses:\s*pnpm\/setup@v2/u);
@@ -185,8 +186,16 @@ test("workflow is manual, deterministic, minimally privileged and isolated from 
   assert.match(workflow, /install:\s*false/u);
   assert.match(workflow, /pnpm install --frozen-lockfile/u);
   assert.match(workflow, /pnpm production:scheduler:actions/u);
+  assert.doesNotMatch(workflow, /presentation:publish|publish-public-presentation|deploy-pages/iu);
   assert.doesNotMatch(workflow, /sync:jobs|export:mirror|crawler|scoring|app\/api\/jobs|supabase/iu);
   assert.doesNotMatch(workflow, /push\s+--force|git\s+(?:merge|rebase)/iu);
+});
+
+test("scheduled authoritative commits cannot replace the static Web cutover through Vercel Git", () => {
+  const config = JSON.parse(readFileSync(path.join(process.cwd(), "vercel.json"), "utf8")) as {
+    git?: { deploymentEnabled?: Record<string, boolean> };
+  };
+  assert.equal(config.git?.deploymentEnabled?.main, false);
 });
 
 test("production Actions entrypoint is fail-closed and contains no Canary or Legacy dependency", () => {
