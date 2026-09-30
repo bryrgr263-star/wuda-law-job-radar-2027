@@ -76,9 +76,11 @@ jobs:
         run: |
           set -euo pipefail
           manifest="$RUNNER_TEMP/live-release.json"
+          request_url="${PUBLIC_LIVE_MANIFEST_URL}?publication_run=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           status="$(curl --silent --show-error --proto '=https' --tlsv1.2 --max-redirs 0 \
+            --header 'Cache-Control: no-cache' --header 'Pragma: no-cache' \
             --connect-timeout 15 --max-time 60 --output "$manifest" --write-out '%{http_code}' \
-            "$PUBLIC_LIVE_MANIFEST_URL")"
+            "$request_url")"
           case "$status" in
             200) printf 'manifest_path=%s\n' "$manifest" >> "$GITHUB_OUTPUT" ;;
             404) rm -f "$manifest"; printf 'manifest_path=ABSENT\n' >> "$GITHUB_OUTPUT" ;;

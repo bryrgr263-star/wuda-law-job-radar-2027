@@ -1,4 +1,4 @@
-# Public Presentation Delivery — Offline implementation / deployment handoff
+# Public Presentation Delivery — GitHub Pages operations
 
 ## Ownership and runtime
 
@@ -55,21 +55,34 @@ If failure occurs AFTER pointer commit while writing the private receipt, inspec
 
 Rollback is a separate explicit operator action using `rollbackPublicRelease` with verified release ID, actor and expected current pointer hash. It switches delivery only, visibly displays the old SHA/time, and never reintroduces Legacy truth. Production rollback needs separate authorization. A local rollback receipt must be retained by the caller; never upload it as public data.
 
-## Scheduler handoff — prepared, not activated
+## Automatic Scheduler handoff — active
 
 1. Existing scheduler completes its CAS push.
 2. Existing fresh post-push Process B verifies the batch ending SHA.
-3. Pass that exact ending SHA to the publication CLI; never a floating HEAD/branch.
-4. CLI independently pins/replays, uses existing current selector and prepares the public release.
-5. Only a separately authorized deployment adapter uploads the complete release directory.
+3. The workflow validates the safe automation report and emits only the exact committed `ending_sha` and publication handoff status.
+4. Only a successful Scheduler job with `publication_handoff=READY` calls the reusable Pages workflow.
+5. The Pages workflow checks out that exact SHA, independently pins/replays it, uses the existing Position-scoped current selector and prepares the public release.
+6. Only the complete validated release directory is uploaded to GitHub Pages.
 
 Publication failure does not change the committed batch/acquisition results. `SchedulerBatchManifest.public_website_published` is not changed by this implementation. Existing publication callbacks do not grant ownership of public truth or permit callers to inject display objects. FAILED/PARTIAL acquisition can coexist with a valid current snapshot; publication never falsifies those acquisition outcomes.
 
-No workflow changes are included. Both acquisition workflows remain manual-only. A future deployment step/manual publication workflow must use contents:read for generation and pages:write/id-token:write only for Pages deployment, serialized in one deployment concurrency group with cancel-in-progress=false. Do not use the Legacy mirror exporter.
+The acquisition job retains `contents: write` only for its authoritative CAS push. The dependent Pages job receives `contents: read`, `pages: write`, and `id-token: write`. Publication is serialized in the `pages` concurrency group with `cancel-in-progress: false`. The Legacy Pages writer is retired: it cannot crawl, export, or deploy and remains manual-only fail-closed.
 
-## Later deployment / Final Cutover smoke checklist (NOT executed here)
+## GitHub Pages publication and manual initial cutover
 
-- Choose/approve the actual Pages or existing site entrance, base_path and public URL; confirm environment permissions and no cost.
+The formal public URL is `https://bryrgr263-star.github.io/wuda-law-job-radar-2027/` and the fixed project base path is `/wuda-law-job-radar-2027`. The reusable workflow `.github/workflows/public-presentation-pages.yml` accepts an exact authoritative SHA; it never accepts a floating branch as publication truth.
+
+The first trusted replacement of the historical Pages site is a manual initial cutover. Dispatch the Pages workflow with the reviewed authoritative SHA, production stream, and `allow_initial_cutover=true`. Later automatic Scheduler handoffs always pass `allow_initial_cutover=false`.
+
+Before building, the workflow reads only the fixed HTTPS live release manifest without following redirects. It sends no-cache revalidation headers and a run-unique query so a delayed job cannot authorize itself against a stale CDN copy. A missing manifest is accepted only for the explicit initial cutover. A valid live manifest supplies the deployed authoritative SHA, snapshot hash, implementation SHA, schema version, and base path to the ancestry precondition. Descendant publication may advance; identical bytes are idempotent; stale, unrelated, same-SHA-conflicting, malformed, redirected, or wrong-base-path publication fails closed.
+
+The generated release directory is the only uploaded artifact. GitHub Pages keeps serving its last-known-good deployment unless a complete newer artifact is accepted. A failed build or deploy does not roll back authoritative acquisition state and does not invoke Legacy. Publication-only retry dispatches the same workflow with the same exact SHA; it performs no acquisition and cannot overwrite a newer live release with an older SHA.
+
+Vercel retirement occurs after online Pages acceptance, without redirecting it through an unreachable intermediary. Retire that public entry only after the Pages URL, sealed manifest, snapshot, JobBoard behavior, and rollback path are verified online.
+
+## Initial cutover and online smoke checklist
+
+- Confirm the fixed Pages project entrance, `/wuda-law-job-radar-2027` base path, public URL, environment permissions and zero-cost account state.
 - Upload only the complete verified release. Observe actual deployment success; a local staging receipt is NOT a deployment result.
 - Validate public release manifest, SHA and snapshot hash over deployed resources.
 - Confirm the expected Position count from that authoritative current snapshot, uniqueness, truthful status/reasons, correct separate links and unavailable fields.
@@ -77,7 +90,7 @@ No workflow changes are included. Both acquisition workflows remain manual-only.
 - Confirm root/project asset routes, HTTPS/WebCrypto, homepage cache refresh and old cached page behavior during replacement; GitHub Pages/CDN headers are not controlled by local rename or HTML meta tags.
 - Simulate failed deployment and independently retry the same artifact, preserving the previous working site; confirm no acquisition occurs.
 - Verify explicit previous-release deployment rollback without Legacy fallback or source requests.
-- Only after these deployment checks may the deployment/cutover blocker be marked resolved. Run2, schedule activation and Legacy cleanup remain separate instructions.
+- Only after these deployment checks may the deployment/cutover blocker be marked resolved. Legacy cleanup remains a separate instruction.
 
 ## Implementation file inventory
 

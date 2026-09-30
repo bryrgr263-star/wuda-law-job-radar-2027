@@ -5,14 +5,18 @@ import { createPublicSnapshot, validatePublicSnapshot } from "../../lib/public-p
 import { fixtureInput } from "./helpers";
 import { canonicalSerialize } from "../../lib/ingestion/normalization/canonical-artifact-registry";
 
-test("snapshot same SHA canonical bytes, explicit whitelist, four truthful positions", () => {
+test("snapshot same SHA canonical bytes, explicit whitelist, four current truthful positions", () => {
   const input = fixtureInput();
   const envelope = createPublicSnapshot(input);
   const payload = validatePublicSnapshot(envelope, input.authoritative_sha, envelope.payload_sha256);
   assert.equal(payload.positions.length, 4);
   assert.equal(new Set(payload.positions.map(item => item.position_id)).size, 4);
-  assert.ok(payload.positions.every(item => item.presentation_status === "EVIDENCE_BLOCKED"
-    && item.reason_codes.includes("RELEVANCE_ASSESSMENT_MISSING")));
+  assert.ok(payload.positions.every(item => item.presentation_status === "EVIDENCE_BLOCKED"));
+  assert.equal(payload.positions.filter(item => item.reason_codes.includes("RELEVANCE_ASSESSMENT_MISSING")).length, 1);
+  const zhenghan = payload.positions.filter(item => item.application_link.state === "NOT_YET_AVAILABLE");
+  assert.equal(zhenghan.length, 3);
+  assert.ok(zhenghan.every(item => item.decision_revision === 2
+    && item.reason_codes.includes("ELIGIBILITY_ASSESSMENT_MISSING")));
   assert.equal(payload.positions.filter(item => item.application_link.state === "NOT_YET_AVAILABLE").length, 3);
   assert.equal(JSON.stringify(envelope), JSON.stringify(createPublicSnapshot(structuredClone(input))));
   assert.doesNotMatch(envelope.payload_canonical_bytes, /upstream|provenance|opportunity_candidate_id|requirement_fact_id/);

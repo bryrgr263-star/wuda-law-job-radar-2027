@@ -19,6 +19,9 @@ test("one reusable Pages workflow performs exact-SHA publication-only deployment
   assert.match(workflow, /ref:\s*\$\{\{ inputs\.authoritative_sha \}\}/u);
   assert.match(workflow, /fetch-depth:\s*0/u);
   assert.match(workflow, /https:\/\/bryrgr263-star\.github\.io\/wuda-law-job-radar-2027\/presentation\/release\.json/u);
+  assert.match(workflow, /Cache-Control:\s*no-cache/u);
+  assert.match(workflow, /Pragma:\s*no-cache/u);
+  assert.match(workflow, /publication_run=\$\{GITHUB_RUN_ID\}-\$\{GITHUB_RUN_ATTEMPT\}/u);
   assert.match(workflow, /--max-redirs\s+0/u);
   assert.match(workflow, /pnpm presentation:prepare-pages/u);
   assert.match(workflow, /actions\/configure-pages@v6/u);

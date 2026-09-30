@@ -8,7 +8,7 @@ import { JobBoard, JobDetails } from "../../components/job-board";
 import { createPublicSnapshot } from "../../lib/public-presentation/snapshot";
 import { fixtureInput } from "../public-presentation/helpers";
 
-test("same JobBoard loads sealed Run1 public data without legacy; exact links and trace remain honest", async () => {
+test("same JobBoard loads sealed current public data without legacy; exact links and trace remain honest", async () => {
   const input = fixtureInput();
   const snapshot = createPublicSnapshot(input);
   let requests = 0;
@@ -28,10 +28,14 @@ test("same JobBoard loads sealed Run1 public data without legacy; exact links an
   assert.equal((html.match(/投递链接尚未取得/gu) ?? []).length, 3);
   for (const job of board.jobs) {
     const detail = renderToStaticMarkup(createElement(JobDetails, { job }));
-    assert.ok(detail.includes("RELEVANCE_ASSESSMENT_MISSING"));
+    for (const reason of job.reasonCodes) assert.ok(detail.includes(reason));
     assert.ok(detail.includes(`href="${job.announcementLink}"`));
     assert.ok(!("candidateId" in job));
   }
+  const zhenghan = board.jobs.filter(job => job.applicationLink === null);
+  assert.equal(zhenghan.length, 3);
+  assert.ok(zhenghan.every(job => job.revision === 2
+    && job.reasonCodes.includes("ELIGIBILITY_ASSESSMENT_MISSING")));
 });
 
 test("public loader rejects origin, redirect, hash, SHA and schema mismatch; empty valid is distinct", async () => {

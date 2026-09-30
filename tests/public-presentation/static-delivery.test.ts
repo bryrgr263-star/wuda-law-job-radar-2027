@@ -24,7 +24,7 @@ test("isolated Next export reuses one UI, excludes private state, pins snapshot 
       copyFileSync(path.resolve(filename), path.join(repository, filename));
     }
     execFileSync("git", ["add", "--", ...STATIC_CLIENT_FILES], { cwd: repository });
-    execFileSync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-m", "test-only candidate UI"], { cwd: repository, stdio: "pipe" });
+    execFileSync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--allow-empty", "-m", "test-only candidate UI"], { cwd: repository, stdio: "pipe" });
     const implementationSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repository, encoding: "utf8" }).trim();
     const snapshot = createPublicSnapshot(fixtureInput());
     const loader = pathToFileURL(path.resolve("node_modules/tsx/dist/loader.mjs")).href;
