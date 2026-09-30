@@ -38,6 +38,16 @@ test("same JobBoard loads sealed current public data without legacy; exact links
     && job.reasonCodes.includes("ELIGIBILITY_ASSESSMENT_MISSING")));
 });
 
+test("public JobBoard labels the cutover accurately without changing preparation mode", () => {
+  const jobs = [] as const;
+  const publicHtml = renderToStaticMarkup(createElement(JobBoard, { initialJobs: jobs, deliveryMode: "PUBLIC" }));
+  const preparationHtml = renderToStaticMarkup(createElement(JobBoard, { initialJobs: jobs }));
+  assert.match(publicHtml, /已提交官方证据 · 公开展示/);
+  assert.match(publicHtml, /公开数据 · 按权威版本更新/);
+  assert.doesNotMatch(publicHtml, /准备模式|未执行最终切换/);
+  assert.match(preparationHtml, /准备模式 · 未执行最终切换/);
+});
+
 test("public loader rejects origin, redirect, hash, SHA and schema mismatch; empty valid is distinct", async () => {
   const input = fixtureInput();
   const snapshot = createPublicSnapshot(input);

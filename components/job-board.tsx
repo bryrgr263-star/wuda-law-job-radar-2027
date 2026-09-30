@@ -29,7 +29,7 @@ export function JobDetails({ job }: { job: PresentationDisplayJob }) {
   </>;
 }
 
-export function JobBoard({ initialJobs }: { initialJobs: readonly PresentationDisplayJob[] }) {
+export function JobBoard({ initialJobs, deliveryMode = "PREPARATION" }: { initialJobs: readonly PresentationDisplayJob[]; deliveryMode?: "PREPARATION" | "PUBLIC" }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<BoardStatus | "ALL">("ALL");
   const [employer, setEmployer] = useState("ALL");
@@ -55,7 +55,7 @@ export function JobBoard({ initialJobs }: { initialJobs: readonly PresentationDi
       <nav><a href="#jobs">岗位库</a><a href="#rules">信息说明</a></nav>
     </div></header>
     <section className="hero"><div className="hero-grid"><div>
-      <div className="live-chip"><ShieldCheck size={14} /> 已提交官方证据 · 只读展示准备模式</div>
+      <div className="live-chip"><ShieldCheck size={14} /> {deliveryMode === "PUBLIC" ? "已提交官方证据 · 公开展示" : "已提交官方证据 · 只读展示准备模式"}</div>
       <p className="eyebrow">LEGAL EMPLOYMENT OPPORTUNITIES</p>
       <h1>把分散的机会，<br /><em>整理成可行动的选择。</em></h1>
       <p className="hero-copy">保留官方招聘机会与证据状态。信息待核验不代表资格不符，招聘要求以官方公告为准。</p>
@@ -95,7 +95,7 @@ export function JobBoard({ initialJobs }: { initialJobs: readonly PresentationDi
         <article><span>02</span><h3>链接分开</h3><p>公告链接不是投递链接，未取得时明确标注。</p></article>
         <article><span>03</span><h3>版本可追溯</h3><p>详情保留决策版本和原因信息，不重新判断。</p></article></div>
     </section>
-    <footer><div><strong>武大法硕求职雷达 · 2027</strong><p>岗位信息以官方公告为准，本网站不接收或保存简历。</p></div><span>准备模式 · 未执行最终切换</span></footer>
+    <footer><div><strong>武大法硕求职雷达 · 2027</strong><p>岗位信息以官方公告为准，本网站不接收或保存简历。</p></div><span>{deliveryMode === "PUBLIC" ? "公开数据 · 按权威版本更新" : "准备模式 · 未执行最终切换"}</span></footer>
     {selectedJob && <div className="modal-backdrop" onClick={() => setSelectedId(null)}><section className="detail-modal" role="dialog" aria-modal="true" aria-label="岗位详情" onClick={(event) => event.stopPropagation()}>
       <button className="modal-close" onClick={() => setSelectedId(null)} aria-label="关闭详情">×</button><JobDetails job={selectedJob} />
     </section></div>}

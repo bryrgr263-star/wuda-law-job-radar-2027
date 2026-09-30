@@ -27,6 +27,6 @@ export function PublicPresentationBoard(props: {
         <p>Snapshot SHA-256：{board?.snapshot_hash ?? props.snapshotHash}</p>
         <p>生成时间：{board?.generated_at ?? "尚未校验"}</p><p>SHA-256 为完整性校验，不是数字签名。</p></details>
     </section>
-    {board && <JobBoard key={board.snapshot_hash} initialJobs={board.jobs} />}
+    {board && <JobBoard key={board.snapshot_hash} initialJobs={board.jobs} deliveryMode="PUBLIC" />}
   </>;
 }
