@@ -16,7 +16,15 @@ test("one reusable Pages workflow performs exact-SHA publication-only deployment
   assert.match(workflow, /contents:\s*read/u);
   assert.match(workflow, /pages:\s*write/u);
   assert.match(workflow, /id-token:\s*write/u);
-  assert.match(workflow, /ref:\s*\$\{\{ inputs\.authoritative_sha \}\}/u);
+  assert.match(workflow, /ref:\s*\$\{\{ inputs\.rollback_run_id != '' && github\.sha \|\| inputs\.authoritative_sha \}\}/u);
+  assert.match(workflow, /rollback_run_id:/u);
+  assert.match(workflow, /expected_live_sha:/u);
+  assert.match(workflow, /Verify explicit prior-release rollback/u);
+  assert.match(workflow, /scripts\/verify-github-pages-rollback\.ts/u);
+  assert.match(workflow, /include-hidden-files:\s*true/u);
+  assert.match(workflow, /run\.path !== '\.github\/workflows\/public-presentation-pages\.yml'/u);
+  assert.match(workflow, /Refuse stale normal publication/u);
+  assert.match(workflow, /git ls-remote origin refs\/heads\/main/u);
   assert.match(workflow, /fetch-depth:\s*0/u);
   assert.match(workflow, /https:\/\/bryrgr263-star\.github\.io\/wuda-law-job-radar-2027\/presentation\/release\.json/u);
   assert.match(workflow, /Cache-Control:\s*no-cache/u);
@@ -27,7 +35,7 @@ test("one reusable Pages workflow performs exact-SHA publication-only deployment
   assert.match(workflow, /actions\/configure-pages@v6/u);
   assert.match(workflow, /actions\/upload-pages-artifact@v5/u);
   assert.match(workflow, /actions\/deploy-pages@v5/u);
-  assert.match(workflow, /path:\s*\$\{\{ steps\.prepare\.outputs\.release_path \}\}/u);
+  assert.match(workflow, /path:\s*\$\{\{ inputs\.rollback_run_id != '' && steps\.recovery\.outputs\.path \|\| steps\.prepare\.outputs\.release_path \}\}/u);
   assert.doesNotMatch(workflow,
     /production:scheduler:actions|sync:jobs|export:mirror|Supabase|vercel|crawler|scoring/iu);
 });

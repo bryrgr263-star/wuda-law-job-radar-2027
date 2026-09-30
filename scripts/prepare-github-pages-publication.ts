@@ -1,12 +1,14 @@
-import { readFileSync, realpathSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { verifyPagesPublicationPrecondition } from "../lib/public-presentation/pages-publication";
+import { verifyPagesPublicationPrecondition, verifyPagesRecoveryAncestry } from "../lib/public-presentation/pages-publication";
+import { downloadVerifiedPagesRelease } from "../lib/public-presentation/pages-retention";
 import {
   assertNoSymlinks,
   parsePublicReleaseManifest,
-  readPublicationPointer
+  readPublicationPointer, validatePublicRelease
 } from "../lib/public-presentation/publication";
 import { shaSchema } from "../lib/public-presentation/schema";
 import {
@@ -17,6 +19,8 @@ import {
 export interface GitHubPagesPublicationInput extends PublicationOptions {
   readonly live_manifest_path: string | null;
   readonly allow_initial_cutover: boolean;
+  readonly recovery_release_path?: string | null;
+  readonly fetcher?: (url: string, options: RequestInit) => Promise<Response>;
 }
 
 export interface GitHubPagesPublicationResult {
@@ -28,8 +32,9 @@ export interface GitHubPagesPublicationResult {
 }
 
 export function parseGitHubPagesPublicationArgs(args: readonly string[]): GitHubPagesPublicationInput {
-  const keys = ["--repository", "--authoritative-sha", "--stream", "--base-path", "--output",
+  const requiredKeys = ["--repository", "--authoritative-sha", "--stream", "--base-path", "--output",
     "--live-manifest", "--allow-initial-cutover"];
+  const keys = [...requiredKeys, "--recovery-release"];
   const values = new Map<string, string>();
   if (args.length % 2) throw new Error("PAGES_ARGUMENT_INVALID");
   for (let index = 0; index < args.length; index += 2) {
@@ -37,7 +42,7 @@ export function parseGitHubPagesPublicationArgs(args: readonly string[]): GitHub
     if (!keys.includes(key) || values.has(key)) throw new Error("PAGES_ARGUMENT_INVALID");
     values.set(key, args[index + 1]);
   }
-  if (keys.some(key => !values.has(key))) throw new Error("PAGES_ARGUMENT_MISSING");
+  if (requiredKeys.some(key => !values.has(key))) throw new Error("PAGES_ARGUMENT_MISSING");
   const authoritativeSha = shaSchema.parse(values.get("--authoritative-sha"));
   const stream = values.get("--stream")!;
   const basePath = values.get("--base-path")!;
@@ -56,7 +61,9 @@ export function parseGitHubPagesPublicationArgs(args: readonly string[]): GitHub
     base_path: basePath,
     delivery_root: path.resolve(values.get("--output")!),
     live_manifest_path: liveManifest === "ABSENT" ? null : path.resolve(liveManifest),
-    allow_initial_cutover: initial === "true"
+    allow_initial_cutover: initial === "true",
+    recovery_release_path: !values.has("--recovery-release") || values.get("--recovery-release") === "ABSENT"
+      ? null : path.resolve(values.get("--recovery-release")!)
   };
 }
 
@@ -76,9 +83,38 @@ export async function prepareGitHubPagesPublication(
     }
   }
 
-  await publishFromAuthoritativeCommit({ repository_path: repository,
-    authoritative_sha: input.authoritative_sha, stream_id: input.stream_id,
-    base_path: input.base_path, delivery_root: input.delivery_root });
+  let recoveryPath: string | undefined;
+  if (input.recovery_release_path) {
+    if (!liveManifest) throw new Error("PAGES_RECOVERY_LIVE_REQUIRED");
+    recoveryPath = realpathSync(input.recovery_release_path);
+    assertNoSymlinks(recoveryPath);
+    const recoveryManifest = validatePublicRelease(recoveryPath,
+      JSON.parse(readFileSync(path.join(recoveryPath, "presentation", "release.json"), "utf8")));
+    verifyPagesRecoveryAncestry(repository, recoveryManifest, liveManifest);
+  }
+
+  const temporary = mkdtempSync(path.join(os.tmpdir(), "pages-live-release-"));
+  try {
+    let previousReleasePath: string | undefined;
+    if (liveManifest !== null) {
+      const live = parsePublicReleaseManifest(liveManifest);
+      if (live.base_path !== input.base_path) throw new Error("PAGES_LIVE_MANIFEST_INVALID");
+      const local = readPublicationPointer(input.delivery_root);
+      if (local?.manifest_hash === live.bundle_manifest_hash) {
+        previousReleasePath = path.join(input.delivery_root, "releases", local.release_id);
+      } else {
+        previousReleasePath = path.join(temporary, "previous");
+        await downloadVerifiedPagesRelease({ manifest: live,
+          base_url: `https://bryrgr263-star.github.io${input.base_path}/`,
+          destination: previousReleasePath, fetcher: input.fetcher });
+      }
+    }
+    await publishFromAuthoritativeCommit({ repository_path: repository,
+      authoritative_sha: input.authoritative_sha, stream_id: input.stream_id,
+      base_path: input.base_path, delivery_root: input.delivery_root,
+      verified_previous_release_path: previousReleasePath,
+      verified_recovery_release_path: recoveryPath });
+  } finally { rmSync(temporary, { recursive: true, force: true }); }
   const pointer = readPublicationPointer(input.delivery_root);
   if (!pointer || pointer.authoritative_sha !== input.authoritative_sha) {
     throw new Error("PAGES_LOCAL_RELEASE_BINDING_INVALID");

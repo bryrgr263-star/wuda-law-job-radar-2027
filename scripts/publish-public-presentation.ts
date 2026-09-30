@@ -13,6 +13,8 @@ import { assertNoSymlinks, publishPublicRelease, readPublicationPointer } from "
 export interface PublicationOptions {
   readonly repository_path: string; readonly authoritative_sha: string; readonly stream_id: string;
   readonly base_path: string; readonly delivery_root: string;
+  readonly verified_previous_release_path?: string;
+  readonly verified_recovery_release_path?: string;
 }
 export function parsePublicationArgs(args: readonly string[]): PublicationOptions {
   const keys = ["--repository", "--authoritative-sha", "--stream", "--base-path", "--output"];
@@ -50,7 +52,10 @@ export async function publishFromAuthoritativeCommit(input: PublicationOptions) 
     const stage = path.join(temporary, "release");
     const manifest = await prepareStaticDelivery({ snapshot, implementation_repository: repository,
       implementation_sha: input.authoritative_sha, base_path: input.base_path, staging_path: stage,
-      previous_release_path: pointer ? path.join(input.delivery_root, "releases", pointer.release_id) : undefined });
+      previous_release_path: input.verified_previous_release_path ?? (pointer
+        ? path.join(input.delivery_root, "releases", pointer.release_id) : undefined),
+      additional_previous_release_paths: input.verified_recovery_release_path
+        ? [input.verified_recovery_release_path] : [] });
     const receipt = publishPublicRelease({ delivery_root: input.delivery_root, staged_release_path: stage, manifest,
       repository_path: repository, expected_pointer_hash: pointer?.pointer_hash ?? null });
     const receipts = path.join(input.delivery_root, "receipts");

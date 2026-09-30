@@ -44,7 +44,7 @@ test("automatic Pages delivery remains a publication-only adapter", () => {
   assert.equal(vercel.git?.deploymentEnabled?.main, false);
 });
 
-test("operations guide documents activated handoff, retry, stale guard, and retirement order", () => {
+test("operations guide documents activated handoff, retry, stale guard, and backup entry", () => {
   const guide = readFileSync("docs/public-presentation-delivery-operations.md", "utf8");
   assert.match(guide, /Automatic Scheduler handoff — active/u);
   assert.match(guide, /manual initial cutover/u);
@@ -53,5 +53,5 @@ test("operations guide documents activated handoff, retry, stale guard, and reti
   assert.match(guide, /last-known-good/iu);
   assert.match(guide, /https:\/\/bryrgr263-star\.github\.io\/wuda-law-job-radar-2027\//u);
   assert.match(guide, /Legacy Pages writer.*retired/iu);
-  assert.match(guide, /Vercel.*after.*online Pages acceptance/iu);
+  assert.match(guide, /Vercel remains a separate backup entry/iu);
 });

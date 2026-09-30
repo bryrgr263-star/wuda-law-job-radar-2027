@@ -55,6 +55,24 @@ test("initial Pages preparation and same-SHA retry use one sealed release withou
       delivery_root: delivery, live_manifest_path: manifestPath, allow_initial_cutover: false });
     assert.equal(second.precondition, "IDEMPOTENT");
     assert.equal(second.release_id, first.release_id);
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      files: readonly { path: string }[];
+    };
+    const requested: string[] = [];
+    const freshDelivery = path.join(temporary, "fresh-delivery");
+    const fresh = await prepareGitHubPagesPublication({ repository_path: process.cwd(),
+      authoritative_sha: headBefore, stream_id: STREAM_ID, base_path: "/wuda-law-job-radar-2027",
+      delivery_root: freshDelivery, live_manifest_path: manifestPath, allow_initial_cutover: false,
+      fetcher: async (url, options) => {
+        requested.push(url);
+        assert.equal(options.redirect, "error");
+        assert.equal(options.credentials, "omit");
+        const filename = url.replace("https://bryrgr263-star.github.io/wuda-law-job-radar-2027/", "");
+        return new Response(readFileSync(path.join(delivery, "releases", first.release_id, filename)));
+      } });
+    assert.equal(fresh.precondition, "IDEMPOTENT");
+    assert.equal(requested.length, manifest.files.length);
+    assert.equal(readPublicationPointer(freshDelivery)?.snapshot_hash, pointer.snapshot_hash);
     assert.equal(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), headBefore);
     const payload = JSON.parse(JSON.parse(readFileSync(path.join(delivery, "releases", pointer.release_id,
       "presentation", "snapshots", `${pointer.snapshot_hash}.json`), "utf8")).payload_canonical_bytes);

@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
-  verifyPagesPublicationPrecondition
+  verifyPagesPublicationPrecondition, verifyPagesRecoveryAncestry, verifyPagesRollbackPrecondition
 } from "../../lib/public-presentation/pages-publication";
 import type { PublicReleaseManifest } from "../../lib/public-presentation/publication";
 
@@ -53,6 +53,34 @@ test("manual initial cutover alone accepts an absent live trusted manifest", () 
       live_authoritative_sha: null,
       candidate_authoritative_sha: fixture.second
     });
+  } finally { rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
+test("explicit recovery accepts only a verified ancestor of the live Pages release", () => {
+  const fixture = repositoryFixture();
+  try {
+    assert.equal(verifyPagesRecoveryAncestry(fixture.root, manifest(fixture.first), manifest(fixture.second)), fixture.first);
+    assert.throws(() => verifyPagesRecoveryAncestry(fixture.root, manifest(fixture.second), manifest(fixture.second)), /PAGES_RECOVERY_NOT_OLDER/);
+    assert.throws(() => verifyPagesRecoveryAncestry(fixture.root, manifest(fixture.unrelated), manifest(fixture.second)), /PAGES_RECOVERY_NOT_ANCESTOR/);
+  } finally { rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
+test("explicit rollback requires the exact live SHA and a retained verified older snapshot", () => {
+  const fixture = repositoryFixture();
+  try {
+    const older = { ...manifest(fixture.first), files: [
+      { path: `presentation/snapshots/${"1".repeat(64)}.json`, size: 1, sha256: "4".repeat(64) }
+    ] };
+    const live = { ...manifest(fixture.second), files: [
+      { path: older.snapshot_path, size: 1, sha256: "4".repeat(64) }
+    ] };
+    assert.equal(verifyPagesRollbackPrecondition(fixture.root, older, live, fixture.second), fixture.first);
+    assert.throws(() => verifyPagesRollbackPrecondition(fixture.root, older, live, fixture.first),
+      /PAGES_ROLLBACK_LIVE_SHA_MISMATCH/);
+    assert.throws(() => verifyPagesRollbackPrecondition(fixture.root, older, manifest(fixture.second), fixture.second),
+      /PAGES_ROLLBACK_SNAPSHOT_NOT_RETAINED/);
+    assert.throws(() => verifyPagesRollbackPrecondition(fixture.root, manifest(fixture.unrelated), live, fixture.second),
+      /PAGES_RECOVERY_NOT_ANCESTOR/);
   } finally { rmSync(fixture.root, { recursive: true, force: true }); }
 });
 

@@ -4,6 +4,7 @@ import {
   parsePublicReleaseManifest,
   type PublicReleaseManifest
 } from "./publication";
+import { shaSchema } from "./schema";
 
 export interface PagesPublicationPreconditionInput {
   readonly repository_path: string;
@@ -17,6 +18,37 @@ export type PagesPublicationPreconditionResult = Readonly<{
   live_authoritative_sha: string | null;
   candidate_authoritative_sha: string;
 }>;
+
+export function verifyPagesRecoveryAncestry(repositoryPath: string, recoveryValue: unknown,
+  liveValue: unknown): string {
+  const recovery = parsePublicReleaseManifest(recoveryValue);
+  const live = parsePublicReleaseManifest(liveValue);
+  if (recovery.base_path !== live.base_path
+    || recovery.implementation_sha !== recovery.authoritative_sha
+    || live.implementation_sha !== live.authoritative_sha) throw new Error("PAGES_RECOVERY_BINDING_INVALID");
+  if (recovery.authoritative_sha === live.authoritative_sha) throw new Error("PAGES_RECOVERY_NOT_OLDER");
+  try {
+    execFileSync("git", ["merge-base", "--is-ancestor", recovery.authoritative_sha,
+      live.authoritative_sha], { cwd: repositoryPath, stdio: "pipe", windowsHide: true });
+  } catch { throw new Error("PAGES_RECOVERY_NOT_ANCESTOR"); }
+  return recovery.authoritative_sha;
+}
+
+export function verifyPagesRollbackPrecondition(repositoryPath: string, targetValue: unknown,
+  liveValue: unknown, expectedLiveSha: string): string {
+  const live = parsePublicReleaseManifest(liveValue);
+  if (live.authoritative_sha !== shaSchema.parse(expectedLiveSha)) {
+    throw new Error("PAGES_ROLLBACK_LIVE_SHA_MISMATCH");
+  }
+  const target = parsePublicReleaseManifest(targetValue);
+  const ancestorSha = verifyPagesRecoveryAncestry(repositoryPath, target, live);
+  const targetSnapshot = target.files.find(file => file.path === target.snapshot_path);
+  if (!targetSnapshot || !live.files.some(file => file.path === target.snapshot_path
+    && file.sha256 === targetSnapshot.sha256 && file.size === targetSnapshot.size)) {
+    throw new Error("PAGES_ROLLBACK_SNAPSHOT_NOT_RETAINED");
+  }
+  return ancestorSha;
+}
 
 export function verifyPagesPublicationPrecondition(
   input: PagesPublicationPreconditionInput

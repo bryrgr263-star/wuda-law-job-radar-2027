@@ -1,5 +1,5 @@
 import { execFile, execFileSync } from "node:child_process";
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 import { canonicalSerialize } from "../ingestion/normalization/canonical-artifact-registry";
 import { shaSchema, type PublicSnapshotEnvelope } from "./schema";
 import { validatePublicSnapshot } from "./snapshot";
-import { assertNoSymlinks, createBuildReceipt, createReleaseManifest, validatePublicRelease, type PublicReleaseManifest } from "./publication";
+import { retainVerifiedReleaseAssets } from "./pages-retention";
+import { assertNoSymlinks, createBuildReceipt, createReleaseManifest, type PublicReleaseManifest } from "./publication";
 
 export const STATIC_CLIENT_FILES = [
   "components/job-board.tsx", "components/public-presentation-board.tsx", "lib/presentation-web/model.ts",
@@ -20,6 +21,7 @@ export async function prepareStaticDelivery(input: {
   readonly snapshot: PublicSnapshotEnvelope; readonly implementation_repository: string; readonly implementation_sha: string;
   readonly base_path: string; readonly staging_path: string; readonly test_only?: boolean;
   readonly previous_release_path?: string;
+  readonly additional_previous_release_paths?: readonly string[];
 }): Promise<PublicReleaseManifest> {
   shaSchema.parse(input.implementation_sha);
   const payload = JSON.parse(input.snapshot.payload_canonical_bytes) as { authoritative_sha: string };
@@ -70,17 +72,10 @@ export async function prepareStaticDelivery(input: {
     mkdirSync(path.join(input.staging_path, "presentation", "snapshots"), { recursive: true });
     writeFileSync(path.join(input.staging_path, "presentation", "snapshots", `${input.snapshot.payload_sha256}.json`), canonicalSerialize(input.snapshot));
     writeFileSync(path.join(input.staging_path, ".nojekyll"), "");
-    if (input.previous_release_path) {
-      const previous = validatePublicRelease(input.previous_release_path,
-        JSON.parse(readFileSync(path.join(input.previous_release_path, "presentation", "release.json"), "utf8")));
-      for (const file of previous.files.filter(item => item.path.startsWith("_next/static/") || item.path === previous.snapshot_path)) {
-        const destination = path.join(input.staging_path, file.path);
-        const source = path.join(input.previous_release_path, file.path);
-        if (existsSync(destination)) {
-          if (!readFileSync(destination).equals(readFileSync(source))) throw new Error("PUBLIC_RETAINED_ASSET_COLLISION");
-        } else { mkdirSync(path.dirname(destination), { recursive: true }); copyFileSync(source, destination); }
-      }
-    }
+    retainVerifiedReleaseAssets(input.staging_path, [
+      ...(input.previous_release_path ? [input.previous_release_path] : []),
+      ...(input.additional_previous_release_paths ?? [])
+    ]);
     const manifest = createReleaseManifest(input.staging_path, { authoritative_sha: payload.authoritative_sha,
       implementation_sha: input.implementation_sha, snapshot_hash: input.snapshot.payload_sha256, base_path: input.base_path });
     writeFileSync(path.join(input.staging_path, "presentation", "release.json"), canonicalSerialize(manifest));

@@ -13,6 +13,18 @@ on:
         required: false
         type: boolean
         default: false
+      recovery_run_id:
+        required: false
+        type: string
+        default: ''
+      rollback_run_id:
+        required: false
+        type: string
+        default: ''
+      expected_live_sha:
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       authoritative_sha:
@@ -28,8 +40,24 @@ on:
         required: true
         type: boolean
         default: false
+      recovery_run_id:
+        description: Optional earlier verified Pages run to restore a missing immutable snapshot
+        required: false
+        type: string
+        default: ''
+      rollback_run_id:
+        description: Explicitly redeploy an earlier verified Pages release without acquisition
+        required: false
+        type: string
+        default: ''
+      expected_live_sha:
+        description: Exact currently deployed authoritative SHA required for rollback
+        required: false
+        type: string
+        default: ''
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -55,9 +83,24 @@ jobs:
       - name: Check out exact authoritative commit
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.authoritative_sha }}
+          ref: ${{ inputs.rollback_run_id != '' && github.sha || inputs.authoritative_sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Validate publication mode
+        shell: bash
+        env:
+          ROLLBACK_RUN_ID: ${{ inputs.rollback_run_id }}
+          RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
+          EXPECTED_LIVE_SHA: ${{ inputs.expected_live_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$ROLLBACK_RUN_ID" ]]; then
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && -z "$RECOVERY_RUN_ID" ]] || exit 1
+            [[ "$EXPECTED_LIVE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          else
+            [[ -z "$EXPECTED_LIVE_SHA" ]] || exit 1
+          fi
 
       - name: Set up pinned pnpm and Node.js
         uses: pnpm/setup@v2
@@ -87,7 +130,86 @@ jobs:
             *) echo "PAGES_LIVE_MANIFEST_HTTP_FAILURE_$status" >&2; exit 1 ;;
           esac
 
+      - name: Verify optional recovery run
+        if: ${{ inputs.recovery_run_id != '' || inputs.rollback_run_id != '' }}
+        id: recovery_run
+        shell: bash
+        env:
+          RECOVERY_RUN_ID: ${{ inputs.rollback_run_id != '' && inputs.rollback_run_id || inputs.recovery_run_id }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const id = process.env.RECOVERY_RUN_ID;
+          if (!/^[1-9][0-9]{0,18}$/.test(id)) throw new Error('PAGES_RECOVERY_RUN_ID_INVALID');
+          const url = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${id}`;
+          fetch(url, { headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+            Accept: 'application/vnd.github+json' }, redirect: 'error' }).then(async response => {
+            if (!response.ok) throw new Error('PAGES_RECOVERY_RUN_UNAVAILABLE');
+            const run = await response.json();
+            if (run.conclusion !== 'success' || run.status !== 'completed'
+              || run.path !== '.github/workflows/public-presentation-pages.yml'
+              || !/^[0-9a-f]{40}$/.test(run.head_sha)) throw new Error('PAGES_RECOVERY_RUN_NOT_TRUSTED');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `sha=${run.head_sha}\n`);
+          }).catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
+
+      - name: Download optional verified Pages artifact
+        if: ${{ inputs.recovery_run_id != '' || inputs.rollback_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          run-id: ${{ inputs.rollback_run_id != '' && inputs.rollback_run_id || inputs.recovery_run_id }}
+          repository: ${{ github.repository }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/pages-recovery-artifact
+
+      - name: Extract optional verified recovery release
+        id: recovery
+        shell: bash
+        env:
+          RECOVERY_RUN_ID: ${{ inputs.rollback_run_id != '' && inputs.rollback_run_id || inputs.recovery_run_id }}
+          RECOVERY_SHA: ${{ steps.recovery_run.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$RECOVERY_RUN_ID" ]]; then
+            echo 'path=ABSENT' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          archive="$RUNNER_TEMP/pages-recovery-artifact/artifact.tar"
+          destination="$RUNNER_TEMP/pages-recovery-release"
+          test -f "$archive"
+          test "$(stat -c%s "$archive")" -le 67108864
+          tar -tf "$archive" > "$RUNNER_TEMP/pages-recovery-paths.txt"
+          tar -tvf "$archive" > "$RUNNER_TEMP/pages-recovery-types.txt"
+          while IFS= read -r entry; do
+            [[ "$entry" == './' ]] && continue
+            [[ "$entry" == ./* && "$entry" != *$'\\'* ]] || exit 1
+            IFS='/' read -ra parts <<< "${entry#./}"
+            for part in "${parts[@]}"; do
+              [[ "$part" != '..' && "$part" != '.' ]] || exit 1
+            done
+          done < "$RUNNER_TEMP/pages-recovery-paths.txt"
+          while IFS= read -r entry; do
+            [[ "${entry:0:1}" == '-' || "${entry:0:1}" == 'd' ]] || exit 1
+          done < "$RUNNER_TEMP/pages-recovery-types.txt"
+          mkdir -m 700 "$destination"
+          tar -xf "$archive" --no-same-owner --no-same-permissions -C "$destination"
+          test -e "$destination/.nojekyll" || : > "$destination/.nojekyll"
+          RECOVERY_RELEASE_PATH="$destination" node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const manifest = JSON.parse(fs.readFileSync(path.join(process.env.RECOVERY_RELEASE_PATH,
+            'presentation/release.json'), 'utf8'));
+          if (manifest.authoritative_sha !== process.env.RECOVERY_SHA
+            || manifest.implementation_sha !== process.env.RECOVERY_SHA) {
+            throw new Error('PAGES_RECOVERY_RUN_SHA_MISMATCH');
+          }
+          NODE
+          printf 'path=%s\n' "$destination" >> "$GITHUB_OUTPUT"
+
       - name: Prepare verified immutable Pages release
+        if: ${{ inputs.rollback_run_id == '' }}
         id: prepare
         shell: bash
         env:
@@ -103,6 +225,7 @@ jobs:
             --base-path "$PUBLIC_BASE_PATH" \
             --output "$RUNNER_TEMP/public-delivery" \
             --live-manifest "$LIVE_MANIFEST_PATH" \
+            --recovery-release "${{ steps.recovery.outputs.path }}" \
             --allow-initial-cutover "$ALLOW_INITIAL_CUTOVER" > "$result"
           RESULT_FILE="$result" node <<'NODE'
           const fs = require('node:fs');
@@ -119,13 +242,40 @@ jobs:
             `release_path=${value.release_path}\nauthoritative_sha=${value.authoritative_sha}\nsnapshot_hash=${value.snapshot_hash}\n`);
           NODE
 
+      - name: Verify explicit prior-release rollback
+        if: ${{ inputs.rollback_run_id != '' }}
+        shell: bash
+        env:
+          EXPECTED_LIVE_SHA: ${{ inputs.expected_live_sha }}
+          TARGET_SHA: ${{ inputs.authoritative_sha }}
+          RECOVERY_SHA: ${{ steps.recovery_run.outputs.sha }}
+          LIVE_MANIFEST_PATH: ${{ steps.live.outputs.manifest_path }}
+          TARGET_RELEASE_PATH: ${{ steps.recovery.outputs.path }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" == "$RECOVERY_SHA" && "$LIVE_MANIFEST_PATH" != ABSENT ]] || exit 1
+          pnpm exec tsx scripts/verify-github-pages-rollback.ts "$GITHUB_WORKSPACE" \
+            "$TARGET_RELEASE_PATH" "$LIVE_MANIFEST_PATH" "$EXPECTED_LIVE_SHA"
+
+      - name: Refuse stale normal publication
+        if: ${{ inputs.rollback_run_id == '' }}
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.authoritative_sha }}
+        run: |
+          set -euo pipefail
+          latest="$(git ls-remote origin refs/heads/main | cut -f1)"
+          [[ "$latest" =~ ^[0-9a-f]{40}$ && "$latest" == "$CANDIDATE_SHA" ]] || exit 1
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
 
       - name: Upload trusted static release
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ${{ steps.prepare.outputs.release_path }}
+          path: ${{ inputs.rollback_run_id != '' && steps.recovery.outputs.path || steps.prepare.outputs.release_path }}
+          include-hidden-files: true
+          retention-days: 90
 
       - name: Deploy trusted static release
         id: deployment
