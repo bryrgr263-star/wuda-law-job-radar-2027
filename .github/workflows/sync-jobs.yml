@@ -1,62 +1,17 @@
-name: Sync 2027 recruitment jobs
+name: Retired Legacy Job Sync
 
 on:
   workflow_dispatch:
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
-  sync:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 1
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v7
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Crawl and update jobs
-        run: pnpm sync:jobs
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
-      - name: Generate public mirror
-        run: pnpm export:mirror
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v6
-
-      - name: Upload public mirror
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: public-site
-
-      - name: Deploy public mirror
-        id: deployment
-        uses: actions/deploy-pages@v5
+      - name: Refuse retired Legacy writer
+        run: |
+          echo "LEGACY_PAGES_WRITER_RETIRED" >&2
+          exit 1

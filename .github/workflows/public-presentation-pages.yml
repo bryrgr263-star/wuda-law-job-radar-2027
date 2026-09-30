@@ -1,0 +1,130 @@
+name: Public Presentation Pages
+
+on:
+  workflow_call:
+    inputs:
+      authoritative_sha:
+        required: true
+        type: string
+      stream_id:
+        required: true
+        type: string
+      allow_initial_cutover:
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      authoritative_sha:
+        description: Exact committed authoritative SHA
+        required: true
+        type: string
+      stream_id:
+        description: Trusted production stream ID
+        required: true
+        type: string
+      allow_initial_cutover:
+        description: Allow replacing the Legacy Pages site when no trusted live manifest exists
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 24.19.0
+  PNPM_VERSION: 11.25.0
+  PUBLIC_BASE_PATH: /wuda-law-job-radar-2027
+  PUBLIC_LIVE_MANIFEST_URL: https://bryrgr263-star.github.io/wuda-law-job-radar-2027/presentation/release.json
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out exact authoritative commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.authoritative_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          runtime: node@${{ env.NODE_VERSION }}
+          install: false
+          cache: true
+
+      - name: Install deterministic dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Capture current trusted Pages manifest
+        id: live
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="$RUNNER_TEMP/live-release.json"
+          status="$(curl --silent --show-error --proto '=https' --tlsv1.2 --max-redirs 0 \
+            --connect-timeout 15 --max-time 60 --output "$manifest" --write-out '%{http_code}' \
+            "$PUBLIC_LIVE_MANIFEST_URL")"
+          case "$status" in
+            200) printf 'manifest_path=%s\n' "$manifest" >> "$GITHUB_OUTPUT" ;;
+            404) rm -f "$manifest"; printf 'manifest_path=ABSENT\n' >> "$GITHUB_OUTPUT" ;;
+            *) echo "PAGES_LIVE_MANIFEST_HTTP_FAILURE_$status" >&2; exit 1 ;;
+          esac
+
+      - name: Prepare verified immutable Pages release
+        id: prepare
+        shell: bash
+        env:
+          LIVE_MANIFEST_PATH: ${{ steps.live.outputs.manifest_path }}
+          ALLOW_INITIAL_CUTOVER: ${{ inputs.allow_initial_cutover }}
+        run: |
+          set -euo pipefail
+          result="$RUNNER_TEMP/pages-publication-result.json"
+          pnpm presentation:prepare-pages \
+            --repository "$GITHUB_WORKSPACE" \
+            --authoritative-sha "${{ inputs.authoritative_sha }}" \
+            --stream "${{ inputs.stream_id }}" \
+            --base-path "$PUBLIC_BASE_PATH" \
+            --output "$RUNNER_TEMP/public-delivery" \
+            --live-manifest "$LIVE_MANIFEST_PATH" \
+            --allow-initial-cutover "$ALLOW_INITIAL_CUTOVER" > "$result"
+          RESULT_FILE="$result" node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const value = JSON.parse(fs.readFileSync(process.env.RESULT_FILE, 'utf8'));
+          if (!/^[a-f0-9]{40}$/.test(value.authoritative_sha)
+            || !/^[a-f0-9]{64}$/.test(value.snapshot_hash)
+            || !/^[a-f0-9]{64}$/.test(value.release_id)
+            || !path.isAbsolute(value.release_path)
+            || !['INITIAL_CUTOVER', 'ADVANCE', 'IDEMPOTENT'].includes(value.precondition)) {
+            throw new Error('PAGES_PREPARATION_OUTPUT_INVALID');
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,
+            `release_path=${value.release_path}\nauthoritative_sha=${value.authoritative_sha}\nsnapshot_hash=${value.snapshot_hash}\n`);
+          NODE
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload trusted static release
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ steps.prepare.outputs.release_path }}
+
+      - name: Deploy trusted static release
+        id: deployment
+        uses: actions/deploy-pages@v5
