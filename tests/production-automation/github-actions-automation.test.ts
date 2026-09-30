@@ -94,6 +94,8 @@ test("publication failure is retryable from committed ReadModel without a second
       batch_id: "actions-publication-retry", actor: "github-actions:test", started_at: AT
     }, async () => { throw new Error("controlled publication failure"); });
     assert.equal(result.publication_handoff, "RETRY_REQUIRED");
+    assert.equal(result.ending_sha, result.manifest_commit);
+    const committedEndingSha = result.ending_sha;
     assert.equal(sent, 1);
 
     let published = 0;
@@ -102,6 +104,7 @@ test("publication failure is retryable from committed ReadModel without a second
     assert.equal(retry.status, "PUBLISHED");
     assert.ok(published > 0);
     assert.equal(sent, 1);
+    assert.equal(result.ending_sha, committedEndingSha);
   } finally {
     repository.remove();
   }
@@ -186,7 +189,20 @@ test("workflow has one conservative daily wake-up plus manual dispatch and stays
   assert.match(workflow, /install:\s*false/u);
   assert.match(workflow, /pnpm install --frozen-lockfile/u);
   assert.match(workflow, /pnpm production:scheduler:actions/u);
-  assert.doesNotMatch(workflow, /presentation:publish|publish-public-presentation|deploy-pages/iu);
+  assert.match(workflow, /outputs:\s*\n\s+authoritative_sha:\s*\$\{\{ steps\.publication_handoff\.outputs\.authoritative_sha \}\}/u);
+  assert.match(workflow, /publication_handoff:\s*\$\{\{ steps\.publication_handoff\.outputs\.publication_handoff \}\}/u);
+  assert.match(workflow, /id:\s*publication_handoff/u);
+  assert.match(workflow, /PRODUCTION_AUTOMATION_REPORT_PATH/u);
+  assert.match(workflow, /PUBLICATION_HANDOFF_REPORT_INVALID/u);
+  assert.match(workflow, /uses:\s*\.\/\.github\/workflows\/public-presentation-pages\.yml/u);
+  assert.match(workflow, /needs\.run-production-scheduler\.result == 'success'/u);
+  assert.match(workflow, /needs\.run-production-scheduler\.outputs\.publication_handoff == 'READY'/u);
+  assert.match(workflow, /authoritative_sha:\s*\$\{\{ needs\.run-production-scheduler\.outputs\.authoritative_sha \}\}/u);
+  assert.match(workflow, /stream_id:\s*\$\{\{ vars\.PRODUCTION_STREAM_ID \}\}/u);
+  assert.match(workflow, /allow_initial_cutover:\s*false/u);
+  assert.match(workflow, /run-production-scheduler:\s*\n\s+permissions:\s*\n\s+contents:\s*write/u);
+  assert.ok(workflow.indexOf("pnpm production:scheduler:actions") < workflow.indexOf("id: publication_handoff"));
+  assert.ok(workflow.indexOf("id: publication_handoff") < workflow.indexOf("uses: actions/upload-artifact@v6"));
   assert.doesNotMatch(workflow, /sync:jobs|export:mirror|crawler|scoring|app\/api\/jobs|supabase/iu);
   assert.doesNotMatch(workflow, /push\s+--force|git\s+(?:merge|rebase)/iu);
 });

@@ -6,7 +6,9 @@ on:
     - cron: "17 2 * * *"
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: production-scheduler-${{ github.repository }}-${{ github.ref }}
@@ -25,8 +27,13 @@ env:
 
 jobs:
   run-production-scheduler:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      authoritative_sha: ${{ steps.publication_handoff.outputs.authoritative_sha }}
+      publication_handoff: ${{ steps.publication_handoff.outputs.publication_handoff }}
     steps:
       - name: Require branch dispatch
         shell: bash
@@ -77,6 +84,32 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: pnpm production:scheduler:actions
 
+      - name: Validate publication handoff
+        id: publication_handoff
+        shell: bash
+        env:
+          REPORT_PATH: ${{ env.PRODUCTION_AUTOMATION_REPORT_PATH }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const report = JSON.parse(fs.readFileSync(process.env.REPORT_PATH, "utf8"));
+          const validSha = typeof report.ending_sha === "string"
+            && /^[0-9a-f]{40}$/u.test(report.ending_sha);
+          const validHandoff = ["NOT_REQUIRED", "READY", "PUBLISHED", "RETRY_REQUIRED"]
+            .includes(report.publication_handoff);
+          if (report.status !== "COMPLETED"
+            || report.effective_batch_status !== "SUCCESS"
+            || report.cas_result !== "COMMITTED"
+            || report.post_push_process_b !== "PASS"
+            || !validSha
+            || !validHandoff) {
+            throw new Error("PUBLICATION_HANDOFF_REPORT_INVALID");
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,
+            `authoritative_sha=${report.ending_sha}\npublication_handoff=${report.publication_handoff}\n`,
+            "utf8");
+          NODE
+
       - name: Upload diagnostic report
         if: always()
         uses: actions/upload-artifact@v6
@@ -85,3 +118,16 @@ jobs:
           path: production-automation-report.json
           if-no-files-found: error
           retention-days: 14
+
+  publish-public-presentation:
+    needs: run-production-scheduler
+    if: ${{ needs.run-production-scheduler.result == 'success' && needs.run-production-scheduler.outputs.publication_handoff == 'READY' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/public-presentation-pages.yml
+    with:
+      authoritative_sha: ${{ needs.run-production-scheduler.outputs.authoritative_sha }}
+      stream_id: ${{ vars.PRODUCTION_STREAM_ID }}
+      allow_initial_cutover: false
