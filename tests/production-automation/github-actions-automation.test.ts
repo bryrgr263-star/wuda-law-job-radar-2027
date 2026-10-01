@@ -201,6 +201,9 @@ test("workflow has one conservative daily wake-up plus manual dispatch and stays
   assert.match(workflow, /stream_id:\s*\$\{\{ vars\.PRODUCTION_STREAM_ID \}\}/u);
   assert.match(workflow, /allow_initial_cutover:\s*false/u);
   assert.match(workflow, /run-production-scheduler:\s*\n\s+permissions:\s*\n\s+contents:\s*write/u);
+  const publicationJob = workflow.split("  publish-public-presentation:")[1];
+  assert.ok(publicationJob);
+  assert.match(publicationJob, /^    permissions:\r?\n      actions: read\r?$/mu);
   assert.ok(workflow.indexOf("pnpm production:scheduler:actions") < workflow.indexOf("id: publication_handoff"));
   assert.ok(workflow.indexOf("id: publication_handoff") < workflow.indexOf("uses: actions/upload-artifact@v6"));
   assert.doesNotMatch(workflow, /sync:jobs|export:mirror|crawler|scoring|app\/api\/jobs|supabase/iu);

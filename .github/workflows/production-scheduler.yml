@@ -123,6 +123,7 @@ jobs:
     needs: run-production-scheduler
     if: ${{ needs.run-production-scheduler.result == 'success' && needs.run-production-scheduler.outputs.publication_handoff == 'READY' }}
     permissions:
+      actions: read
       contents: read
       pages: write
       id-token: write
