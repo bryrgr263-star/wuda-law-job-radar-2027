@@ -18,9 +18,10 @@ import { closeContinuousRecord, issueContinuousRecord, reserveContinuousRecord,
   revokeContinuousRecord, validateContinuousContext } from "../../lib/application/source-admission/continuous-acquisition";
 import { createSourcePersistenceVersion } from "../../lib/production-persistence/contracts";
 
-test("production adapter registry resolves only the two approved official adapters", () => {
+test("production adapter registry resolves only the approved official adapters", () => {
   const keys = registeredProductionAdapterKeys();
   assert.deepEqual(keys, [
+    "cn-chnenergy-2027-reviewed-official-html",
     "cn-haier-2027-legal-official-html",
     "cn-zhenghan-2027-official-html"
   ]);

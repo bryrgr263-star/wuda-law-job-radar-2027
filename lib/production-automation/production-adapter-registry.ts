@@ -1,9 +1,10 @@
 import type { RecruitmentAdapter } from "../ingestion";
 import { Haier2027LegalOfficialHtmlAdapter } from "../production-sources/haier-2027-source";
 import { Zhenghan2027OfficialHtmlAdapter } from "../production-sources/zhenghan-2027-source";
+import { Chnenergy2027HtmlAdapter } from "../production-sources/chnenergy-2027-source";
 
 const productionAdapters = new Map<string, RecruitmentAdapter>();
-for (const adapter of [new Haier2027LegalOfficialHtmlAdapter(), new Zhenghan2027OfficialHtmlAdapter()]) {
+for (const adapter of [new Haier2027LegalOfficialHtmlAdapter(), new Zhenghan2027OfficialHtmlAdapter(), new Chnenergy2027HtmlAdapter()]) {
   if (productionAdapters.has(adapter.descriptor.adapter_key)) throw new Error("PRODUCTION_ADAPTER_KEY_COLLISION");
   productionAdapters.set(adapter.descriptor.adapter_key, adapter);
 }
