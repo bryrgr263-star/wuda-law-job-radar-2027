@@ -3,6 +3,40 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
+
+test("handoff validator accepts committed partial results but rejects unverified failure reports", () => {
+  const workflow = readFileSync(path.join(process.cwd(), ".github/workflows/production-scheduler.yml"), "utf8");
+  const script = workflow.split("node <<'NODE'")[1]!.split("          NODE")[0]!;
+  const valid = { status: "FAILED", effective_batch_status: "PARTIAL", cas_result: "COMMITTED",
+    post_push_process_b: "PASS", ending_sha: "a".repeat(40), publication_handoff: "READY",
+    presentation_read_model_ids: ["committed-model"] };
+  const evaluate = (report: object) => {
+    const outputs: string[] = [];
+    runInNewContext(script, { process: { env: { REPORT_PATH: "report", GITHUB_OUTPUT: "output" } },
+      require: (name: string) => {
+        assert.equal(name, "node:fs");
+        return { readFileSync: () => JSON.stringify(report), appendFileSync: (_path: string, value: string) => outputs.push(value) };
+      } });
+    return outputs;
+  };
+  assert.match(evaluate(valid)[0]!, /publication_handoff=READY/u);
+  for (const patch of [{ cas_result: "FAILED" }, { post_push_process_b: "FAIL" },
+    { ending_sha: "invalid" }, { presentation_read_model_ids: [] }, { effective_batch_status: "UNKNOWN" }]) {
+    assert.throws(() => evaluate({ ...valid, ...patch }), /PUBLICATION_HANDOFF_/u);
+  }
+  assert.throws(() => evaluate({ status: "FAILED", error_code: "AUTOMATION_EXECUTION_FAILED" }), /PUBLICATION_HANDOFF_/u);
+});
+
+test("committed partial-source results can hand off publication without hiding scheduler failure", () => {
+  const workflow = readFileSync(path.join(process.cwd(), ".github/workflows/production-scheduler.yml"), "utf8");
+  assert.match(workflow, /name: Validate publication handoff\s+if: \$\{\{ !cancelled\(\) && \(steps\.scheduler\.outcome == 'success' \|\| steps\.scheduler\.outcome == 'failure'\) \}\}/u);
+  assert.match(workflow, /\["SUCCESS", "PARTIAL", "FAILED", "DEFERRED"\]\.includes\(report\.effective_batch_status\)/u);
+  assert.match(workflow, /if: \$\{\{ !cancelled\(\) && needs\.run-production-scheduler\.result != 'cancelled' && needs\.run-production-scheduler\.outputs\.publication_handoff == 'READY' \}\}/u);
+  assert.doesNotMatch(workflow, /continue-on-error:\s*true/u);
+  assert.match(workflow, /report\.post_push_process_b !== "PASS"/u);
+  assert.match(workflow, /report\.cas_result !== "COMMITTED"/u);
+});
 
 test("one reusable Pages workflow performs exact-SHA publication-only deployment", () => {
   const workflow = readFileSync(path.join(process.cwd(),

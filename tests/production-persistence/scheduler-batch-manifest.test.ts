@@ -6,12 +6,46 @@ import test from "node:test";
 import {
   appendSchedulerBatchManifest,
   deriveSchedulerBatchStatus,
+  deriveCurrentSchedulerBatchStatus,
   effectiveSourceExecutionStatus,
   readSchedulerBatchManifests,
   sealSchedulerBatchManifest
 } from "../../lib/production-persistence/scheduler-batch-manifest";
 import { bootstrapZeroCostProductionCompositionRoot } from "../../lib/production-persistence/zero-cost-production-composition-root";
 import { AT, createRemote, git, identity } from "./continuous-acquisition-fixture";
+
+test("current cadence-only deferral is not failure and never masks safety failures", () => {
+  assert.equal(deriveCurrentSchedulerBatchStatus([], ["CADENCE_DENIED"]), "DEFERRED");
+  assert.equal(deriveCurrentSchedulerBatchStatus(["SUCCESS"], ["CADENCE_DENIED"]), "SUCCESS");
+  assert.equal(deriveCurrentSchedulerBatchStatus(["FAILED"], ["CADENCE_DENIED"]), "FAILED");
+  assert.equal(deriveCurrentSchedulerBatchStatus(["SUCCESS", "FAILED"], ["CADENCE_DENIED"]), "PARTIAL");
+  assert.equal(deriveCurrentSchedulerBatchStatus([], ["AUTHORIZATION_REVOKED"]), "FAILED");
+  assert.equal(deriveCurrentSchedulerBatchStatus(["SUCCESS"], ["PENDING_GATE_DENIED"]), "PARTIAL");
+  assert.equal(deriveCurrentSchedulerBatchStatus([], []), "FAILED");
+  assert.equal(deriveSchedulerBatchStatus([], 1), "FAILED");
+});
+
+test("v4 cadence deferral restores from Git while historical v1 bytes retain FAILED semantics", async () => {
+  const repository = await createRemote();
+  try {
+    const parent = git(repository.remote, "rev-parse", "main");
+    const base = { batch_id: "cadence-version-compatibility", initial_head: parent, manifest_parent: parent,
+      started_at: AT, completed_at: AT, actor: "controlled-scheduler", source_executions: [],
+      deferred_sources: [{ source_definition_id: "source", recruitment_endpoint_id: "endpoint",
+        authorization_id: "authorization", reason: "CADENCE_DENIED" as const }],
+      presentation_publish_readiness: "NO_NEW_MODEL" as const, public_website_published: false as const };
+    const legacy = sealSchedulerBatchManifest({ ...base, scheduler_policy_version: "production-scheduler-batch/1.0.0", batch_status: "FAILED" });
+    assert.equal(legacy.schema_version, "production-scheduler-batch/1.0.0");
+    assert.throws(() => sealSchedulerBatchManifest({ ...base, scheduler_policy_version: "production-scheduler-batch/1.0.0", batch_status: "DEFERRED" }), /SEAL_INVALID/u);
+    const current = sealSchedulerBatchManifest({ ...base, scheduler_policy_version: "production-scheduler-batch/4.0.0", batch_status: "DEFERRED" });
+    appendSchedulerBatchManifest(repository.remote, "main", current, identity, [], []);
+    const restored = await bootstrapZeroCostProductionCompositionRoot({ remote_url: repository.remote,
+      branch: "main", stream_id: "cadence-version-compatibility" }).restore();
+    assert.deepEqual(restored.scheduler_batches, [current]);
+    assert.throws(() => sealSchedulerBatchManifest({ ...base, scheduler_policy_version: "production-scheduler-batch/4.0.0",
+      deferred_sources: [{ ...base.deferred_sources[0]!, reason: "PENDING_GATE_DENIED" }], batch_status: "DEFERRED" }), /SEAL_INVALID/u);
+  } finally { repository.remove(); }
+});
 
 test("batch status is derived only from retained source outcomes and deferrals", () => {
   assert.equal(deriveSchedulerBatchStatus(["SUCCESS", "NOT_MODIFIED", "CONFIRMED_EMPTY"], 0), "SUCCESS");

@@ -124,7 +124,9 @@ test("cadence denial remains authoritative and the Actions boundary sends no una
     const denied = await executeProductionSchedulerAutomation(options, {
       batch_id: "actions-cadence-denied", actor: "github-actions:test", started_at: AT
     });
-    assert.equal(denied.batch_status, "FAILED");
+    assert.equal(denied.batch_status, "DEFERRED");
+    assert.equal(denied.effective_batch_status, "DEFERRED");
+    assert.equal(denied.publication_handoff, "NOT_REQUIRED");
     assert.deepEqual(denied.manifest.deferred_sources.map(item => item.reason), ["CADENCE_DENIED"]);
     assert.equal(sent, 1);
   } finally {
@@ -195,7 +197,7 @@ test("workflow has one conservative daily wake-up plus manual dispatch and stays
   assert.match(workflow, /PRODUCTION_AUTOMATION_REPORT_PATH/u);
   assert.match(workflow, /PUBLICATION_HANDOFF_REPORT_INVALID/u);
   assert.match(workflow, /uses:\s*\.\/\.github\/workflows\/public-presentation-pages\.yml/u);
-  assert.match(workflow, /needs\.run-production-scheduler\.result == 'success'/u);
+  assert.match(workflow, /!cancelled\(\) && needs\.run-production-scheduler\.result != 'cancelled' && needs\.run-production-scheduler\.outputs\.publication_handoff == 'READY'/u);
   assert.match(workflow, /needs\.run-production-scheduler\.outputs\.publication_handoff == 'READY'/u);
   assert.match(workflow, /authoritative_sha:\s*\$\{\{ needs\.run-production-scheduler\.outputs\.authoritative_sha \}\}/u);
   assert.match(workflow, /stream_id:\s*\$\{\{ vars\.PRODUCTION_STREAM_ID \}\}/u);

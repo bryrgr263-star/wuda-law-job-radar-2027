@@ -10,7 +10,7 @@ import type {
   SchedulerBatchManifest,
   SchedulerBatchStatus
 } from "../production-persistence/scheduler-batch-manifest";
-import { deriveSchedulerBatchStatus, effectiveSourceExecutionStatus } from "../production-persistence/scheduler-batch-manifest";
+import { CADENCE_SCHEDULER_BATCH_SCHEMA_VERSION, deriveCurrentSchedulerBatchStatus, deriveSchedulerBatchStatus, effectiveSourceExecutionStatus } from "../production-persistence/scheduler-batch-manifest";
 import type { SourceExecutionOutcome, TrustedChainFailureDiagnostic } from "../production-persistence/source-execution-outcome";
 
 export type PublicationHandoffStatus = "NOT_REQUIRED" | "READY" | "PUBLISHED" | "RETRY_REQUIRED";
@@ -70,11 +70,14 @@ export async function executeProductionSchedulerAutomation(
   });
   const publicationHandoff = await handoffPublication(restored, after.read_models, publisher);
   const byOutcome = new Map(after.source_execution_outcomes.map(outcome => [outcome.source_execution_id, outcome]));
-  const effectiveBatchStatus = deriveSchedulerBatchStatus(restored.source_executions.map(item => {
+  const effectiveStatuses = restored.source_executions.map(item => {
     const outcome = byOutcome.get(item.source_execution_id);
     if (!outcome) throw new Error("ACTIONS_POST_PUSH_SOURCE_OUTCOME_MISSING");
     return effectiveSourceExecutionStatus(outcome);
-  }), restored.deferred_sources.length);
+  });
+  const effectiveBatchStatus = restored.schema_version === CADENCE_SCHEDULER_BATCH_SCHEMA_VERSION
+    ? deriveCurrentSchedulerBatchStatus(effectiveStatuses, restored.deferred_sources.map(item => item.reason))
+    : deriveSchedulerBatchStatus(effectiveStatuses, restored.deferred_sources.length);
   return Object.freeze({
     starting_sha: before.committed_head,
     ending_sha: after.committed_head,

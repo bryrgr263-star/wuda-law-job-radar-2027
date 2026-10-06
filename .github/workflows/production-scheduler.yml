@@ -85,6 +85,7 @@ jobs:
         run: pnpm production:scheduler:actions
 
       - name: Validate publication handoff
+        if: ${{ !cancelled() && (steps.scheduler.outcome == 'success' || steps.scheduler.outcome == 'failure') }}
         id: publication_handoff
         shell: bash
         env:
@@ -97,13 +98,18 @@ jobs:
             && /^[0-9a-f]{40}$/u.test(report.ending_sha);
           const validHandoff = ["NOT_REQUIRED", "READY", "PUBLISHED", "RETRY_REQUIRED"]
             .includes(report.publication_handoff);
-          if (report.status !== "COMPLETED"
-            || report.effective_batch_status !== "SUCCESS"
+          if (!["COMPLETED", "FAILED"].includes(report.status)
+            || !["SUCCESS", "PARTIAL", "FAILED", "DEFERRED"].includes(report.effective_batch_status)
             || report.cas_result !== "COMMITTED"
             || report.post_push_process_b !== "PASS"
             || !validSha
             || !validHandoff) {
             throw new Error("PUBLICATION_HANDOFF_REPORT_INVALID");
+          }
+          if (report.publication_handoff === "READY"
+            && (!Array.isArray(report.presentation_read_model_ids)
+              || report.presentation_read_model_ids.length === 0)) {
+            throw new Error("PUBLICATION_HANDOFF_NO_COMMITTED_MODEL");
           }
           fs.appendFileSync(process.env.GITHUB_OUTPUT,
             `authoritative_sha=${report.ending_sha}\npublication_handoff=${report.publication_handoff}\n`,
@@ -121,7 +127,7 @@ jobs:
 
   publish-public-presentation:
     needs: run-production-scheduler
-    if: ${{ needs.run-production-scheduler.result == 'success' && needs.run-production-scheduler.outputs.publication_handoff == 'READY' }}
+    if: ${{ !cancelled() && needs.run-production-scheduler.result != 'cancelled' && needs.run-production-scheduler.outputs.publication_handoff == 'READY' }}
     permissions:
       actions: read
       contents: read

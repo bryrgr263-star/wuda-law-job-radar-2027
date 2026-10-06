@@ -49,7 +49,7 @@ async function main() {
       expected_starting_sha: checkoutHead
     });
     const report = {
-      status: result.effective_batch_status === "SUCCESS" ? "COMPLETED" : "FAILED",
+      status: ["SUCCESS", "DEFERRED"].includes(result.effective_batch_status) ? "COMPLETED" : "FAILED",
       starting_sha: result.starting_sha,
       ending_sha: result.ending_sha,
       batch_id: result.batch_id,
@@ -76,7 +76,7 @@ async function main() {
     };
     writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.log(JSON.stringify(report));
-    if (result.effective_batch_status !== "SUCCESS") process.exitCode = 1;
+    if (result.effective_batch_status !== "SUCCESS" && result.effective_batch_status !== "DEFERRED") process.exitCode = 1;
   } catch (error) {
     const report: SafeFailureReport = { status: "FAILED", error_code: safeErrorCode(error) };
     writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");

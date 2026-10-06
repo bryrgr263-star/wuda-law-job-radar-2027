@@ -11,6 +11,8 @@ import { enumerateScheduledSources, type ScheduledSource } from "./scheduler-sou
 import {
   appendSchedulerBatchManifest,
   deriveSchedulerBatchStatus,
+  deriveCurrentSchedulerBatchStatus,
+  CADENCE_SCHEDULER_BATCH_SCHEMA_VERSION,
   effectiveSourceExecutionStatus,
   sealSchedulerBatchManifest,
   SCHEDULER_POLICY_VERSION,
@@ -147,14 +149,16 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
         });
         const hasTrustedFailure = resolved.some(item => item.outcome.trusted_chain_status === "FAILED"
           || (item.outcome.status === "SUCCESS" && item.outcome.trusted_chain_status !== "COMMITTED"));
+        const hasCadenceDeferral = deferred.some(item => item.reason === "CADENCE_DENIED");
         const sourceExecutions: SchedulerSourceExecutionReference[] = resolved.map(({ outcome, reference }) => ({
           ...reference,
-          ...(hasTrustedFailure ? { trusted_chain_status: outcome.trusted_chain_status,
+          ...(hasTrustedFailure || hasCadenceDeferral ? { trusted_chain_status: outcome.trusted_chain_status,
             effective_status: effectiveSourceExecutionStatus(outcome) } : {})
         }));
         const manifest = sealSchedulerBatchManifest({
           batch_id: input.batch_id,
-          scheduler_policy_version: hasTrustedFailure ? TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION
+          scheduler_policy_version: hasCadenceDeferral ? CADENCE_SCHEDULER_BATCH_SCHEMA_VERSION
+            : hasTrustedFailure ? TRUSTED_CHAIN_SCHEDULER_BATCH_SCHEMA_VERSION
             : sourceExecutions.some(item => item.authorization_ids)
             ? "production-scheduler-batch/2.0.0" : SCHEDULER_POLICY_VERSION,
           initial_head: initialHead,
@@ -164,7 +168,9 @@ export function bootstrapProductionSchedulerBatch(options: ProductionSchedulerBa
           actor: input.actor,
           source_executions: sourceExecutions,
           deferred_sources: deferred,
-          batch_status: deriveSchedulerBatchStatus(sourceExecutions.map(item => item.effective_status ?? item.outcome_status), deferred.length),
+          batch_status: hasCadenceDeferral
+            ? deriveCurrentSchedulerBatchStatus(sourceExecutions.map(item => item.effective_status ?? item.outcome_status), deferred.map(item => item.reason))
+            : deriveSchedulerBatchStatus(sourceExecutions.map(item => item.effective_status ?? item.outcome_status), deferred.length),
           presentation_publish_readiness: sourceExecutions.some(item => item.presentation_read_model_ids.length)
             ? "READY" : "NO_NEW_MODEL",
           public_website_published: false
