@@ -11,6 +11,147 @@ import { importHistoricalResearch } from "../../lib/source-discovery/research-im
 import { DiscoveryRoot, selectDueSeeds } from "../../lib/source-discovery/discovery-root";
 import { DiscoveryBudget } from "../../lib/source-discovery/discovery-budget";
 import { createDiscoveryRecord } from "../../lib/source-discovery/contracts";
+import dns from "node:dns/promises";
+import https from "node:https";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
+
+test("live discovery preserves a scope-denied NOT_SENT event and restores without fixture provenance", async context => {
+  const { directory } = repository();
+  const store = new GitDiscoveryStore(directory);
+  context.mock.method(dns, "resolve4", async () => ["127.0.0.1"]);
+  const live = new DiscoveryRoot({ store, run_id: "live-dns-denied", scope,
+    started_at: at, approved_scope_hash: canonicalHash(scope), mode: "REAL_DIRECTORY" });
+  await live.discoverLive("official", scope.exact_urls[0]!);
+  const records = store.restore(store.head()).list("OBSERVATION");
+  assert.equal(records.at(-1)?.payload.request_state, "NOT_SENT");
+  assert.equal(records.at(-1)?.payload.provenance_kind, "REAL_DIRECTORY");
+  assert.equal(records.at(-1)?.payload.reason, "DISCOVERY_SCOPE_DENIED");
+  const restored = DiscoveryRoot.restore({ store, sha: store.head(), run_id: "live-dns-denied",
+    approved_scope_hash: canonicalHash(scope), mode: "REAL_DIRECTORY" });
+  assert.deepEqual(restored.budgetSnapshot(), live.budgetSnapshot());
+  assert.equal(store.restore(store.head()).current("CANDIDATE").length, 0);
+});
+
+test("live DNS policy failure is NOT_SENT while guarded HTTP failure retains SENT and live mode", async context => {
+  const { directory } = repository();
+  const store = new GitDiscoveryStore(directory);
+  const now = new Date().toISOString();
+  const liveScope = { ...scope, effective_from: now, expires_at: new Date(Date.parse(now) + 600000).toISOString() };
+  const hash = canonicalHash(liveScope);
+  context.mock.method(dns, "resolve4", async () => ["10.0.0.1"]);
+  const first = new DiscoveryRoot({ store, run_id: "live-dns", scope: liveScope,
+    started_at: now, approved_scope_hash: hash, mode: "REAL_DIRECTORY" });
+  await first.discoverLive("first", liveScope.exact_urls[0]!);
+  const denied = store.restore(store.head()).list("OBSERVATION").at(-1)!;
+  assert.equal(denied.payload.request_state, "NOT_SENT");
+  assert.equal(denied.payload.reason, "DISCOVERY_DNS_DENIED");
+  context.mock.restoreAll();
+  context.mock.method(dns, "resolve4", async () => ["8.8.8.8"]);
+  const secondScope = { ...liveScope, exact_urls: ["https://second.example.org/directory/"] };
+  const secondHash = canonicalHash(secondScope);
+  const second = new DiscoveryRoot({ store, run_id: "live-http", scope: secondScope,
+    started_at: new Date().toISOString(), approved_scope_hash: secondHash, mode: "REAL_DIRECTORY" });
+  await second.discoverLive("second", secondScope.exact_urls[0]!);
+  const failed = store.restore(store.head()).list("OBSERVATION").at(-1)!;
+  assert.equal(failed.payload.request_state, "SENT");
+  assert.equal(failed.payload.status, "NETWORK_FAILURE");
+  assert.equal(failed.payload.provenance_kind, "REAL_DIRECTORY");
+  const sha = store.head();
+  const child = execFileSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "-e",
+    `import {GitDiscoveryStore} from ${JSON.stringify(resolve("lib/source-discovery/git-discovery-store.ts").replaceAll("\\", "/"))}; import {DiscoveryRoot} from ${JSON.stringify(resolve("lib/source-discovery/discovery-root.ts").replaceAll("\\", "/"))}; const store=new GitDiscoveryStore(${JSON.stringify(directory)}); const root=DiscoveryRoot.restore({store,sha:${JSON.stringify(sha)},run_id:"live-http",approved_scope_hash:${JSON.stringify(secondHash)},mode:"REAL_DIRECTORY"});console.log(JSON.stringify(root.budgetSnapshot()));`], { encoding: "utf8", timeout: 30000 });
+  assert.deepEqual(JSON.parse(child.trim()), second.budgetSnapshot());
+  assert.throws(() => DiscoveryRoot.restore({ store, sha, run_id: "live-http", approved_scope_hash: secondHash,
+    mode: "OFFLINE_FIXTURE" }), /DISCOVERY_REPLAY_MISMATCH/u);
+});
+
+test("live revocation during DNS preparation remains terminal and cannot send", async context => {
+  const { directory } = repository();
+  const store = new GitDiscoveryStore(directory);
+  const now = new Date().toISOString();
+  const liveScope = { ...scope, effective_from: now, expires_at: new Date(Date.parse(now) + 600000).toISOString() };
+  let release!: (addresses: string[]) => void;
+  let entered!: () => void;
+  const entering = new Promise<void>(resolve => { entered = resolve; });
+  context.mock.method(dns, "resolve4", () => { entered(); return new Promise<string[]>(resolve => { release = resolve; }); });
+  const root = new DiscoveryRoot({ store, run_id: "live-revoked-dns", scope: liveScope,
+    started_at: now, approved_scope_hash: canonicalHash(liveScope), mode: "REAL_DIRECTORY" });
+  const request = root.discoverLive("official", liveScope.exact_urls[0]!);
+  await entering;
+  root.revoke(new Date().toISOString());
+  release(["8.8.8.8"]);
+  await assert.rejects(() => request, /DISCOVERY_ROOT_HALTED/u);
+  assert.equal(store.restore(store.head()).current("RUN").at(-1)!.payload.stage, "REVOKED");
+  assert.equal(root.budgetSnapshot().events.some(event => event.kind === "SENT"), false);
+});
+
+test("live oversized evidence preserves received bytes and unresolved reservation across restore", async context => {
+  const { directory } = repository();
+  const store = new GitDiscoveryStore(directory);
+  const now = new Date().toISOString();
+  const liveScope = { ...scope, effective_from: now, expires_at: new Date(Date.parse(now) + 600000).toISOString(),
+    budget: { ...scope.budget, max_response_bytes: 4, max_total_bytes: 4 } };
+  context.mock.method(dns, "resolve4", async () => ["8.8.8.8"]);
+  context.mock.method(https, "request", (_url: URL, _options: unknown, callback: (response: unknown) => void) => {
+    const response = Object.assign(new PassThrough(), { statusCode: 200, headers: { "content-type": "text/html" } });
+    const request = Object.assign(new EventEmitter(), {
+      end() { callback(response); response.end("larger than limit"); },
+      destroy(error: Error) { request.emit("error", error); }
+    });
+    return request;
+  });
+  const hash = canonicalHash(liveScope);
+  const root = new DiscoveryRoot({ store, run_id: "live-oversized", scope: liveScope,
+    started_at: now, approved_scope_hash: hash, mode: "REAL_DIRECTORY" });
+  await root.discoverLive("official", liveScope.exact_urls[0]!);
+  const observation = store.restore(store.head()).list("OBSERVATION").at(-1)!;
+  assert.equal(observation.payload.received_bytes, 17);
+  assert.equal(observation.payload.status, "RESPONSE_BUDGET_EXCEEDED_UNRESOLVED");
+  assert.equal(root.budgetSnapshot().events.some(event => event.kind === "OBSERVE"), false);
+  const restored = DiscoveryRoot.restore({ store, sha: store.head(), run_id: "live-oversized", approved_scope_hash: hash, mode: "REAL_DIRECTORY" });
+  await assert.rejects(() => restored.discoverLive("official", liveScope.exact_urls[0]!), /HALTED/u);
+  assert.throws(() => new DiscoveryRoot({ store, run_id: "live-budget-bypass", scope: liveScope,
+    started_at: new Date().toISOString(), approved_scope_hash: hash, mode: "REAL_DIRECTORY" }), /UNRESOLVED_RESERVATION/u);
+});
+
+test("live directory content enters the existing untrusted catalog with safe evidence and no child requests", async context => {
+  const { directory } = repository();
+  const store = new GitDiscoveryStore(directory);
+  const now = new Date().toISOString();
+  const liveScope = { ...scope, effective_from: now, expires_at: new Date(Date.parse(now) + 600000).toISOString() };
+  const hash = canonicalHash(liveScope);
+  let requests = 0;
+  context.mock.method(dns, "resolve4", async () => ["8.8.8.8"]);
+  context.mock.method(https, "request", (_url: URL, _options: unknown, callback: (response: unknown) => void) => {
+    requests += 1;
+    const response = Object.assign(new PassThrough(), { statusCode: 200,
+      headers: { "content-type": "text/html", "set-cookie": ["session=DO_NOT_PERSIST"] } });
+    const request = Object.assign(new EventEmitter(), {
+      end() { callback(response); response.end(html); },
+      destroy(error: Error) { request.emit("error", error); }
+    });
+    return request;
+  });
+  const root = new DiscoveryRoot({ store, run_id: "live-success", scope: liveScope,
+    started_at: now, approved_scope_hash: hash, mode: "REAL_DIRECTORY" });
+  await root.discoverLive("official", liveScope.exact_urls[0]!);
+  const sha = store.head();
+  const records = store.restore(sha).list();
+  const candidate = store.restore(sha).current("CANDIDATE")[0]!;
+  assert.equal(candidate.payload.provenance_kind, "REAL_DIRECTORY");
+  assert.equal(candidate.payload.officiality, "UNRESOLVED");
+  assert.equal(candidate.payload.production_admission_status, "NOT_SUBMITTED");
+  assert.equal(candidate.payload.recruitment_year_signal, "OBSERVED");
+  assert.equal(requests, 1);
+  assert.doesNotMatch(JSON.stringify(records), /DO_NOT_PERSIST/u);
+  const response = store.restore(sha).list("OBSERVATION").find(record => record.payload.http_status === 200)!;
+  assert.match(String(response.payload.content_sha256), /^[a-f0-9]{64}$/u);
+  assert.equal(response.payload.byte_length, Buffer.byteLength(html));
+  assert.deepEqual(DiscoveryRoot.restore({ store, sha, run_id: "live-success", approved_scope_hash: hash,
+    mode: "REAL_DIRECTORY" }).budgetSnapshot(), root.budgetSnapshot());
+  await assert.rejects(() => root.discover("official", liveScope.exact_urls[0]!, now,
+    { kind: "OFFLINE_DIRECTORY_FIXTURE", responses: {} }), /DISCOVERY_FIXTURE_REQUIRED/u);
+});
 
 const at = "2026-10-06T00:00:00.000Z";
 const scope = { scope_id: "fixture-directory", revision: 1, status: "ACTIVE" as const,

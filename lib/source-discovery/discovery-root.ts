@@ -5,14 +5,17 @@ import { GitDiscoveryStore } from "./git-discovery-store";
 import { observeDirectory } from "./adapters/official-directory";
 import { publicDiscoveryAddress, safeDiscoveryUrl } from "./safety";
 import { prepareAdmissionProposal } from "./admission-proposal";
+import { DirectoryHttpFailure, prepareDirectoryHttpRequest } from "./adapters/official-directory-http";
 
 export interface DirectoryResponse {
   http_status: number; final_url: string; addresses: string[]; content_type: string; body: string;
   response_set_cookie_present: boolean;
+  content_sha256?: string;
+  received_byte_length?: number;
 }
 interface RootOptions {
   store: GitDiscoveryStore; run_id: string; scope: DiscoveryPolicy; started_at: string;
-  approved_scope_hash: string; mode: "OFFLINE_FIXTURE";
+  approved_scope_hash: string; mode: "OFFLINE_FIXTURE" | "REAL_DIRECTORY";
   cooldowns?: Record<string, string>;
 }
 export interface OfflineDirectoryFixture {
@@ -27,7 +30,7 @@ export class DiscoveryRoot {
   private expectedHead: string;
 
   constructor(options: RootOptions) {
-    if (options.mode !== "OFFLINE_FIXTURE" || !options.run_id.trim()
+    if (!["OFFLINE_FIXTURE", "REAL_DIRECTORY"].includes(options.mode) || !options.run_id.trim()
       || canonicalHash(options.scope) !== options.approved_scope_hash) throw new Error("DISCOVERY_SCOPE_NOT_APPROVED");
     this.options = { ...options, scope: structuredClone(options.scope) };
     this.expectedHead = options.store.head();
@@ -66,6 +69,8 @@ export class DiscoveryRoot {
   }
 
   private runIdentity() { return `discovery:run:${canonicalHash(this.options.run_id)}`; }
+  private provenanceKind() { return this.options.mode; }
+  private observerActor() { return this.options.mode === "OFFLINE_FIXTURE" ? "OFFLINE_DIRECTORY_OBSERVER" : "REAL_DIRECTORY_OBSERVER"; }
 
   private assertRepositoryGate(organization: string, url: string, at: string): void {
     const runs = this.options.store.restore(this.expectedHead).current("RUN");
@@ -97,7 +102,7 @@ export class DiscoveryRoot {
     const prior = this.options.store.restore(parent).list("RUN").filter(record => record.logical_id === this.runIdentity()).at(-1);
     const run = createDiscoveryRecord("RUN", this.runIdentity(), {
       run_id: this.options.run_id, actor: this.options.scope.approved_by, observed_at: at,
-      provenance_kind: "OFFLINE_FIXTURE", mode: this.options.mode, scope_hash: this.options.approved_scope_hash,
+      provenance_kind: this.provenanceKind(), mode: this.options.mode, scope_hash: this.options.approved_scope_hash,
       input_sha: prior?.payload.input_sha ?? parent, stage, budget: this.budget.snapshot()
     }, prior ? [prior] : [], (prior?.revision ?? 0) + 1);
     try { this.expectedHead = this.options.store.commit([...additions, run], parent); }
@@ -111,14 +116,15 @@ export class DiscoveryRoot {
     this.halted = true;
   }
 
-  static restore(input: { store: GitDiscoveryStore; sha: string; run_id: string; approved_scope_hash: string; mode: "OFFLINE_FIXTURE" }): DiscoveryRoot {
+  static restore(input: { store: GitDiscoveryStore; sha: string; run_id: string; approved_scope_hash: string; mode: "OFFLINE_FIXTURE" | "REAL_DIRECTORY" }): DiscoveryRoot {
     const runs = input.store.restore(input.sha).list("RUN").filter(record => record.logical_id === `discovery:run:${canonicalHash(input.run_id)}`);
-    if (!runs.length || input.mode !== "OFFLINE_FIXTURE") throw new Error("DISCOVERY_RUN_NOT_FOUND");
+    if (!runs.length || !["OFFLINE_FIXTURE", "REAL_DIRECTORY"].includes(input.mode)) throw new Error("DISCOVERY_RUN_NOT_FOUND");
     let previousEvents: unknown[] = [];
     for (const record of runs) {
       const snapshot = record.payload.budget as DiscoveryBudgetSnapshot;
       DiscoveryBudget.restore(snapshot);
-      if (record.payload.scope_hash !== input.approved_scope_hash || canonicalHash(snapshot.policy) !== input.approved_scope_hash
+      if (record.payload.mode !== input.mode || record.payload.provenance_kind !== input.mode
+        || record.payload.scope_hash !== input.approved_scope_hash || canonicalHash(snapshot.policy) !== input.approved_scope_hash
         || canonicalHash(snapshot.events.slice(0, previousEvents.length)) !== canonicalHash(previousEvents)) throw new Error("DISCOVERY_REPLAY_MISMATCH");
       previousEvents = snapshot.events;
     }
@@ -135,10 +141,21 @@ export class DiscoveryRoot {
 
   async discover(organization: string, url: string, at: string,
     fixture: OfflineDirectoryFixture): Promise<void> {
+    if (this.options.mode !== "OFFLINE_FIXTURE" || !fixture || fixture.kind !== "OFFLINE_DIRECTORY_FIXTURE") throw new Error("DISCOVERY_FIXTURE_REQUIRED");
+    return this.discoverInput(organization, url, at, fixture);
+  }
+
+  async discoverLive(organization: string, url: string): Promise<void> {
+    if (this.options.mode !== "REAL_DIRECTORY") throw new Error("DISCOVERY_REAL_SCOPE_REQUIRED");
+    return this.discoverInput(organization, url, new Date().toISOString(), null);
+  }
+
+  private async discoverInput(organization: string, url: string, at: string, fixture: OfflineDirectoryFixture | null): Promise<void> {
+    if ((fixture === null) !== (this.options.mode === "REAL_DIRECTORY")) throw new Error("DISCOVERY_MODE_MISMATCH");
     if (this.halted) throw new Error("DISCOVERY_ROOT_HALTED");
     if (this.options.store.head() !== this.expectedHead) throw new Error("DISCOVERY_STALE_ROOT_CAS");
-    if (fixture.kind !== "OFFLINE_DIRECTORY_FIXTURE") throw new Error("DISCOVERY_FIXTURE_REQUIRED");
-    canonicalHash(fixture);
+    if (fixture && fixture.kind !== "OFFLINE_DIRECTORY_FIXTURE") throw new Error("DISCOVERY_FIXTURE_REQUIRED");
+    if (fixture) canonicalHash(fixture);
     let intent: ReturnType<DiscoveryBudget["reserve"]>;
     try { this.assertRepositoryGate(organization, url, at); intent = this.budget.reserve(organization, url, at); }
     catch (error) {
@@ -147,21 +164,63 @@ export class DiscoveryRoot {
       const reason = error instanceof Error && permitted.has(error.message) ? error.message : "DISCOVERY_TARGET_DENIED";
       const denied = createDiscoveryRecord("OBSERVATION", `discovery:denied:${canonicalHash({ run: this.options.run_id, organization, url_hash: canonicalHash(url), at })}`, {
         request_state: "NOT_SENT", status: "POLICY_DENIED", target_hash: canonicalHash(url), observed_at: at,
-        provenance_kind: "OFFLINE_FIXTURE", scope_hash: this.options.approved_scope_hash, reason
+        provenance_kind: this.provenanceKind(), scope_hash: this.options.approved_scope_hash, reason
       });
       this.persist("PRE_SEND_DENIED", at, [denied]);
       return;
     }
     this.persist("RESERVED", at);
+    let prepared: Awaited<ReturnType<typeof prepareDirectoryHttpRequest>> | null = null;
+    if (!fixture) {
+      try {
+        const remaining = Math.min(60000, Date.parse(this.options.started_at)
+          + this.options.scope.budget.runtime_seconds * 1000 - Date.now());
+        prepared = await prepareDirectoryHttpRequest(url, this.options.scope.budget.max_response_bytes, remaining);
+        at = new Date().toISOString();
+        if (Date.parse(at) >= Date.parse(this.options.scope.expires_at)
+          || Date.parse(at) >= Date.parse(this.options.started_at) + this.options.scope.budget.runtime_seconds * 1000) {
+          throw new Error("DISCOVERY_SCOPE_DENIED");
+        }
+      } catch (error) {
+        if (this.halted) throw new Error("DISCOVERY_ROOT_HALTED");
+        const reason = error instanceof Error && /^DISCOVERY_[A-Z_]+$/.test(error.message) ? error.message : "DISCOVERY_DNS_FAILURE";
+        this.finish(intent, "POLICY_DENIED", new Date().toISOString(), 0, false, [], { reason });
+        return;
+      }
+    }
+    if (this.halted) throw new Error("DISCOVERY_ROOT_HALTED");
     this.budget.markSent(intent.intent_id, at);
     this.persist("SEND_ENTERED", at);
-    const supplied = fixture.responses[intent.url];
+    let supplied: DirectoryResponse | { failure: "NETWORK_FAILURE" } | undefined;
+    if (fixture) supplied = fixture.responses[intent.url];
+    else {
+      try { supplied = await prepared!.execute(); }
+      catch (error) {
+        if (this.halted) throw new Error("DISCOVERY_ROOT_HALTED");
+        const received = error instanceof DirectoryHttpFailure ? error.received_bytes : 0;
+        const reason = error instanceof DirectoryHttpFailure ? error.reason_code : "DISCOVERY_HTTP_REQUEST_FAILED";
+        const consumed = this.budget.snapshot().events.filter(event => event.kind === "OBSERVE").reduce((sum, event) => sum + event.byte_length, 0);
+        if (received > this.options.scope.budget.max_response_bytes || received + consumed > this.options.scope.budget.max_total_bytes) {
+          const observation = createDiscoveryRecord("OBSERVATION", `discovery:oversize:${canonicalHash(intent.intent_id)}`, {
+            intent_id: intent.intent_id, request_state: "SENT", status: "RESPONSE_BUDGET_EXCEEDED_UNRESOLVED",
+            received_bytes: received, reason, provenance_kind: this.provenanceKind(), observed_at: new Date().toISOString()
+          });
+          this.persist("RESPONSE_BUDGET_EXCEEDED_UNRESOLVED", new Date().toISOString(), [observation]);
+          this.halted = true;
+          return;
+        }
+        this.finish(intent, "NETWORK_FAILURE", new Date().toISOString(), received, false, [], { reason });
+        return;
+      }
+      at = new Date().toISOString();
+    }
+    if (this.halted) throw new Error("DISCOVERY_ROOT_HALTED");
     if (!supplied || "failure" in supplied) {
       this.finish(intent, "NETWORK_FAILURE", at, 0, false);
       return;
     }
     const response = structuredClone(supplied);
-    const length = Buffer.byteLength(response.body, "utf8");
+    const length = fixture ? Buffer.byteLength(response.body, "utf8") : response.received_byte_length!;
     if (length > this.options.scope.budget.max_response_bytes
       || length + this.budget.snapshot().events.filter(event => event.kind === "OBSERVE").reduce((sum, event) => sum + event.byte_length, 0) > this.options.scope.budget.max_total_bytes) {
       this.persist("RESPONSE_BUDGET_EXCEEDED_UNRESOLVED", at);
@@ -184,7 +243,7 @@ export class DiscoveryRoot {
       for (const [ordinal, entry] of directory.selected.entries()) {
         const observation = createDiscoveryRecord("OBSERVATION", `discovery:observation:${canonicalHash({ intent: intent.intent_id, ordinal })}`, {
           ...entry, run_id: this.options.run_id, frontier: true, publisher_url: url, observed_at: at,
-          provenance_kind: "OFFLINE_FIXTURE", content_hash: directory.content_hash, request_state: "SENT",
+          provenance_kind: this.provenanceKind(), content_hash: directory.content_hash, request_state: "SENT",
           intent_id: intent.intent_id, scope_hash: this.options.approved_scope_hash,
           reconstruction_limit: "RAW_HTML_NOT_RETAINED_SAFE_QUOTE_AND_HASH_ONLY"
         }, [sentRun]);
@@ -192,7 +251,7 @@ export class DiscoveryRoot {
         const identity = `discovery:candidate:${canonicalHash({ publisher: url, target: entry.url_hash })}`;
         const prior = catalog.list("CANDIDATE").filter(record => record.logical_id === identity).at(-1);
         const candidate = createDiscoveryRecord("CANDIDATE", identity, {
-          provenance_kind: "OFFLINE_FIXTURE", employer_claim: entry.quote, employer_identity: "UNRESOLVED",
+          provenance_kind: this.provenanceKind(), employer_claim: entry.quote, employer_identity: "UNRESOLVED",
           publisher_identity: "UNRESOLVED", recruitment_owner_identity: "UNRESOLVED", hosting_platform_identity: "UNRESOLVED",
           recruitment_entry_url: entry.url, officiality: "UNRESOLVED", production_admission_status: "NOT_SUBMITTED",
           recruitment_year_signal: /2027(?:\s*届|\s*年)?/.test(entry.quote) ? "OBSERVED" : "NOT_OBSERVED",
@@ -205,18 +264,18 @@ export class DiscoveryRoot {
         catalog.append(observation); catalog.append(candidate);
         if (!prior) additions.push(createDiscoveryRecord("SEED", `discovery:seed:${canonicalHash(identity)}`, {
           candidate_id: identity, employer_claim: entry.quote, recruitment_entry_url: entry.url,
-          provenance_kind: "OFFLINE_FIXTURE", actor: "OFFLINE_DIRECTORY_OBSERVER", observed_at: at,
+          provenance_kind: this.provenanceKind(), actor: this.observerActor(), observed_at: at,
           unknown_signal: true, next_due: new Date(Date.parse(at) + this.options.scope.budget.cooldown_seconds * 1000).toISOString(),
           production_activation: false
         }, [candidate]));
         additions.push(createDiscoveryRecord("VERIFICATION", `discovery:disposition:${canonicalHash(observation.record_id)}`, {
           axis: "ADMISSION_DISPOSITION", result: candidate.payload.disposition, candidate_id: identity,
-          actor: "OFFLINE_DIRECTORY_OBSERVER", observed_at: at, reason: "NO_PRODUCTION_ADMISSION_OR_AUTHORIZATION",
+          actor: this.observerActor(), observed_at: at, reason: "NO_PRODUCTION_ADMISSION_OR_AUTHORIZATION",
           authority: "UNTRUSTED_OBSERVATION_NOT_ADMISSION", admission_proposal: prepareAdmissionProposal(candidate)
         }, [candidate]));
         for (const axis of ["OFFICIALITY", "RECRUITMENT_YEAR", "LEGAL_DISCOVERY"] as const) {
           additions.push(createDiscoveryRecord("VERIFICATION", `discovery:evidence:${canonicalHash({ observation: observation.record_id, axis })}`, {
-            axis, actor: "OFFLINE_DIRECTORY_OBSERVER", observed_at: at, quote: entry.quote, locator: entry.locator,
+            axis, actor: this.observerActor(), observed_at: at, quote: entry.quote, locator: entry.locator,
             result: axis === "OFFICIALITY" ? "UNRESOLVED" : axis === "RECRUITMENT_YEAR" ? candidate.payload.recruitment_year_signal : candidate.payload.legal_signal,
             authority: "UNTRUSTED_OBSERVATION_NOT_ADMISSION", candidate_id: identity
           }, [observation, candidate]));
@@ -228,16 +287,18 @@ export class DiscoveryRoot {
       }));
       if (!directory.selected.length && !directory.deferred.length) status = "EMPTY";
     }
-    this.finish(intent, status, at, length, response.response_set_cookie_present, additions);
+    this.finish(intent, status, at, length, response.response_set_cookie_present, additions,
+      fixture ? {} : { http_status: response.http_status, content_sha256: response.content_sha256 });
   }
 
   private finish(intent: ReturnType<DiscoveryBudget["reserve"]>, status: string, at: string, length: number,
-    cookiePresent: boolean, additions: DiscoveryRecord[] = []) {
+    cookiePresent: boolean, additions: DiscoveryRecord[] = [], facts: Record<string, unknown> = {}) {
+    const sent = this.budget.snapshot().events.some(event => event.kind === "SENT" && event.intent_id === intent.intent_id);
     this.budget.observe(intent.intent_id, { status, byte_length: length }, at);
     const observation = createDiscoveryRecord("OBSERVATION", `discovery:response:${canonicalHash(intent.intent_id)}`, {
       intent_id: intent.intent_id, run_id: this.options.run_id, scope_hash: this.options.approved_scope_hash,
-      exact_url: safeDiscoveryUrl(intent.url), request_state: "SENT", status, byte_length: length,
-      response_set_cookie_present: cookiePresent, cookie_discarded: true, observed_at: at, provenance_kind: "OFFLINE_FIXTURE"
+      exact_url: safeDiscoveryUrl(intent.url), request_state: sent ? "SENT" : "NOT_SENT", status, byte_length: length,
+      response_set_cookie_present: cookiePresent, cookie_discarded: true, observed_at: at, provenance_kind: this.provenanceKind(), ...facts
     }, [this.options.store.restore(this.expectedHead).list("RUN").filter(record => record.logical_id === this.runIdentity()).at(-1)!]);
     this.persist("OBSERVED", at, [...additions, observation]);
   }
