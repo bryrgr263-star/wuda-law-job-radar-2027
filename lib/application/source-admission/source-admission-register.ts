@@ -184,7 +184,9 @@ function validateAdmissionTier(admission: SourceAdmission) {
     for (const target of scope.exact_targets) {
       validateEndpoint(target.exact_url);
       const url = new URL(target.exact_url);
-      if (!target.allowlist_entry_id.trim() || url.protocol !== "https:" || url.search || url.hash || url.href !== target.exact_url) {
+      if (!target.allowlist_entry_id.trim() || url.protocol !== "https:" || url.hash || url.href !== target.exact_url
+        || (url.search && (!target.query_contract_hash || !/^[a-f0-9]{64}$/.test(target.query_contract_hash)))
+        || (target.query_contract_hash !== undefined && (!/^[a-f0-9]{64}$/.test(target.query_contract_hash) || url.port))) {
         throw new SourceAdmissionError("Continuous approval requires exact HTTPS targets without query or fragment");
       }
     }

@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from "node:crypto";
 import { InMemorySourceAdmissionRegister } from "../application/source-admission/source-admission-register";
-import { currentContinuousGrant, type ContinuousScope, type ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
+import { currentContinuousGrant, validateContinuousContext, type ContinuousScope, type ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
+import { assertApprovedQueryRequest, type QueryAuthorizationContract } from "../application/source-admission/query-authorization";
 import type { HttpTransportRequest, HttpTransport } from "../collection-runtime/types";
 import type { TransportResponse } from "../ingestion/domain/raw";
 import { InMemorySourceRegistry } from "../ingestion/registry/source-registry";
@@ -50,7 +51,7 @@ export async function executeContinuousRequest(options: ContinuousRequestGateOpt
   repository.assertAuthoritativeHead(options.branch, reservationHead);
   const response = options.controlled_transport
     ? await options.controlled_transport.execute(structuredClone(request))
-    : await executeContinuousOfficialRequest(request, options.now);
+    : await executeVerifiedOfficialRequest(request, options.now, validateContinuousContext(context).query_contract);
   if (!response || (response.status !== "SUCCESS" && response.status !== "FAILED")) throw new Error("SEND_STATE_UNKNOWN");
   const current = new GitSourceRegistryPersistence({ repository_path: options.repository_path, fencing_verifier: options.fencing_verifier });
   current.assertAuthoritativeHead(options.branch, reservationHead);
@@ -62,10 +63,15 @@ export async function executeContinuousRequest(options: ContinuousRequestGateOpt
 }
 
 export async function executeContinuousOfficialRequest(request: HttpTransportRequest, now: () => string): Promise<TransportResponse> {
+  return executeVerifiedOfficialRequest(request, now);
+}
+
+async function executeVerifiedOfficialRequest(request: HttpTransportRequest, now: () => string, queryContract?: QueryAuthorizationContract): Promise<TransportResponse> {
   const url = new URL(request.locator);
+  if (queryContract) assertApprovedQueryRequest(request.locator, queryContract);
   if (request.method !== "GET" || request.body !== undefined || Object.keys(request.headers).length
     || Object.keys(request.parameters).length || url.protocol !== "https:" || url.href !== request.locator
-    || url.username || url.password || url.hash || url.search || !Number.isSafeInteger(request.timeout_ms) || request.timeout_ms < 1) {
+    || url.username || url.password || url.hash || (url.search && !queryContract) || !Number.isSafeInteger(request.timeout_ms) || request.timeout_ms < 1) {
     throw new Error("EXACT_REQUEST_DENIED");
   }
   const response = await fetch(request.locator, { method: "GET", redirect: "manual", credentials: "omit",

@@ -1,6 +1,7 @@
 import { canonicalHash, canonicalSerialize } from "../../ingestion/normalization/canonical-artifact-registry";
 import type { SourceDefinition, RecruitmentEndpoint } from "../../ingestion/domain/source";
 import type { SourceAdmission } from "./types";
+import { assertApprovedQueryRequest, assertQueryAuthorizationContract, materializeApprovedQueryTargets, type QueryAuthorizationContract } from "./query-authorization";
 
 export const CONTINUOUS_MODE = "REVOCABLE_CONTINUOUS_UNATTENDED_ACQUISITION" as const;
 export type ContinuousScope = "PRODUCTION" | "CONTROLLED_TEST";
@@ -24,6 +25,8 @@ export interface ContinuousSourceContext {
   readonly target: Readonly<Record<string, unknown>>;
 }
 export interface ContinuousGrantPayload {
+  readonly request_contract_version?: "continuous-request/2.0.0";
+  readonly query_contract_hash?: string;
   readonly authorization_mode: typeof CONTINUOUS_MODE;
   readonly authorization_basis: "HUMAN_APPROVED_CONTINUOUS_SCOPE";
   readonly scope: ContinuousScope;
@@ -119,10 +122,23 @@ export function validateContinuousContext(context: ContinuousSourceContext) {
   const entry = scope?.exact_targets.find(item => item.allowlist_entry_id === target.allowlist_entry_id);
   if (!scope || !entry || !["PRODUCTION", "CONTROLLED_TEST"].includes(scope.scope)) throw new Error("EXACT_TARGET_NOT_APPROVED");
   const url = new URL(entry.exact_url);
-  if (url.href !== entry.exact_url || url.protocol !== "https:" || url.username || url.password || url.search || url.hash
+  const queryPolicy = target.query_policy as { mode?: string; contract?: QueryAuthorizationContract };
+  const queryContract = queryPolicy?.mode === "FINITE_VALUES" ? queryPolicy.contract : undefined;
+  if (queryContract) {
+    assertQueryAuthorizationContract(queryContract);
+    assertApprovedQueryRequest(entry.exact_url, queryContract);
+    const approvedTargets = scope.exact_targets.filter(item => item.query_contract_hash === queryContract.contract_hash).map(item => item.exact_url).sort();
+    if (scope.exact_targets.length > 64 || new Set(approvedTargets).size !== approvedTargets.length
+      || canonicalSerialize(approvedTargets) !== canonicalSerialize(materializeApprovedQueryTargets(queryContract))) throw new Error("QUERY_TARGET_INVENTORY_MISMATCH");
+    if (Object.keys(queryPolicy).sort().join(",") !== "contract,mode" || entry.query_contract_hash !== queryContract.contract_hash
+      || queryContract.base_exact_url !== `${url.origin}${url.pathname}` || url.port) throw new Error("EXACT_NETWORK_SCOPE_INVALID");
+  } else if (entry.query_contract_hash !== undefined || url.search
+    || canonicalSerialize(target.query_policy) !== canonicalSerialize({ mode: "DENY_ALL", allowed_parameters: [] })) {
+    throw new Error("EXACT_NETWORK_SCOPE_INVALID");
+  }
+  if (url.href !== entry.exact_url || url.protocol !== "https:" || url.username || url.password || url.hash
     || target.scheme !== "https" || target.host !== url.hostname || target.port !== (url.port ? Number(url.port) : null)
     || target.exact_path !== true || target.path_prefix !== url.pathname || target.allowed_method !== "GET"
-    || canonicalSerialize(target.query_policy) !== canonicalSerialize({ mode: "DENY_ALL", allowed_parameters: [] })
     || endpoint.request_method !== "GET" || endpoint.collection_config.follow_redirects !== false) throw new Error("EXACT_NETWORK_SCOPE_INVALID");
   const review = admission.review_records.find(item => item.source_admission_review_id === scope.approval_review_id);
   if (!review || review.decision !== "APPROVED" || !review.reviewer.trim()) throw new Error("APPROVAL_EVIDENCE_MISSING");
@@ -136,7 +152,7 @@ export function validateContinuousContext(context: ContinuousSourceContext) {
   }
   interval(scope.min_interval_seconds);
   continuousTime(scope.effective_from);
-  return { scope, review, exact_url: entry.exact_url };
+  return { scope, review, exact_url: entry.exact_url, query_contract: queryContract };
 }
 
 function grantFor(context: ContinuousSourceContext, command: ContinuousIssueCommand, version: number): ContinuousAcquisitionAuthorization {
@@ -147,6 +163,7 @@ function grantFor(context: ContinuousSourceContext, command: ContinuousIssueComm
   const payload: ContinuousGrantPayload = {
     authorization_mode: CONTINUOUS_MODE, authorization_basis: "HUMAN_APPROVED_CONTINUOUS_SCOPE",
     scope: approved.scope.scope, bindings: structuredClone(context.bindings), exact_endpoint: approved.exact_url,
+    ...(approved.query_contract ? { request_contract_version: "continuous-request/2.0.0" as const, query_contract_hash: approved.query_contract.contract_hash } : {}),
     effective_from: command.effective_from, cadence_ceiling: { min_interval_seconds: command.min_interval_seconds },
     network_scope: { method: "GET", redirect: "DENY", cookies: "DENY", login: "DENY", captcha: "DENY", interaction: "DENY", discovery: "DENY" }
   };
@@ -203,6 +220,9 @@ export function reserveContinuousRecord(records: readonly ContinuousRecord[], id
   const grant = currentContinuousGrant(records, id);
   const approved = validateContinuousContext(context);
   if (canonicalSerialize(grant.canonical_payload.bindings) !== canonicalSerialize(context.bindings)) throw new Error("REAUTHORIZE_REQUIRED");
+  if (approved.query_contract ? grant.canonical_payload.request_contract_version !== "continuous-request/2.0.0"
+      || grant.canonical_payload.query_contract_hash !== approved.query_contract.contract_hash
+    : grant.canonical_payload.request_contract_version !== undefined || grant.canonical_payload.query_contract_hash !== undefined) throw new Error("REAUTHORIZE_REQUIRED");
   if (grant.canonical_payload.scope !== scope) throw new Error("AUTHORIZATION_SCOPE_MISMATCH");
   if (records.some(record => record.kind === "REVOKE" && record.payload.authorization_id === id)) throw new Error("AUTHORIZATION_REVOKED");
   const now = continuousTime(at);

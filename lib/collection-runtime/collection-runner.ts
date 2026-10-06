@@ -15,11 +15,17 @@ import type {
   CollectionRuntimePolicy,
   HttpTransport
 } from "./types";
+import { paginationContentFingerprint, explicitPaginationEmpty } from "./pagination-content";
 
 export interface CollectionRunnerInput {
   readonly collection_run_id: string;
   readonly endpoint: RecruitmentEndpoint;
   readonly adapter: RecruitmentAdapter;
+  readonly pagination_safety?: {
+    readonly approved_locators: readonly string[];
+    readonly maximum_pages: number;
+    readonly request_budget: number;
+  };
 }
 
 export interface CollectionRunnerOptions {
@@ -48,12 +54,23 @@ export class CollectionRunner {
     const validation = input.adapter.validateEndpoint(input.endpoint);
     if (!validation.valid) throw new Error(`Adapter rejected endpoint: ${validation.issues.join("; ")}`);
     const started_at = this.#clock.now();
-    const maxPages = bounded(input.endpoint.collection_config.max_pages, this.#policy.max_pages);
+    const safety = input.pagination_safety;
+    if (safety && (!Number.isSafeInteger(safety.maximum_pages) || safety.maximum_pages < 1 || safety.maximum_pages > 32
+      || !Number.isSafeInteger(safety.request_budget) || safety.request_budget < 1 || safety.request_budget > 64
+      || !safety.approved_locators.length || safety.approved_locators.length > 64
+      || new Set(safety.approved_locators).size !== safety.approved_locators.length)) throw new Error("PAGINATION_BOUNDARY_INVALID");
+    const maxPages = Math.min(bounded(input.endpoint.collection_config.max_pages, this.#policy.max_pages), safety?.maximum_pages ?? this.#policy.max_pages);
+    const requestBudget = Math.min(this.#policy.request_budget, safety?.request_budget ?? this.#policy.request_budget);
     const retryLimit = bounded(input.endpoint.collection_config.retry_limit, this.#policy.retry_limit);
     const timeoutMs = input.endpoint.collection_config.timeout_ms ?? this.#policy.timeout_ms;
     if (timeoutMs <= 0) throw new Error("Collection timeout must be positive");
 
     const plans = [...input.adapter.plan(input.endpoint)];
+    if (safety) {
+      const planned = plans.map(plan => plan.locator).sort();
+      if (JSON.stringify(planned) !== JSON.stringify([...safety.approved_locators].sort())) throw new Error("QUERY_TARGET_INVENTORY_MISMATCH");
+    }
+    const contentFingerprints = new Set<string>();
     const visitedLocators = new Set<string>();
     const requestResults: CollectionRequestResult[] = [];
     const snapshots = [] as CollectionRunRuntimeResult["snapshots"] extends readonly (infer Value)[] ? Value[] : never[];
@@ -68,6 +85,7 @@ export class CollectionRunner {
 
     while (plans.length > 0) {
       const plan = plans.shift()!;
+      if (safety && !safety.approved_locators.includes(plan.locator)) throw new Error("PAGINATION_TARGET_NOT_DECLARED");
       if (pagesCollected >= maxPages) {
         reasons.add("MAX_PAGES_REACHED");
         limited = true;
@@ -78,13 +96,13 @@ export class CollectionRunner {
         limited = true;
         continue;
       }
-      if (requestsMade >= this.#policy.request_budget) {
+      if (requestsMade >= requestBudget) {
         reasons.add("REQUEST_BUDGET_EXHAUSTED");
         limited = true;
         break;
       }
       visitedLocators.add(plan.locator);
-      const execution = await this.executePlan(plan, timeoutMs, retryLimit, requestResults);
+      const execution = await this.executePlan(plan, timeoutMs, retryLimit, requestResults, requestBudget);
       requestsMade += execution.request_count;
       anyFailedAttempt ||= execution.failed_attempt;
       for (const result of execution.results) {
@@ -105,6 +123,17 @@ export class CollectionRunner {
           raw_blob: finalResult.raw_blob
         });
         records.push(...extracted);
+        if (safety) {
+          const fingerprint = paginationContentFingerprint(extracted);
+          const empty = explicitPaginationEmpty(finalResult.raw_blob, extracted);
+          const repeated = extracted.length > 0 && contentFingerprints.has(fingerprint);
+          contentFingerprints.add(fingerprint);
+          if (empty || repeated) {
+            reasons.add(empty ? "EMPTY_PAGE_STOP" : "REPEATED_CONTENT_BLOCKED");
+            limited = plans.length > 0;
+            break;
+          }
+        }
       } catch (error) {
         extractionErrors.push({
           snapshot_id: finalResult.snapshot.snapshot_id,
@@ -121,7 +150,10 @@ export class CollectionRunner {
           snapshot: finalResult.snapshot,
           pagination_state: plan.pagination_state
         });
-        if (nextPage) plans.push(nextPage);
+        if (nextPage) {
+          if (safety && !safety.approved_locators.includes(nextPage.locator)) throw new Error("PAGINATION_TARGET_NOT_DECLARED");
+          if (!safety || !plans.some(planned => planned.locator === nextPage.locator)) plans.push(nextPage);
+        }
       } catch (error) {
         extractionErrors.push({
           snapshot_id: finalResult.snapshot.snapshot_id,
@@ -166,12 +198,13 @@ export class CollectionRunner {
     plan: CollectionRequestResult["plan"],
     timeoutMs: number,
     retryLimit: number,
-    results: CollectionRequestResult[]
+    results: CollectionRequestResult[],
+    requestBudget = this.#policy.request_budget
   ) {
     const localResults: CollectionRequestResult[] = [];
     let failedAttempt = false;
     for (let attempt = 0; attempt <= retryLimit; attempt += 1) {
-      if (results.length >= this.#policy.request_budget) break;
+      if (results.length >= requestBudget) break;
       await this.waitForRateLimit(attempt);
       const request: TransportRequest = {
         recruitment_endpoint_id: plan.recruitment_endpoint_id,
@@ -214,6 +247,7 @@ function classify(input: {
   readonly limited: boolean;
   readonly anyFailedAttempt: boolean;
 }) {
+  if (input.records.length === 0 && input.reasons.has("EMPTY_PAGE_STOP") && !input.reasons.has("ADAPTER_EXTRACTION_FAILED")) return "SUSPICIOUS_EMPTY" as const;
   if (input.reasons.has("TRANSPORT_FAILED")) return "FAILED" as const;
   if (input.limited || input.reasons.has("MALFORMED_NEXT_PAGE") || input.reasons.has("REPEATED_PAGE_BLOCKED") || input.completeness.status === "PARTIAL") return "PARTIAL" as const;
   if (input.reasons.has("ADAPTER_EXTRACTION_FAILED") || input.completeness.status === "FAILED" || input.anyFailedAttempt) return "FAILED" as const;

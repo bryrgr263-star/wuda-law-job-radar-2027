@@ -7,7 +7,7 @@ import type { ContinuousRecord } from "../application/source-admission/continuou
 import type { AcquisitionPersistenceBundle, RawBlobManifest, SourcePersistenceVersion } from "./contracts";
 import { isClosedOfficialJsonEmpty, type TrustedAcquisitionClassification } from "./trusted-acquisition-evidence";
 import { SourceRunMissingGuard, type SourceRunId } from "../ingestion";
-import { assertSourceExecutionRequestPlanBindings, type SourceExecutionRequestPlan } from "./source-execution-request-plan";
+import { assertSourceExecutionRequestPlanBindings, assertSourceExecutionPaginationEvidence, type SourceExecutionRequestPlan } from "./source-execution-request-plan";
 
 export const SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION = "production-source-execution-outcome/1.0.0" as const;
 export const MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION = "production-source-execution-outcome/2.0.0" as const;
@@ -94,12 +94,6 @@ export async function readSourceExecutionOutcomes(
   }
   const byId = new Map(acquisitions.map(bundle => [bundle.acquisition_run.acquisition_run_id, bundle]));
   const versionIds = new Set(versions.map(version => version.artifact_id));
-  const grants = new Map(continuousRecords.filter(record => record.kind === "GRANT")
-    .map(record => [record.payload.grant!.authorization_id, record.payload.grant!]));
-  const reserves = new Map(continuousRecords.filter(record => record.kind === "RESERVE")
-    .map(record => [record.payload.attempt_id!, record]));
-  const completedAttempts = new Set(continuousRecords.filter(record => record.kind === "COMPLETE")
-    .map(record => record.payload.attempt_id));
   const seen = new Set<string>();
   const entries = await Promise.all(names.map(async name => {
     const relativePath = `production-runs/source-executions/${name}`;
@@ -116,6 +110,25 @@ export async function readSourceExecutionOutcomes(
       throw new Error(`Source execution outcome integrity mismatch: ${name}`);
     }
     seen.add(outcome.source_execution_id);
+    let executionRecords = continuousRecords;
+    if (outcome.request_plan?.schema_version === "source-execution-request-plan/2.0.0") {
+      const parentState = canonicalDeserialize(git(repositoryPath, "show", `${outcome.expected_parent}:production-source-state/state/current.json`)) as {
+        readonly integrity_hash: string;
+        readonly continuous_records?: readonly { readonly record_id: string; readonly integrity_hash: string }[];
+      };
+      const { integrity_hash: stateHash, ...stateContent } = parentState;
+      const references = parentState.continuous_records;
+      if (stateHash !== canonicalHash(stateContent) || !Array.isArray(references)
+        || references.some((reference, index) => reference.record_id !== continuousRecords[index]?.record_id
+          || reference.integrity_hash !== continuousRecords[index]?.integrity_hash)) throw new Error("SOURCE_REQUEST_PLAN_RECORD_SCOPE_INVALID");
+      executionRecords = continuousRecords.slice(0, references.length);
+    }
+    const grants = new Map(executionRecords.filter(record => record.kind === "GRANT")
+      .map(record => [record.payload.grant!.authorization_id, record.payload.grant!]));
+    const reserves = new Map(executionRecords.filter(record => record.kind === "RESERVE")
+      .map(record => [record.payload.attempt_id!, record]));
+    const completedAttempts = new Set(executionRecords.filter(record => record.kind === "COMPLETE")
+      .map(record => record.payload.attempt_id));
     if (!outcome.source_version_ids.length
       || outcome.source_version_ids.some(id => !versionIds.has(id))
       || !versionIds.has(outcome.source_admission_artifact_id)
@@ -152,7 +165,16 @@ export async function readSourceExecutionOutcomes(
       return bundle;
     });
     if (outcome.request_plan) assertSourceExecutionRequestPlanBindings(outcome.request_plan,
-      outcome, versions, continuousRecords, linked);
+      outcome, versions, executionRecords, linked);
+    if (outcome.request_plan?.schema_version === "source-execution-request-plan/2.0.0") {
+      const rawBytes = new Map<string, Uint8Array>();
+      for (const bundle of linked) {
+        if (!bundle.raw_blob_manifest) continue;
+        const bytes = await readRaw(bundle.raw_blob_manifest);
+        if (bytes) rawBytes.set(bundle.raw_blob_manifest.raw_blob_id, bytes);
+      }
+      assertSourceExecutionPaginationEvidence(outcome.request_plan, outcome, versions, linked, rawBytes);
+    }
     if (canonicalSerialize(linked.map(bundle => bundle.snapshot.snapshot_id)) !== canonicalSerialize(outcome.snapshot_ids)
       || canonicalSerialize(linked.flatMap(bundle => bundle.extracted_records.map(record => record.extracted_record_id)))
         !== canonicalSerialize(outcome.extracted_record_ids)

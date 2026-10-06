@@ -322,6 +322,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
       let rawPersistenceForOutcome: GitRawObjectPersistence | null = null;
       let collectionAbortError: string | null = null;
       let plannedTargets: readonly SourceExecutionPlannedTarget[] | null = null;
+      let requestIntentHash: string | null = null;
       let observedCollection: TrustedAcquisitionObservation | null = null;
       let materializedRecords: readonly ExtractedRecordV2[] = [];
       let sourceArtifactId: string | null = null;
@@ -359,8 +360,8 @@ export function bootstrapZeroCostProductionCompositionRoot(
             source_definition_id: acquisitionEvidence.source_definition_id, source_artifact_id: sourceArtifactId,
             source_revision: sourceRevision!,
             recruitment_endpoint_id: acquisitionEvidence.recruitment_endpoint_id, endpoint_artifact_id: endpointArtifactId,
-            targets: plannedTargets.map(target => ({ ...target,
-              observations: observedCollection!.request_results.flatMap((result, index) => {
+            targets: plannedTargets.map(target => {
+              const observations = observedCollection!.request_results.flatMap((result, index) => {
                 if (result.request.locator !== target.exact_url) return [];
                 const attemptId = attempts[index];
                 const acquisitionRunId = acquisitionEvidence!.acquisition_run_ids[index];
@@ -372,7 +373,26 @@ export function bootstrapZeroCostProductionCompositionRoot(
                   extracted_record_ids: materializedRecords.filter(record =>
                     record.snapshot_id === result.snapshot.snapshot_id).map(record => record.extracted_record_id),
                   transport_status: result.response.status }];
-              }) })) }) : undefined;
+              });
+              const projected = { ...target, observations };
+              if (target.request_policy.query !== "FINITE_VALUES") return projected;
+              if (!requestIntentHash) throw new Error("SOURCE_REQUEST_PLAN_INTENT_MISSING");
+              if (observations.length) return { ...projected, execution_disposition: "REQUESTED" as const };
+              if (collectionAbortError) {
+                const reasons = ["AUTHORIZATION_REVOKED", "AUTHORIZATION_NOT_EFFECTIVE", "EXACT_REQUEST_DENIED",
+                  "REAUTHORIZE_REQUIRED", "RUN_ABORTED"] as const;
+                const reason = reasons.find(value => value === collectionAbortError) ?? "REQUEST_PLAN_ABORTED";
+                if (!target.authorization_id) throw new Error("SOURCE_REQUEST_PLAN_ABORT_AUTHORIZATION_MISSING");
+                return { ...projected, execution_disposition: "NOT_REQUESTED_DUE_ABORT" as const,
+                  abort_evidence: { reason, stage: "BEFORE_RESERVATION" as const, request_intent_hash: requestIntentHash,
+                    authorization_reference: target.authorization_id, policy_reference: target.allowlist_artifact_id } };
+              }
+              const stopReasons = ["EMPTY_PAGE_STOP", "REPEATED_CONTENT_BLOCKED", "MAX_PAGES_REACHED", "REQUEST_BUDGET_EXHAUSTED"] as const;
+              const reason = stopReasons.find(value => observedCollection!.reason_codes.includes(value));
+              if (!reason) throw new Error("SOURCE_REQUEST_PLAN_UNOBSERVED_TARGET_UNEXPLAINED");
+              return { ...projected, execution_disposition: "SKIPPED_BY_BOUNDED_STOP" as const,
+                stop_evidence: { reason, request_intent_hash: requestIntentHash, policy_reference: target.allowlist_artifact_id } };
+            }) }) : undefined;
         const outcome = sealSourceExecutionOutcome({
           source_execution_id: input.run_id,
           status: acquisitionEvidence.status,
@@ -529,6 +549,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
         const allowlistFor = (request: Pick<HttpTransportRequest, "locator" | "method">) => {
           const match = allowlistVersions.find((version) => {
             if (version.artifact.kind !== "OFFICIAL_ENDPOINT_ALLOWLIST") return false;
+            if (version.artifact.payload.query_policy.mode === "FINITE_VALUES"
+              && !admission.continuous_acquisition_scope?.exact_targets.some(target => target.exact_url === request.locator
+                && target.allowlist_entry_id === version.stream_id)) return false;
             try {
               assertOfficialRequestAllowed(
                 version.artifact.payload,
@@ -567,12 +590,17 @@ export function bootstrapZeroCostProductionCompositionRoot(
               exact_url: request.locator, authorization_id: matches[0]?.payload.grant?.authorization_id ?? null,
               source_admission_artifact_id: admissionVersion.artifact_id,
               endpoint_purpose: version.artifact.payload.endpoint_purpose,
-              request_policy: { method: "GET" as const, redirect: "DENY" as const, query: "DENY" as const },
+              request_policy: version.artifact.payload.query_policy.mode === "FINITE_VALUES"
+                ? { method: "GET" as const, redirect: "DENY" as const, query: "FINITE_VALUES" as const,
+                  query_contract_hash: version.artifact.payload.query_policy.contract.contract_hash }
+                : { method: "GET" as const, redirect: "DENY" as const, query: "DENY" as const },
               observations: [] };
           });
           if (new Set(plannedTargets.map(target => target.exact_url)).size !== plannedTargets.length) {
             throw new Error("SOURCE_REQUEST_PLAN_DUPLICATE_TARGET");
           }
+          if (plannedTargets.some(target => target.request_policy.query === "FINITE_VALUES")
+            && plannedTargets.some(target => !target.authorization_id)) throw new Error("EXACT_AUTHORIZATION_REFERENCE_REQUIRED");
           const approvedTargets = admission.continuous_acquisition_scope?.exact_targets.map(target => target.exact_url) ?? [];
           if (canonicalSerialize(plannedTargets.map(target => target.exact_url).sort())
               !== canonicalSerialize([...approvedTargets].sort())) {
@@ -588,6 +616,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
             source_admission_artifact_id: admissionVersion.artifact_id,
             targets: plannedTargets.map(({ observations, ...target }) => target) });
           const written = writeSourceExecutionRequestIntent(checkoutPath, intent);
+          requestIntentHash = intent.integrity_hash;
           if (written.appended) {
             assertRemoteHead(remoteUrl, branch, expectedParent!);
             git(checkoutPath, "add", "--", written.relative);
@@ -610,6 +639,13 @@ export function bootstrapZeroCostProductionCompositionRoot(
           nextPage: source => input.adapter.nextPage(source),
           assessCompleteness: source => input.adapter.assessCompleteness(source)
         };
+        const queryContracts = plannedTargets?.flatMap(target => {
+          const version = allowlistFor({ locator: target.exact_url, method: "GET" });
+          return version.artifact.kind === "OFFICIAL_ENDPOINT_ALLOWLIST" && version.artifact.payload.query_policy.mode === "FINITE_VALUES"
+            ? [version.artifact.payload.query_policy.contract] : [];
+        }) ?? [];
+        if (queryContracts.length && (queryContracts.length !== plannedTargets!.length
+          || new Set(queryContracts.map(contract => contract.contract_hash)).size !== 1)) throw new Error("QUERY_PLAN_CONTRACT_MISMATCH");
         let collection: TrustedAcquisitionObservation;
         try {
           collection = await new CollectionRunner({
@@ -649,13 +685,19 @@ export function bootstrapZeroCostProductionCompositionRoot(
           }).run({
           collection_run_id: input.run_id,
           endpoint,
-          adapter: observedAdapter
+          adapter: observedAdapter,
+          ...(queryContracts.length ? { pagination_safety: { approved_locators: plannedTargets!.map(target => target.exact_url),
+            maximum_pages: queryContracts[0]!.maximum_pages, request_budget: queryContracts[0]!.request_budget } } : {})
           });
         } catch (error) {
           if (!continuous || capturedRequests.length === 0 || faultBoundary
             || pendingContinuousAttempt(new GitSourceRegistryPersistence({ repository_path: checkoutPath,
               fencing_verifier: options.continuous_fencing_verifier }).listContinuousRecords())) throw error;
-          collectionAbortError = errorMessage(error);
+          const originalAbort = errorMessage(error);
+          collectionAbortError = plannedTargets?.some(target => target.request_policy.query === "FINITE_VALUES")
+            ? ["AUTHORIZATION_REVOKED", "AUTHORIZATION_NOT_EFFECTIVE", "EXACT_REQUEST_DENIED", "REAUTHORIZE_REQUIRED", "RUN_ABORTED"]
+              .includes(originalAbort) ? originalAbort : "REQUEST_PLAN_ABORTED"
+            : originalAbort;
           collection = {
             collection_run_id: input.run_id,
             source_definition_id: endpoint.source_definition_id,

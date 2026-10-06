@@ -4,13 +4,13 @@ import path from "node:path";
 import { canonicalDeserialize, canonicalHash, canonicalSerialize } from "../ingestion/normalization/canonical-artifact-registry";
 import type { ContinuousRecord } from "../application/source-admission/continuous-acquisition";
 import type { SourcePersistenceVersion } from "./contracts";
-import type { SourceExecutionPlannedTarget } from "./source-execution-request-plan";
+import { assertPlannedTargetAllowlist, assertPlannedTargetPolicy, type SourceExecutionPlannedTarget } from "./source-execution-request-plan";
 import type { SourceExecutionOutcome } from "./source-execution-outcome";
 
 const SCHEMA_VERSION = "source-execution-request-intent/1.0.0" as const;
 
 export interface SourceExecutionRequestIntent {
-  readonly schema_version: typeof SCHEMA_VERSION;
+  readonly schema_version: typeof SCHEMA_VERSION | "source-execution-request-intent/2.0.0";
   readonly source_execution_id: string;
   readonly source_definition_id: string;
   readonly source_artifact_id: string;
@@ -18,12 +18,14 @@ export interface SourceExecutionRequestIntent {
   readonly recruitment_endpoint_id: string;
   readonly endpoint_artifact_id: string;
   readonly source_admission_artifact_id: string;
-  readonly targets: readonly Omit<SourceExecutionPlannedTarget, "observations">[];
+  readonly targets: readonly Omit<SourceExecutionPlannedTarget, "observations" | "execution_disposition" | "abort_evidence" | "stop_evidence">[];
   readonly integrity_hash: string;
 }
 
 export function sealSourceExecutionRequestIntent(input: Omit<SourceExecutionRequestIntent, "schema_version" | "integrity_hash">): SourceExecutionRequestIntent {
-  const content = { schema_version: SCHEMA_VERSION, ...structuredClone(input) };
+  const schema_version = input.targets.some(target => target.request_policy.query === "FINITE_VALUES")
+    ? "source-execution-request-intent/2.0.0" as const : SCHEMA_VERSION;
+  const content = { schema_version, ...structuredClone(input) };
   const intent = { ...content, integrity_hash: canonicalHash(content) };
   assertSourceExecutionRequestIntent(intent);
   return intent;
@@ -79,19 +81,25 @@ export function readSourceExecutionRequestIntents(repositoryPath: string,
     }
     for (const target of intent.targets) {
       const version = byVersion.get(target.allowlist_artifact_id);
-      const grant = target.authorization_id ? grants.get(target.authorization_id) : null;
+      const policy = target.request_policy;
+      const grant = policy.query === "FINITE_VALUES" ? records.filter(record => record.kind === "GRANT"
+        && record.payload.grant!.authorization_id === target.authorization_id
+        && record.payload.grant!.canonical_payload.bindings.target.artifact_id === target.allowlist_artifact_id
+        && record.payload.grant!.canonical_payload.query_contract_hash === policy.query_contract_hash).at(-1)?.payload.grant
+        : target.authorization_id ? grants.get(target.authorization_id) : null;
+      if (version?.artifact.kind === "OFFICIAL_ENDPOINT_ALLOWLIST") assertPlannedTargetAllowlist(target, version.artifact.payload);
       if (version?.artifact.kind !== "OFFICIAL_ENDPOINT_ALLOWLIST"
         || version.stream_id !== target.allowlist_entry_id
         || !version.artifact.payload.active || !version.artifact.payload.exact_path
         || version.artifact.payload.allowed_method !== "GET"
-        || canonicalSerialize(version.artifact.payload.query_policy) !== canonicalSerialize({ mode: "DENY_ALL", allowed_parameters: [] })
         || version.artifact.payload.source_admission_artifact_id !== intent.source_admission_artifact_id
         || version.artifact.payload.recruitment_endpoint_artifact_id !== intent.endpoint_artifact_id
         || version.artifact.payload.endpoint_purpose !== target.endpoint_purpose
-        || `${version.artifact.payload.scheme}://${version.artifact.payload.host}${version.artifact.payload.path_prefix}` !== target.exact_url
         || target.endpoint_purpose !== admission.artifact.payload.endpoint_purpose
         || (target.authorization_id !== null && (!grant
           || grant.canonical_payload.exact_endpoint !== target.exact_url
+          || (target.request_policy.query === "FINITE_VALUES" && (grant.canonical_payload.request_contract_version !== "continuous-request/2.0.0"
+            || grant.canonical_payload.query_contract_hash !== target.request_policy.query_contract_hash))
           || grant.canonical_payload.bindings.target.artifact_id !== target.allowlist_artifact_id
           || grant.canonical_payload.bindings.admission.artifact_id !== intent.source_admission_artifact_id
           || grant.canonical_payload.bindings.endpoint.artifact_id !== intent.endpoint_artifact_id
@@ -114,7 +122,9 @@ export function assertSourceExecutionIntentOutcome(intent: SourceExecutionReques
     || intent.endpoint_artifact_id !== plan.endpoint_artifact_id
     || canonicalSerialize(intent.targets.flatMap(target => target.authorization_id ? [target.authorization_id] : []).sort())
       !== canonicalSerialize([...outcome.continuous_authorization_ids].sort())
-    || canonicalSerialize(intent.targets) !== canonicalSerialize(plan.targets.map(({ observations, ...target }) => target))) {
+    || plan.targets.some(target => target.abort_evidence && target.abort_evidence.request_intent_hash !== intent.integrity_hash)
+    || plan.targets.some(target => target.stop_evidence && target.stop_evidence.request_intent_hash !== intent.integrity_hash)
+    || canonicalSerialize(intent.targets) !== canonicalSerialize(plan.targets.map(({ observations, execution_disposition, abort_evidence, stop_evidence, ...target }) => target))) {
     throw new Error("SOURCE_REQUEST_INTENT_OUTCOME_MISMATCH");
   }
 }
@@ -123,7 +133,8 @@ function assertSourceExecutionRequestIntent(intent: SourceExecutionRequestIntent
   const { integrity_hash: hash, ...content } = intent;
   const keys = ["schema_version", "source_execution_id", "source_definition_id", "source_artifact_id", "source_revision",
     "recruitment_endpoint_id", "endpoint_artifact_id", "source_admission_artifact_id", "targets", "integrity_hash"];
-  if (Object.keys(intent).sort().join(",") !== keys.sort().join(",") || intent.schema_version !== SCHEMA_VERSION
+  if (Object.keys(intent).sort().join(",") !== keys.sort().join(",") || ![SCHEMA_VERSION, "source-execution-request-intent/2.0.0"].includes(intent.schema_version)
+    || (intent.schema_version === SCHEMA_VERSION && intent.targets.some(target => target.request_policy.query !== "DENY"))
     || hash !== canonicalHash(content) || !intent.source_execution_id || !intent.targets.length
     || !Number.isSafeInteger(intent.source_revision) || intent.source_revision < 1
     || !intent.source_definition_id || !intent.recruitment_endpoint_id) {
@@ -132,14 +143,14 @@ function assertSourceExecutionRequestIntent(intent: SourceExecutionRequestIntent
   const urls = new Set<string>();
   const authorizationIds = new Set<string>();
   for (const target of intent.targets) {
+    assertPlannedTargetPolicy(target);
     const url = new URL(target.exact_url);
     if (Object.keys(target).sort().join(",") !== ["allowlist_entry_id", "allowlist_artifact_id", "exact_url",
       "authorization_id", "source_admission_artifact_id", "endpoint_purpose", "request_policy"].sort().join(",")
       || urls.has(target.exact_url) || url.href !== target.exact_url || url.protocol !== "https:"
-      || url.username || url.password || url.search || url.hash
+      || url.username || url.password || (url.search && target.request_policy.query === "DENY") || url.hash
       || !target.allowlist_entry_id || !target.allowlist_artifact_id
       || target.source_admission_artifact_id !== intent.source_admission_artifact_id
-      || canonicalSerialize(target.request_policy) !== canonicalSerialize({ method: "GET", redirect: "DENY", query: "DENY" })
       || (target.authorization_id !== null && (authorizationIds.has(target.authorization_id) || !target.authorization_id))) {
       throw new Error("SOURCE_REQUEST_INTENT_TARGET_INVALID");
     }

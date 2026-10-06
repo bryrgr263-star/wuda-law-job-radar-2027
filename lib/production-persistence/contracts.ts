@@ -11,6 +11,7 @@ import type {
 } from "../ingestion";
 import type { AdapterKeyRegistration } from "../ingestion/registry/types";
 import { canonicalSerialize } from "../ingestion/normalization/canonical-artifact-registry";
+import { assertApprovedQueryRequest, type QueryAuthorizationContract } from "../application/source-admission/query-authorization";
 
 export const PRODUCTION_RAW_BUCKET = "trusted-raw-production" as const;
 export const PRODUCTION_CANDIDATE_EVIDENCE_BUCKET =
@@ -50,7 +51,7 @@ export interface OfficialEndpointAllowlist {
   readonly query_policy: {
     readonly mode: "DENY_ALL" | "ALLOW_LIST";
     readonly allowed_parameters: readonly string[];
-  };
+  } | { readonly mode: "FINITE_VALUES"; readonly contract: QueryAuthorizationContract };
   readonly endpoint_purpose: string;
   readonly authority_level: string;
   readonly approval_evidence_ids: readonly string[];
@@ -176,6 +177,11 @@ export function assertOfficialRequestAllowed(
       || requested.pathname.startsWith(`${allowlist.path_prefix.replace(/\/$/u, "")}/`);
   if (!pathAllowed) {
     throw new ProductionPersistenceError("SOURCE_NOT_ALLOWED", "Official path is not approved");
+  }
+  if (allowlist.query_policy.mode === "FINITE_VALUES") {
+    if (!allowlist.exact_path || allowlist.port !== null) throw new ProductionPersistenceError("SOURCE_NOT_ALLOWED", "Finite query requires an exact HTTPS base");
+    assertApprovedQueryRequest(requestUrl, allowlist.query_policy.contract);
+    return;
   }
   const queryNames = [...requested.searchParams.keys()].sort();
   if (allowlist.query_policy.mode === "DENY_ALL" && queryNames.length > 0) {

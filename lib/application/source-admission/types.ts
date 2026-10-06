@@ -153,7 +153,7 @@ export interface SourceAccessReview {
 export interface SourceAdmission {
   readonly continuous_acquisition_scope?: {
     readonly scope: "PRODUCTION" | "CONTROLLED_TEST";
-    readonly exact_targets: readonly { readonly allowlist_entry_id: string; readonly exact_url: string }[];
+    readonly exact_targets: readonly { readonly allowlist_entry_id: string; readonly exact_url: string; readonly query_contract_hash?: string }[];
     readonly min_interval_seconds: number;
     readonly effective_from: string;
     readonly approval_review_id: SourceAdmissionReviewId;
