@@ -32,4 +32,9 @@ export function verifyDiscoveryRecord(record: DiscoveryRecord): void {
     || !record.logical_id.startsWith("discovery:") || !Number.isSafeInteger(record.revision)
     || record.revision < 1 || record.record_id !== `${record.logical_id}:${record.revision}`
     || canonicalHash(content) !== integrityHash) throw new Error("DISCOVERY_INTEGRITY_INVALID");
+  if (!record.payload || Array.isArray(record.payload) || typeof record.payload !== "object"
+    || !Array.isArray(record.upstream) || record.upstream.some(reference => typeof reference.record_id !== "string"
+      || !/^[a-f0-9]{64}$/.test(reference.integrity_hash))) throw new Error("DISCOVERY_SCHEMA_INVALID");
+  if (record.kind === "CANDIDATE" && (record.payload.production_admission_status !== undefined && record.payload.production_admission_status !== "NOT_SUBMITTED"
+    || record.payload.provenance_kind === "IMPORTED_RESEARCH" && record.payload.officiality !== "UNRESOLVED")) throw new Error("DISCOVERY_TRUST_UPGRADE_DENIED");
 }

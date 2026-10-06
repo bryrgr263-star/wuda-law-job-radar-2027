@@ -26,4 +26,10 @@ export class DiscoveryCatalog {
   list(kind?: DiscoveryKind): DiscoveryRecord[] {
     return [...this.records.values()].filter(record => !kind || record.kind === kind).map(record => structuredClone(record));
   }
+
+  current(kind: DiscoveryKind): DiscoveryRecord[] {
+    const latest = new Map<string, DiscoveryRecord>();
+    for (const record of this.list(kind)) latest.set(record.logical_id, record);
+    return [...latest.values()];
+  }
 }
