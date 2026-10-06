@@ -29,6 +29,7 @@ import {
   prepareSourceOccurrenceMaterialization,
   SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION,
   SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2,
+  SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3,
   type ExtractedRecord,
   type ExtractedRecordV2,
   type IsoDateTime,
@@ -879,7 +880,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
             trustedFailureSubjectId = current.version.source_occurrence_version_id;
             const verified = await trusted.root.execute({
               kind: "SOURCE_DISCOVERY_SUPPORT_VERIFY",
-              input: { schema_version: current.snapshot.content_hash === snapshot.content_hash
+              input: { schema_version: current.snapshot.content_hash !== snapshot.content_hash
+                && endpoint.adapter_key === "cn-haier-2027-legal-official-html"
+                ? SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3 : current.snapshot.content_hash === snapshot.content_hash
                 || endpoint.adapter_key !== "cn-zhenghan-2027-official-html"
                 ? SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION : SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2,
                 sov_id: current.version.source_occurrence_version_id,

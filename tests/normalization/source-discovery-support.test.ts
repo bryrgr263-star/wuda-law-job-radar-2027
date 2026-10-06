@@ -4,6 +4,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import os from "node:os";
 import path from "node:path";
 import {
   bootstrapTrustedChainCompositionRoot,
@@ -116,6 +119,68 @@ async function issuedContext(raw?: Parameters<typeof context>[1]) {
 function committedRaw(sha256: string) {
   return new Uint8Array(readFileSync(path.join(process.cwd(), "trusted-objects", "objects", "sha256",
     sha256.slice(0, 2), sha256.slice(2, 4), sha256)));
+}
+
+test("Haier static resource versions require v3 evidence and restore sealed support", async () => {
+  const state = await issuedContext({
+    first: committedRaw("9b442f746a6c5af303019e8f680808069724f82544f27c50ff18e11edee78efc"),
+    next: committedRaw("7857a9ecce813f8797afaca06363f5661bcd9416540b71ff257b903a97b904e5"),
+    locator: "https://maker.haier.net/client/campus/customizedptjobdetail/sid/64/rid/61",
+    adapter_key: "cn-haier-2027-legal-official-html"
+  });
+  const command = { ...state.supportCommand, input: { ...state.supportCommand.input,
+    schema_version: "trusted-sov-discovery-support/3.0.0" as const } };
+  const issued = await state.root.execute(command, metadata) as { support: SOVDiscoverySupport };
+  assert.equal(issued.support.equivalence.result, "VERIFIED_BUSINESS_EQUIVALENT");
+  assert.equal(issued.support.discovery.raw_sha256, state.secondEvidence.raw_blob.sha256);
+  const restored = await bootstrapTrustedChainCompositionRoot({ scope: "SYNTHETIC_TEST", restoration_journal: state.journal });
+  assert.deepEqual(restored.root.resolvers.source_occurrences.resolveSupport(issued.support.support_id), issued.support);
+  const directory = mkdtempSync(path.join(os.tmpdir(), "haier-support-process-b-"));
+  try {
+    const evidencePath = path.join(directory, "evidence.json");
+    writeFileSync(evidencePath, JSON.stringify({ executions: state.executions,
+      evidence: [state.firstEvidence, state.secondEvidence].map(item => ({ ...item,
+        raw_blob: { ...item.raw_blob, bytes: [...item.raw_blob.bytes] } })) }));
+    const code = `import { readFileSync } from 'node:fs';
+      import { bootstrapTrustedChainCompositionRoot } from ${JSON.stringify(path.join(process.cwd(), "lib/ingestion/index.ts"))};
+      const data=JSON.parse(readFileSync(${JSON.stringify(evidencePath)},'utf8'));
+      for(const item of data.evidence) item.raw_blob.bytes=new Uint8Array(item.raw_blob.bytes);
+      const journal={async list(){return data.executions.map(item=>item.record)},
+        async appendExecution(){throw new Error('RESTORE_IS_READ_ONLY')},
+        async readArtifactEnvelope(kind,id,scope){return data.executions.flatMap(item=>item.artifact_envelopes).find(item=>item.artifact_kind===kind&&item.artifact_id===id&&item.scope===scope)??null},
+        async readVerifiedDiscovery(snapshot,id){return data.evidence.find(item=>item.snapshot.snapshot_id===snapshot&&item.extracted_record.extracted_record_id===id)}};
+      bootstrapTrustedChainCompositionRoot({scope:'SYNTHETIC_TEST',restoration_journal:journal}).then(({root})=>console.log(JSON.stringify(root.resolvers.source_occurrences.resolveSupport(${JSON.stringify(issued.support.support_id)}))));`;
+    const output = execFileSync(process.execPath, [path.join(process.cwd(), "node_modules/tsx/dist/cli.mjs"), "-e", code],
+      { encoding: "utf8", timeout: 60000 });
+    assert.deepEqual(JSON.parse(output), issued.support);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("Haier v3 must reject business edits despite unchanged extracted semantics", async () => {
+  const first = committedRaw("9b442f746a6c5af303019e8f680808069724f82544f27c50ff18e11edee78efc");
+  const next = committedRaw("7857a9ecce813f8797afaca06363f5661bcd9416540b71ff257b903a97b904e5");
+  const changed = Buffer.from(Buffer.from(next).toString("utf8").replace("法务", "销售"));
+  assert.notDeepEqual(changed, next);
+  const state = await issuedContext({ first, next: changed,
+    locator: "https://maker.haier.net/client/campus/customizedptjobdetail/sid/64/rid/61",
+    adapter_key: "cn-haier-2027-legal-official-html" });
+  await assert.rejects(state.root.execute({ ...state.supportCommand, input: { ...state.supportCommand.input,
+    schema_version: "trusted-sov-discovery-support/3.0.0" } }, metadata));
+});
+
+for (const mutation of ["resource-path", "unknown-version", "new-clause"]) {
+  test(`Haier v3 rejects ${mutation} outside the exact resource-version proof`, async () => {
+    const first = committedRaw("9b442f746a6c5af303019e8f680808069724f82544f27c50ff18e11edee78efc");
+    const text = Buffer.from(committedRaw("7857a9ecce813f8797afaca06363f5661bcd9416540b71ff257b903a97b904e5")).toString("utf8");
+    const changed = mutation === "resource-path" ? text.replace("/static/default/basejs/basic.js", "/static/unknown.js")
+      : mutation === "unknown-version" ? text.replace("version=1790776267", "version=opaque")
+      : `${text}<p>新增招聘条件</p>`;
+    const state = await issuedContext({ first, next: Buffer.from(changed),
+      locator: "https://maker.haier.net/client/campus/customizedptjobdetail/sid/64/rid/61",
+      adapter_key: "cn-haier-2027-legal-official-html" });
+    await assert.rejects(state.root.execute({ ...state.supportCommand, input: { ...state.supportCommand.input,
+      schema_version: "trusted-sov-discovery-support/3.0.0" } }, metadata));
+  });
 }
 
 for (const [locator, firstHash, nextHash] of [

@@ -7,6 +7,7 @@ import type { TrustedSourceOccurrenceArtifact, TrustedSourceOccurrenceRole } fro
 
 export const SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION = "trusted-sov-discovery-support/1.0.0" as const;
 export const SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2 = "trusted-sov-discovery-support/2.0.0" as const;
+export const SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3 = "trusted-sov-discovery-support/3.0.0" as const;
 const ZHENGHAN_CACHE_TRAILER_RULE = "ZHENGHAN_TERMINAL_CACHE_TRAILER_V1" as const;
 export type DiscoverySupportScope = "PRODUCTION" | "SYNTHETIC_TEST";
 export interface DiscoverySourceReference {
@@ -27,7 +28,7 @@ export interface SOVDiscoveryEvidence {
     readonly allowlist: DiscoverySourceReference; readonly authority_level: "OFFICIAL" | "AUTHORIZED" };
 }
 export interface SOVDiscoverySupportCommand {
-  readonly schema_version: typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION | typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2;
+  readonly schema_version: typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION | typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2 | typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3;
   readonly sov_id: SourceOccurrenceVersionId;
   readonly snapshot_id: Snapshot["snapshot_id"];
   readonly extracted_record_id: ExtractedRecordV2["extracted_record_id"];
@@ -55,6 +56,9 @@ export interface SOVDiscoverySupport {
       readonly extractor_version: string; readonly schema_version: string; readonly normalizer_version: string };
     readonly normalized_descriptor_hash: string; readonly identity_evidence_descriptor_hash: string;
     readonly reference_original_descriptor_hash: string;
+    readonly resource_equivalence?: { readonly rule: "HAIER_STATIC_RESOURCE_VERSION_V1";
+      readonly original_raw_sha256: string; readonly next_raw_sha256: string;
+      readonly preserved_html_sha256: string; readonly resource_count: number };
     readonly raw_equivalence?: { readonly rule: typeof ZHENGHAN_CACHE_TRAILER_RULE;
       readonly original_raw_sha256: string; readonly next_raw_sha256: string;
       readonly authoritative_html_sha256: string; readonly authoritative_html_byte_length: number;
@@ -115,7 +119,9 @@ export function validatedDiscoverySupport(original: TrustedSourceOccurrenceArtif
   same(prepared.identity_hash, original.occurrence.identity_hash, "SourceOccurrence hash");
   const rawEquivalence = contractVersion === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2
     ? verifyZhenghanRawEquivalence(first, next) : null;
-  if (!rawEquivalence) same(first.raw_blob.sha256, next.raw_blob.sha256,
+  const resourceEquivalence = contractVersion === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3
+    ? verifyHaierResourceEquivalence(first, next) : null;
+  if (!rawEquivalence && !resourceEquivalence) same(first.raw_blob.sha256, next.raw_blob.sha256,
     "Raw changed; identical normalized text is not sufficient");
   same(first.raw_blob.content_type, next.raw_blob.content_type, "Raw content type");
   same(first.snapshot.request_metadata.locator, next.snapshot.request_metadata.locator, "Acquisition locator");
@@ -125,7 +131,7 @@ export function validatedDiscoverySupport(original: TrustedSourceOccurrenceArtif
     Object.entries(evidence.snapshot.response_metadata.headers).filter(([name]) => name.toLowerCase() !== "date")
   );
   same(versionHeaders(first), versionHeaders(next), "Response revision/authority headers");
-  if (!rawEquivalence && !Buffer.from(first.raw_blob.bytes).equals(Buffer.from(next.raw_blob.bytes))) {
+  if (!rawEquivalence && !resourceEquivalence && !Buffer.from(first.raw_blob.bytes).equals(Buffer.from(next.raw_blob.bytes))) {
     throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "Raw bytes mismatch; support reuse rejected");
   }
   same(extractionDescriptor(first), extractionDescriptor(next), "Parser/adapter/extraction contract");
@@ -161,7 +167,8 @@ export function validatedDiscoverySupport(original: TrustedSourceOccurrenceArtif
       identity_evidence_descriptor_hash: canonicalHash(nextDescriptor.evidence),
       reference_original_descriptor_hash: canonicalHash(originalDescriptor.content),
       ...(rawEquivalence ? { raw_equivalence: rawEquivalence } : {}),
-      result: rawEquivalence ? "VERIFIED_BUSINESS_EQUIVALENT" as const : "VERIFIED_IDENTICAL" as const }
+      ...(resourceEquivalence ? { resource_equivalence: resourceEquivalence } : {}),
+      result: rawEquivalence || resourceEquivalence ? "VERIFIED_BUSINESS_EQUIVALENT" as const : "VERIFIED_IDENTICAL" as const }
   };
   const withId = { ...payload, support_id: discoverySupportId(payload) };
   return assertSOVDiscoverySupportIntegrity({ ...withId, integrity_hash: canonicalHash(withId) });
@@ -169,10 +176,14 @@ export function validatedDiscoverySupport(original: TrustedSourceOccurrenceArtif
 
 export function assertSOVDiscoverySupportIntegrity(support: SOVDiscoverySupport) {
   const { integrity_hash: integrityHash, ...payload } = support;
-  if (![SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2].includes(support.schema_version)
+  if (![SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3].includes(support.schema_version)
       || support.equivalence.verification_contract_version !== support.schema_version
+      || (support.schema_version !== SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3 && !!support.equivalence.resource_equivalence)
       || (support.schema_version === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION
         ? support.equivalence.result !== "VERIFIED_IDENTICAL" || !!support.equivalence.raw_equivalence
+        : support.schema_version === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3
+          ? support.equivalence.result !== "VERIFIED_BUSINESS_EQUIVALENT" || !!support.equivalence.raw_equivalence
+            || !validHaierProof(support.equivalence.resource_equivalence, support.discovery.raw_sha256)
         : support.equivalence.result !== "VERIFIED_BUSINESS_EQUIVALENT"
           || !validRawEquivalence(support.equivalence.raw_equivalence, support.discovery.raw_sha256))
       || !["PRODUCTION", "SYNTHETIC_TEST"].includes(support.scope)
@@ -180,6 +191,52 @@ export function assertSOVDiscoverySupportIntegrity(support: SOVDiscoverySupport)
     throw new SOVDiscoverySupportError("INTEGRITY_FAILURE", "Discovery support ID/contract/integrity mismatch");
   }
   return structuredClone(support);
+}
+
+function verifyHaierResourceEquivalence(first: SOVDiscoveryEvidence, next: SOVDiscoveryEvidence) {
+  const locator = "https://maker.haier.net/client/campus/customizedptjobdetail/sid/64/rid/61";
+  if (first.endpoint.adapter_key !== "cn-haier-2027-legal-official-html"
+    || next.endpoint.adapter_key !== first.endpoint.adapter_key
+    || first.snapshot.request_metadata.locator !== locator || next.snapshot.request_metadata.locator !== locator
+    || first.raw_blob.content_type.toLowerCase() !== "text/html; charset=utf-8"
+    || next.raw_blob.content_type !== first.raw_blob.content_type
+    || first.raw_blob.sha256 === next.raw_blob.sha256) {
+    throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "Haier exact resource-version rule does not apply");
+  }
+  const paths = ["/static/default/basejs/basic.js", "/static/new_iconfont/iconfont.css",
+    "/static/default/iconfont/iconfont.css", "/static/default/plus/formselects/formselects.css",
+    "/static/default/plus/formselects/formselects.js", "/static/default/basejs/pdform.js",
+    "/static/default/basejs/fuzzySearch.js", "/static/default/plus/chuangba_plus/searchModule/js/searchModule.js",
+    "/static/mobile/js/vue.min.js", "/static/default/pagecss/normal.css", "/static/default/pagejs/normal.js",
+    "/static/default/pagecss/policy.css", "/static/default/pagecss/client/ai_assistant.css"];
+  const mask = (bytes: Uint8Array) => {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (!Buffer.from(text, "utf8").equals(Buffer.from(bytes))) throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "Resource encoding mismatch");
+    const found: string[] = [];
+    const versions = new Set<string>();
+    const masked = text.replace(/<(?:script|link)\b[^<>]*\b(?:src|href)="(\/static\/[^"?]+)\?version=([0-9]{10})"[^<>]*>/gu,
+      (tag: string, resource: string, version: string) => {
+        if (!paths.includes(resource)) return tag;
+        found.push(resource); versions.add(version);
+        return tag.replace(`${resource}?version=${version}`, `${resource}?version=FIXED`);
+      });
+    if (canonicalSerialize(found) !== canonicalSerialize(paths) || versions.size !== 1) {
+      throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "Haier resource inventory/version binding mismatch");
+    }
+    return masked;
+  };
+  const original = mask(first.raw_blob.bytes);
+  const observed = mask(next.raw_blob.bytes);
+  if (original !== observed) throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "HTML changed outside approved static-resource version spans");
+  return { rule: "HAIER_STATIC_RESOURCE_VERSION_V1" as const, original_raw_sha256: first.raw_blob.sha256,
+    next_raw_sha256: next.raw_blob.sha256, preserved_html_sha256: createHash("sha256").update(original).digest("hex"), resource_count: 13 };
+}
+
+function validHaierProof(proof: SOVDiscoverySupport["equivalence"]["resource_equivalence"], nextHash: string) {
+  return !!proof && Object.keys(proof).sort().join(",") === ["rule", "original_raw_sha256", "next_raw_sha256", "preserved_html_sha256", "resource_count"].sort().join(",")
+    && proof.rule === "HAIER_STATIC_RESOURCE_VERSION_V1" && proof.resource_count === 13
+    && proof.next_raw_sha256 === nextHash && proof.original_raw_sha256 !== nextHash
+    && [proof.original_raw_sha256, proof.next_raw_sha256, proof.preserved_html_sha256].every(value => /^[a-f0-9]{64}$/u.test(value));
 }
 
 function verifyZhenghanRawEquivalence(first: SOVDiscoveryEvidence, next: SOVDiscoveryEvidence) {
