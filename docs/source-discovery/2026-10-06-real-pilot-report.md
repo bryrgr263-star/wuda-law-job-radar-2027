@@ -35,4 +35,4 @@ Runtime detail: reservation occurs before dispatch; DNS is public-IPv4 pinned, T
 ## Durable evidence location
 
 Isolated candidate Git repository: `C:\Users\HUAWEI\AppData\Local\Codex\discovery-pilots\2026-10-06-final-closure`.
-This local repository is not production authoritative state or a deployed Discovery service. Code-stage remote integration remains blocked until a reliable latest-main read is available.
+This local repository is not production authoritative state or a deployed Discovery service. The live transport code stage was safely integrated and pushed in `1adeb7e6008ba8d594a84b77161f2b6e4a3d64d1` on 2026-10-07. Useful recruitment yield and scheduled Discovery deployment remain open; pushing the code does not promote this isolated Pilot catalog to production truth.

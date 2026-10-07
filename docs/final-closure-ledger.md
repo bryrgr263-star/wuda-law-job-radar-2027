@@ -20,7 +20,7 @@ Unknown evidence never implies a negative eligibility/relevance conclusion.
 | P3 Real Source Expansion | NOT_STARTED | Existing official candidates first; never invent 2027/position binding. |
 | P4 Capability A | NOT_STARTED | Implement only after a concrete recurring source blocker. |
 | P5 Capability C | NOT_STARTED | Text-layer PDF only when demonstrated necessary; no OCR. |
-| P6 Requirement Coverage | NOT_STARTED | Real recruitment conditions only; duties and work arrangements do not automatically become candidate requirements. |
+| P6 Requirement Coverage | IN_PROGRESS | Existing four-record domain inventory prepared. Stored Source Compositions remain UNRESOLVED; no production Requirement/RSV command or trusted Candidate Evidence is present. No business rules/domain expansion. |
 | P7 Eligibility Coverage | NOT_STARTED | Trusted RSV and evidence only; asserted is not document-verified. |
 | P8 Publication | NOT_STARTED | Natural handoff proof plus last-known-good preservation. |
 | P9 Production Scale | NOT_STARTED | Independent sources, partial failure, replay, CAS and dedup. |
@@ -52,3 +52,9 @@ Unknown evidence never implies a negative eligibility/relevance conclusion.
 - 2026-10-07 18:12 Beijing: normal HTTPS fetch succeeded; remote main remained `1634441ca0d5221150288d1be856e63a2279408c`. The old external network failure does not explain away the retained evidence-loss blocker.
 - User decision: prepare a bounded, honest failed-recovery contract; execution requires a later explicit confirmation. Do not append a production recovery outcome, clear SOURCE_OUTCOME_PENDING or re-acquire while that approval is absent.
 - Ruling: all phase statuses use the directive's allowed labels. Live transport proof is not full autonomous recruitment discovery closure, and a network recovery is not recovery of deleted evidence.
+- Retention-only local fix commit: `c639f4d99fb37655a088f697f7d1a574c162b3de`. All 46 scoped tests PASS; TypeScript and diff check PASS. Production namespaces unchanged. No production request, recovery outcome, publication or grant was created by this fix.
+- Fresh remote clone was attempted once after the successful fetch and failed before replay with GitHub Connection reset. This is BLOCKED_EXTERNAL, not a Process B integrity regression. No immediate remote retry or push; retained local fix and expected remote parent `1634441ca0d5221150288d1be856e63a2279408c` remain intact.
+- Independent offline work: prepared a real Requirement domain inventory from existing committed envelopes and a separate evidence-loss recovery proposal. No new schema, Predicate, candidate issuance, Eligibility or production recovery operation was implemented. The user explicitly requires execution confirmation for recovery.
+- Correct cadence breakpoint: the existing rule uses COMPLETE/RECOVER time. National Energy's first target is not eligible before `2026-10-08 16:13:49.932 Asia/Shanghai` from committed COMPLETE `2026-10-07T08:13:49.932Z`, subject to fresh authorization/pending gates. The earlier RESERVE timestamp must not be used as the cadence origin.
+- Ruling: the local retention test proves survival after Process A returns, not durable storage after an ephemeral GitHub runner is destroyed. Neither this fix nor the recovery design may be described as recovery of deleted Raw bytes or complete remote outage durability.
+- Requirement inventory evidence: 117 stored journal segments contain zero Requirement/RSV/Predicate/Eligibility commands; stored canonical artifact hash comparison found 0 mismatches. Three compositions remain UNRESOLVED with no authority/selection closure. These are bounded inspections, not replacements for authoritative Process B or permission to bypass the composition gate.
