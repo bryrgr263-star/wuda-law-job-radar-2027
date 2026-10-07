@@ -418,6 +418,8 @@ test("pre-commit and post-local-commit crashes leave remote HEAD unchanged", asy
       const result = await root.run(fixture.input);
       assert.equal(result.status, "FAILED");
       assert.equal(result.committed_head, null);
+      if (result.unpublished_recovery) rmSync(path.dirname(result.unpublished_recovery.repository_path),
+        { recursive: true, force: true });
       assert.equal(git(repository.remote, "rev-parse", "main").trim(), before);
       assert.equal((await rootFor(repository.remote).restore()).restored_record_count, 0);
     } finally {
@@ -453,6 +455,42 @@ test("publish failure preserves trusted commit and retries persisted ReadModel o
     assert.match(retriedBytes, /presentation_read_model_id/u);
     assert.equal(git(repository.remote, "rev-parse", "main").trim(), committed);
   } finally {
+    repository.remove();
+  }
+});
+
+test("an unpublished atomic commit survives cleanup and retries without acquisition", async () => {
+  const repository = createRemote();
+  let recoveryDirectory: string | undefined;
+  try {
+    const fixture = runFixture("unpublished-recovery");
+    const parent = git(repository.remote, "rev-parse", "main").trim();
+    let requests = 0;
+    const transport = fixture.input.transport;
+    const failed = await rootFor(repository.remote, point => {
+      if (point === "AFTER_LOCAL_COMMIT") throw new Error("simulated remote connectivity failure");
+    }).run({ ...fixture.input, transport: { async execute(request) {
+      requests += 1;
+      return transport.execute(request);
+    } } });
+    assert.equal(failed.status, "FAILED");
+    assert.equal(failed.committed_head, null);
+    const recovery = failed.unpublished_recovery;
+    assert.ok(recovery, "unpublished commit must remain available after Process A returns");
+    recoveryDirectory = path.dirname(recovery.repository_path);
+    assert.equal(recovery.expected_parent, parent);
+    assert.equal(recovery.run_id, fixture.input.run_id);
+    assert.equal(git(recovery.repository_path, "rev-parse", "HEAD").trim(), recovery.local_commit);
+    assert.equal(git(recovery.repository_path, "rev-parse", "HEAD^").trim(), parent);
+    const fresh = await rootFor(recovery.repository_path).restore();
+    assert.equal(fresh.committed_head, recovery.local_commit);
+    assert.deepEqual(fresh.read_models.map(model => model.presentation_read_model_id), failed.presentation_read_model_ids);
+    assert.equal(git(repository.remote, "rev-parse", "main").trim(), parent);
+    git(recovery.repository_path, "push", repository.remote, "HEAD:refs/heads/main");
+    assert.equal((await rootFor(repository.remote).restore()).committed_head, recovery.local_commit);
+    assert.equal(requests, 1, "retrying the existing commit must not acquire again");
+  } finally {
+    if (recoveryDirectory) rmSync(recoveryDirectory, { recursive: true, force: true });
     repository.remove();
   }
 });
@@ -635,7 +673,8 @@ function rootFor(
     branch: "main",
     stream_id: "zero-cost-production-test",
     now: () => OBSERVED_AT,
-    fault_injector: faultInjector
+    fault_injector: faultInjector,
+    recovery_directory: path.join(os.tmpdir(), "zero-cost-test-recovery")
   });
 }
 

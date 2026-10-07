@@ -3,6 +3,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   writeFileSync,
   mkdirSync
@@ -123,6 +124,14 @@ export interface ZeroCostProductionRunResult {
   readonly presentation_read_model_ids: readonly string[];
   readonly presentation_publish_status: "NOT_REQUESTED" | "PUBLISHED" | "RETRY_REQUIRED";
   readonly error: string | null;
+  readonly unpublished_recovery?: ZeroCostUnpublishedRecovery;
+}
+
+export interface ZeroCostUnpublishedRecovery {
+  readonly run_id: string;
+  readonly expected_parent: string;
+  readonly local_commit: string;
+  readonly repository_path: string;
 }
 
 export interface ZeroCostProductionAcquisitionTransport {
@@ -174,6 +183,7 @@ export interface ZeroCostProductionCompositionRootOptions {
   readonly stream_id: string;
   readonly commit_identity?: { readonly name: string; readonly email: string };
   readonly now?: () => string;
+  readonly recovery_directory?: string;
   readonly fault_injector?: (
     point: ZeroCostProductionFaultPoint
   ) => void | Promise<void>;
@@ -232,6 +242,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
   const remoteUrl = required(options.remote_url, "remote_url");
   const branch = required(options.branch, "branch");
   const streamId = required(options.stream_id, "stream_id");
+  const recoveryDirectory = options.recovery_directory ?? path.join(os.homedir(),
+    ".codex", "production-recovery");
+  if (!path.isAbsolute(recoveryDirectory)) throw new Error("ABSOLUTE_RECOVERY_DIRECTORY_REQUIRED");
   const writerKey = `${remoteUrl}\0${branch}`;
   const now = options.now ?? (() => new Date().toISOString());
   const commitIdentity = options.commit_identity ?? {
@@ -314,6 +327,8 @@ export function bootstrapZeroCostProductionCompositionRoot(
       let expectedParent: string | null = null;
       let committedHead: string | null = null;
       let pushed = false;
+      let preparedLocalCommit: string | null = null;
+      let preserveWorkspace = false;
       let faultBoundary: ZeroCostProductionFaultPoint | null = null;
       let rawBlobIds: string[] = [];
       let snapshotIds: string[] = [];
@@ -825,6 +840,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
           await commitAcquisitionOutcome("NOT_RUN");
           squashAndCommit(checkoutPath, expectedParent!, input.run_id, commitIdentity, true);
           committedHead = git(checkoutPath, "rev-parse", "HEAD").trim();
+          preparedLocalCommit = committedHead;
           assertRemoteHead(remoteUrl, branch, expectedParent!);
           git(checkoutPath, "push", "origin", `HEAD:refs/heads/${branch}`);
           if (remoteHead(remoteUrl, branch) !== committedHead) throw new Error("Remote did not accept the source outcome commit");
@@ -985,6 +1001,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
         writeRunManifest(checkoutPath, runManifest);
         squashAndCommit(checkoutPath, expectedParent, input.run_id, commitIdentity);
         committedHead = git(checkoutPath, "rev-parse", "HEAD").trim();
+        preparedLocalCommit = committedHead;
         faultBoundary = "AFTER_LOCAL_COMMIT";
         await options.fault_injector?.("AFTER_LOCAL_COMMIT");
         faultBoundary = null;
@@ -1048,6 +1065,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
               });
               squashAndCommit(checkoutPath, expectedParent, input.run_id, commitIdentity, true);
               committedHead = git(checkoutPath, "rev-parse", "HEAD").trim();
+              preparedLocalCommit = committedHead;
               assertRemoteHead(remoteUrl, branch, expectedParent);
               git(checkoutPath, "push", "origin", `HEAD:refs/heads/${branch}`);
               if (remoteHead(remoteUrl, branch) !== committedHead) throw new Error("Remote did not accept the source outcome commit");
@@ -1058,14 +1076,30 @@ export function bootstrapZeroCostProductionCompositionRoot(
           }
         }
         if (!pushed) committedHead = null;
+        let recovery: ZeroCostUnpublishedRecovery | undefined;
+        if (!pushed && preparedLocalCommit && expectedParent) {
+          preserveWorkspace = true;
+          let retainedRoot = temporaryRoot;
+          try {
+            mkdirSync(recoveryDirectory, { recursive: true, mode: 0o700 });
+            const destination = path.join(recoveryDirectory, path.basename(temporaryRoot));
+            renameSync(temporaryRoot, destination);
+            retainedRoot = destination;
+          } catch {
+            retainedRoot = temporaryRoot;
+          }
+          recovery = { run_id: input.run_id, expected_parent: expectedParent,
+            local_commit: preparedLocalCommit, repository_path: path.join(retainedRoot, "checkout") };
+        }
         lifecycle.push(event(status, now(), errorMessage(error)));
         return result(input.run_id, status, lifecycle, expectedParent, committedHead, {
           rawBlobIds, snapshotIds, extractedRecordIds, restorationRecordIds,
           readModelIds: readModels.map((model) => model.presentation_read_model_id),
+          recovery,
           error: errorMessage(error)
         });
       } finally {
-        rmSync(temporaryRoot, { recursive: true, force: true });
+        if (!preserveWorkspace) rmSync(temporaryRoot, { recursive: true, force: true });
         activeWriters.delete(writerKey);
         running = false;
       }
@@ -1423,6 +1457,7 @@ function result(
     readonly readModelIds?: readonly string[];
     readonly publishStatus?: ZeroCostProductionRunResult["presentation_publish_status"];
     readonly error?: string | null;
+    readonly recovery?: ZeroCostUnpublishedRecovery;
   }
 ): ZeroCostProductionRunResult {
   return Object.freeze({
@@ -1437,7 +1472,8 @@ function result(
     restoration_record_ids: [...(options.restorationRecordIds ?? [])],
     presentation_read_model_ids: [...(options.readModelIds ?? [])],
     presentation_publish_status: options.publishStatus ?? "NOT_REQUESTED",
-    error: options.error ?? null
+    error: options.error ?? null,
+    ...(options.recovery ? { unpublished_recovery: structuredClone(options.recovery) } : {})
   });
 }
 
