@@ -71,6 +71,24 @@ Existing controls live in `tests/pipeline/approved-requirement-projection-covera
 `tests/requirements/p1-cr12-requirement-logic-modality-applicability.test.ts`. This inventory
 does not rewrite those tests, production history, the current ReadModels or the closed CR#12.
 
+## Candidate Evidence privacy prerequisite
+
+Read-only GitHub repository metadata checked on 2026-10-07 reports this repository's visibility as
+`public`. The existing journal stores command payloads and artifact envelopes store canonical
+artifact bytes; SHA-256/seals provide integrity, not confidentiality. The publication allowlist
+protects Pages output but cannot hide personal evidence committed to a public Git repository.
+
+No production Candidate Evidence artifact/issuance command is present in the inspected state;
+this is a prerequisite for future issuance, not a claim that this task disclosed candidate data.
+Do not issue the user's actual private evidence/profile into this public authoritative repository.
+A reviewed private evidence persistence/access boundary is required before production personal
+issuance, while reusing the same issuer/Registry/Trusted Chain. No private repository, credential,
+encryption scheme or new persistence implementation was created in this inventory.
+
+The API result is evidence of repository visibility, not a new source Admission or authorization.
+Test-only fake candidate data is not production evidence, and a public-safe snapshot is not proof
+that the upstream repository can safely store the user's personal material.
+
 ## Continuation boundary
 
 Requirement coverage inventory is complete for these four retained source records, but production

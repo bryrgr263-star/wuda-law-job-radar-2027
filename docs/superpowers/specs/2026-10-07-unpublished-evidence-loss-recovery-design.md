@@ -22,6 +22,12 @@ the unpublished checkout. The log retains IDs, not original bytes or a recoverab
   `2026-10-08 16:13:49.932 Asia/Shanghai`, subject to fresh gates and separate approval at execution.
 - Both National Energy authorizations remain existing grants. No duplicate issuance is needed.
 
+Fresh independent Process B on the fully fetched fixed-head Git history completed successfully:
+117 journal records, 24 acquisitions, 4 distinct current Positions/ReadModels, zero unresolved
+RESERVE and exactly this one unbound COMPLETE. It sent zero production requests. This validates
+the retained authoritative history, not the deleted first acquisition bytes, a remote-clone
+connectivity guarantee, or the proposed recovery variant (which is not implemented).
+
 The newly tested retention fix preserves a prepared commit after a failed local run returns;
 it cannot reconstruct this deleted checkout. It also does not promise durability after an ephemeral
 GitHub runner is destroyed. No IDs from the failure log may become trusted artifacts.
@@ -110,6 +116,19 @@ If remote advances, rehydrate and validate the original bindings again; never ov
 Re-acquisition requires separate approval, ACTIVE authorization, no unresolved/pending execution,
 and recomputation of cadence from authoritative records and actual execution time. It creates a
 new execution ID and does not overwrite or label the lost execution successful.
+
+This incident has a real COMPLETE already. The proposal must not append a ContinuousRecord RECOVER
+or another COMPLETE, move the original completion timestamp, or restart the minimum-interval clock.
+The new failure records loss of authoritative submission/evidence; it does not reinterpret the
+original successful HTTP request as an HTTP failure. The absence of a surviving checkout is an
+explicit operator incident statement, not a cryptographic proof that bytes cannot exist anywhere.
+Its authority is limited to this approved failed termination, never to reconstructing missing facts.
+
+Preparation, offline implementation/tests, production termination and later re-acquisition are
+distinct actions. This design alone authorizes none of the latter three. If a recovery outcome has
+been committed and original bytes are later found, they must not silently replace that outcome or
+be pushed onto its old parent. Preserve both the incident record and the original evidence for a
+separately reviewed restoration path; do not erase the loss decision or reuse a completed identity.
 
 ## Offline acceptance before requesting execution
 
