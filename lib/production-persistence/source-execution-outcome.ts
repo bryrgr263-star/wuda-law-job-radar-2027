@@ -3,7 +3,8 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { canonicalDeserialize, canonicalHash, canonicalSerialize } from "../ingestion/normalization/canonical-artifact-registry";
-import type { ContinuousRecord } from "../application/source-admission/continuous-acquisition";
+import { pendingContinuousAttempt, type ContinuousRecord } from "../application/source-admission/continuous-acquisition";
+import { readSourceExecutionRequestIntents, type SourceExecutionRequestIntent } from "./source-execution-request-intent";
 import type { AcquisitionPersistenceBundle, RawBlobManifest, SourcePersistenceVersion } from "./contracts";
 import { isClosedOfficialJsonEmpty, type TrustedAcquisitionClassification } from "./trusted-acquisition-evidence";
 import { SourceRunMissingGuard, type SourceRunId } from "../ingestion";
@@ -12,6 +13,30 @@ import { assertSourceExecutionRequestPlanBindings, assertSourceExecutionPaginati
 export const SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION = "production-source-execution-outcome/1.0.0" as const;
 export const MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION = "production-source-execution-outcome/2.0.0" as const;
 export const DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION = "production-source-execution-outcome/3.0.0" as const;
+export const RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION = "production-source-execution-outcome/4.0.0" as const;
+
+export interface EvidenceLossRecoveryDecision {
+  readonly expected_parent: string;
+  readonly source_execution_id: string;
+  readonly actor: string;
+  readonly approval_reference: string;
+  readonly incident_baseline: string;
+  readonly decided_at: string;
+  readonly original_evidence_available: boolean;
+}
+
+export interface EvidenceLossRecoveryProof {
+  readonly reason: "UNPUBLISHED_EVIDENCE_LOST";
+  readonly stage: "AUTHORITATIVE_SUBMISSION";
+  readonly intent_hash: string;
+  readonly intent_commit: string;
+  readonly reserve: { readonly record_id: string; readonly integrity_hash: string };
+  readonly complete: { readonly record_id: string; readonly integrity_hash: string };
+  readonly incident_baseline: string;
+  readonly actor: string;
+  readonly approval_reference: string;
+  readonly original_evidence_available: false;
+}
 
 export interface TrustedChainFailureDiagnostic {
   readonly stage: "SOURCE_DISCOVERY_SUPPORT_VERIFY" | "POST_ACQUISITION_EXECUTION";
@@ -25,7 +50,7 @@ export type SourceExecutionStatus =
 
 export interface SourceExecutionOutcome {
   readonly schema_version: typeof SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION | typeof MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION
-    | typeof DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION;
+    | typeof DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION | typeof RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION;
   readonly source_execution_id: string;
   readonly status: SourceExecutionStatus;
   readonly trusted_chain_status: "COMMITTED" | "NOT_RUN" | "FAILED";
@@ -47,6 +72,8 @@ export interface SourceExecutionOutcome {
   readonly extracted_record_ids: readonly string[];
   readonly request_plan?: SourceExecutionRequestPlan;
   readonly trusted_chain_failure?: TrustedChainFailureDiagnostic;
+  readonly outcome_kind?: "RECOVERY_TERMINATION";
+  readonly recovery?: EvidenceLossRecoveryProof;
   readonly integrity_hash: string;
 }
 
@@ -63,7 +90,7 @@ export function writeSourceExecutionOutcome(repositoryPath: string, outcome: Sou
   assertSourceExecutionShape(outcome);
   const { integrity_hash: integrityHash, ...content } = outcome;
   if (![SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION,
-    DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION].includes(outcome.schema_version)
+    DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION].includes(outcome.schema_version)
     || integrityHash !== canonicalHash(content)) throw new Error("Source execution outcome seal mismatch");
   const directory = path.join(repositoryPath, "production-runs", "source-executions");
   mkdirSync(directory, { recursive: true });
@@ -103,13 +130,24 @@ export async function readSourceExecutionOutcomes(
     const { integrity_hash: integrityHash, ...content } = outcome;
     if (canonicalSerialize(outcome) !== bytes
       || ![SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION,
-        DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION].includes(outcome.schema_version)
+        DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION].includes(outcome.schema_version)
       || integrityHash !== canonicalHash(content)
       || name !== `${canonicalHash({ source_execution_id: outcome.source_execution_id })}.json`
       || seen.has(outcome.source_execution_id)) {
       throw new Error(`Source execution outcome integrity mismatch: ${name}`);
     }
     seen.add(outcome.source_execution_id);
+    if (outcome.outcome_kind === "RECOVERY_TERMINATION") {
+      assertEvidenceLossRecoveryBinding(repositoryPath, outcome, versions, continuousRecords);
+      const introducingCommit = git(repositoryPath, "log", "-1", "--format=%H", "--", relativePath).trim();
+      if (!introducingCommit || git(repositoryPath, "rev-parse", `${introducingCommit}^`).trim() !== outcome.expected_parent) {
+        throw new Error("RECOVERY_PARENT_MISMATCH");
+      }
+      if (acquisitions.some(bundle => bundle.acquisition_run.acquisition_run_id.startsWith(`${outcome.source_execution_id}:acquisition:`))) {
+        throw new Error("RECOVERY_ACQUISITION_ALREADY_PRESENT");
+      }
+      return { outcome, introducingCommit };
+    }
     let executionRecords = continuousRecords;
     if (outcome.request_plan?.schema_version === "source-execution-request-plan/2.0.0") {
       const parentState = canonicalDeserialize(git(repositoryPath, "show", `${outcome.expected_parent}:production-source-state/state/current.json`)) as {
@@ -243,6 +281,11 @@ export async function readSourceExecutionOutcomes(
     (commitOrder.get(left.introducingCommit) ?? -1) - (commitOrder.get(right.introducingCommit) ?? -1))
     .map(entry => entry.outcome);
   const byExecutionId = new Map(outcomes.map(outcome => [outcome.source_execution_id, outcome]));
+  for (const recovery of outcomes.filter(outcome => outcome.outcome_kind === "RECOVERY_TERMINATION")) {
+    if (outcomes.some(outcome => outcome !== recovery && outcome.request_attempt_ids.some(id => recovery.request_attempt_ids.includes(id)))) {
+      throw new Error("RECOVERY_ATTEMPT_DOUBLE_BOUND");
+    }
+  }
   for (const outcome of outcomes) {
     const priorId = outcome.acquisition_evidence.prior_source_execution_id;
     if (!priorId) continue;
@@ -269,6 +312,10 @@ export async function readSourceExecutionOutcomes(
 }
 
 function assertSourceExecutionShape(outcome: SourceExecutionOutcome) {
+  if (outcome?.schema_version === RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION) {
+    assertEvidenceLossRecoveryShape(outcome);
+    return;
+  }
   const keys = ["schema_version", "source_execution_id", "status", "trusted_chain_status",
     "source_definition_id", "recruitment_endpoint_id", "source_version_ids",
     "source_admission_artifact_id", "continuous_authorization_ids", "request_attempt_ids",
@@ -304,6 +351,131 @@ function assertSourceExecutionShape(outcome: SourceExecutionOutcome) {
     || outcome.acquisition_evidence.raw_content_hashes.some(value => typeof value !== "string" || !value.trim())) {
     throw new Error("Source execution outcome schema mismatch");
   }
+}
+
+export function prepareEvidenceLossRecoveryOutcome(repositoryPath: string, decision: EvidenceLossRecoveryDecision,
+  versions: readonly SourcePersistenceVersion[], records: readonly ContinuousRecord[],
+  outcomes: readonly SourceExecutionOutcome[]): SourceExecutionOutcome {
+  if (decision.original_evidence_available !== false || !decision.actor?.trim() || !decision.approval_reference?.trim()) {
+    throw new Error("RECOVERY_EXPLICIT_LOSS_APPROVAL_REQUIRED");
+  }
+  if (git(repositoryPath, "rev-parse", "HEAD").trim() !== decision.expected_parent) throw new Error("RECOVERY_STALE_PARENT");
+  const intent = readSourceExecutionRequestIntents(repositoryPath, versions, records, decision.source_execution_id)
+    .find(entry => entry.source_execution_id === decision.source_execution_id);
+  if (!intent || intent.targets.length !== 1 || !intent.targets[0]!.authorization_id) throw new Error("RECOVERY_SINGLE_INTENT_REQUIRED");
+  if (outcomes.some(outcome => outcome.source_execution_id === decision.source_execution_id)) throw new Error("RECOVERY_ALREADY_COVERED");
+  const authorizationId = intent.targets[0]!.authorization_id;
+  const reserve = [...records].reverse().find(record => record.kind === "RESERVE" && record.payload.authorization_id === authorizationId);
+  const complete = records.find(record => record.kind === "COMPLETE" && record.payload.attempt_id === reserve?.payload.attempt_id);
+  if (!reserve || !complete || pendingContinuousAttempt(records)) throw new Error("RECOVERY_COMPLETED_ATTEMPT_REQUIRED");
+  if (outcomes.some(outcome => outcome.request_attempt_ids.includes(reserve.payload.attempt_id!))) throw new Error("RECOVERY_ALREADY_COVERED");
+  const intentCommit = git(repositoryPath, "log", "-1", "--format=%H", "--", intentFile(intent)).trim();
+  const content = {
+    schema_version: RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION,
+    outcome_kind: "RECOVERY_TERMINATION" as const,
+    source_execution_id: intent.source_execution_id,
+    status: "FAILED" as const,
+    trusted_chain_status: "FAILED" as const,
+    source_definition_id: intent.source_definition_id,
+    recruitment_endpoint_id: intent.recruitment_endpoint_id,
+    source_version_ids: [intent.source_artifact_id, intent.endpoint_artifact_id,
+      intent.source_admission_artifact_id, intent.targets[0]!.allowlist_artifact_id],
+    source_admission_artifact_id: intent.source_admission_artifact_id,
+    continuous_authorization_ids: [authorizationId], request_attempt_ids: [reserve.payload.attempt_id!],
+    expected_parent: decision.expected_parent, started_at: reserve.payload.at!, completed_at: decision.decided_at,
+    reason_codes: ["UNPUBLISHED_EVIDENCE_LOST"],
+    acquisition_evidence: { status: "FAILED" as const, assessment: null, empty_validation: null,
+      prior_source_execution_id: null, raw_content_hashes: [] },
+    acquisition_run_ids: [], acquisition_bundle_hashes: [], raw_blob_ids: [], snapshot_ids: [], extracted_record_ids: [],
+    recovery: { reason: "UNPUBLISHED_EVIDENCE_LOST" as const, stage: "AUTHORITATIVE_SUBMISSION" as const,
+      intent_hash: intent.integrity_hash, intent_commit: intentCommit,
+      reserve: { record_id: reserve.record_id, integrity_hash: reserve.integrity_hash },
+      complete: { record_id: complete.record_id, integrity_hash: complete.integrity_hash },
+      incident_baseline: decision.incident_baseline, actor: decision.actor,
+      approval_reference: decision.approval_reference, original_evidence_available: false as const }
+  };
+  const outcome = { ...content, integrity_hash: canonicalHash(content) };
+  assertEvidenceLossRecoveryShape(outcome);
+  assertEvidenceLossRecoveryBinding(repositoryPath, outcome, versions, records);
+  return outcome;
+}
+
+function assertEvidenceLossRecoveryShape(outcome: SourceExecutionOutcome) {
+  const keys = ["schema_version", "outcome_kind", "source_execution_id", "status", "trusted_chain_status",
+    "source_definition_id", "recruitment_endpoint_id", "source_version_ids", "source_admission_artifact_id",
+    "continuous_authorization_ids", "request_attempt_ids", "expected_parent", "started_at", "completed_at",
+    "reason_codes", "acquisition_evidence", "acquisition_run_ids", "acquisition_bundle_hashes", "raw_blob_ids",
+    "snapshot_ids", "extracted_record_ids", "recovery", "integrity_hash"];
+  const proof = outcome.recovery;
+  const hashes = [outcome.integrity_hash, proof?.intent_hash, proof?.reserve?.integrity_hash, proof?.complete?.integrity_hash];
+  const commits = [outcome.expected_parent, proof?.intent_commit, proof?.incident_baseline];
+  const { integrity_hash: hash, ...content } = outcome;
+  if (Object.keys(outcome).sort().join(",") !== keys.sort().join(",")
+    || outcome.outcome_kind !== "RECOVERY_TERMINATION" || outcome.status !== "FAILED" || outcome.trusted_chain_status !== "FAILED"
+    || hash !== canonicalHash(content) || hashes.some(value => typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value))
+    || commits.some(value => typeof value !== "string" || !/^[a-f0-9]{40}$/.test(value))
+    || !proof || Object.keys(proof).sort().join(",") !== ["reason", "stage", "intent_hash", "intent_commit", "reserve", "complete",
+      "incident_baseline", "actor", "approval_reference", "original_evidence_available"].sort().join(",")
+    || proof.reason !== "UNPUBLISHED_EVIDENCE_LOST" || proof.stage !== "AUTHORITATIVE_SUBMISSION"
+    || proof.original_evidence_available !== false || !proof.actor?.trim() || !proof.approval_reference?.trim()
+    || [proof.reserve, proof.complete].some(reference => Object.keys(reference).sort().join(",") !== "integrity_hash,record_id" || !reference.record_id)
+    || !outcome.source_execution_id || !outcome.source_definition_id || !outcome.recruitment_endpoint_id
+    || canonicalSerialize(outcome.reason_codes) !== canonicalSerialize(["UNPUBLISHED_EVIDENCE_LOST"])
+    || !Number.isFinite(Date.parse(outcome.completed_at)) || new Date(outcome.completed_at).toISOString() !== outcome.completed_at
+    || !Number.isFinite(Date.parse(outcome.started_at)) || new Date(outcome.started_at).toISOString() !== outcome.started_at
+    || [outcome.acquisition_run_ids, outcome.acquisition_bundle_hashes, outcome.raw_blob_ids,
+      outcome.snapshot_ids, outcome.extracted_record_ids].some(value => !Array.isArray(value) || value.length !== 0)
+    || canonicalSerialize(outcome.acquisition_evidence) !== canonicalSerialize({ status: "FAILED", assessment: null,
+      empty_validation: null, prior_source_execution_id: null, raw_content_hashes: [] })) {
+    throw new Error("RECOVERY_SCHEMA_INVALID");
+  }
+}
+
+function assertEvidenceLossRecoveryBinding(repositoryPath: string, outcome: SourceExecutionOutcome,
+  versions: readonly SourcePersistenceVersion[], records: readonly ContinuousRecord[]) {
+  const proof = outcome.recovery!;
+  let parentState: { integrity_hash: string; continuous_records: { record_id: string; integrity_hash: string }[] };
+  try {
+    git(repositoryPath, "merge-base", "--is-ancestor", proof.incident_baseline, outcome.expected_parent);
+    parentState = canonicalDeserialize(git(repositoryPath, "show", `${outcome.expected_parent}:production-source-state/state/current.json`));
+  } catch { throw new Error("RECOVERY_INCIDENT_SCOPE_INVALID"); }
+  const { integrity_hash: stateHash, ...stateContent } = parentState;
+  if (stateHash !== canonicalHash(stateContent) || !Array.isArray(parentState.continuous_records)
+    || parentState.continuous_records.some((reference, index) => reference.record_id !== records[index]?.record_id
+      || reference.integrity_hash !== records[index]?.integrity_hash)) throw new Error("RECOVERY_RECORD_SCOPE_INVALID");
+  const prefix = records.slice(0, parentState.continuous_records.length);
+  const intent = readSourceExecutionRequestIntents(repositoryPath, versions, prefix, outcome.source_execution_id)
+    .find(entry => entry.source_execution_id === outcome.source_execution_id);
+  const reserve = prefix.find(record => record.record_id === proof.reserve.record_id);
+  const complete = prefix.find(record => record.record_id === proof.complete.record_id);
+  if (!intent || intent.integrity_hash !== proof.intent_hash || intent.targets.length !== 1
+    || intent.source_definition_id !== outcome.source_definition_id || intent.recruitment_endpoint_id !== outcome.recruitment_endpoint_id
+    || intent.source_admission_artifact_id !== outcome.source_admission_artifact_id
+    || canonicalSerialize(outcome.source_version_ids) !== canonicalSerialize([intent.source_artifact_id, intent.endpoint_artifact_id,
+      intent.source_admission_artifact_id, intent.targets[0]!.allowlist_artifact_id])
+    || !reserve || !complete || reserve.kind !== "RESERVE" || complete.kind !== "COMPLETE" || pendingContinuousAttempt(prefix)
+    || reserve.integrity_hash !== proof.reserve.integrity_hash || complete.integrity_hash !== proof.complete.integrity_hash
+    || complete.payload.outcome !== "SUCCESS" || complete.payload.attempt_id !== reserve.payload.attempt_id
+    || complete.payload.holder !== reserve.payload.holder || complete.sequence <= reserve.sequence
+    || canonicalSerialize(outcome.request_attempt_ids) !== canonicalSerialize([reserve.payload.attempt_id])
+    || canonicalSerialize(outcome.continuous_authorization_ids) !== canonicalSerialize([intent.targets[0]!.authorization_id])
+    || reserve.payload.authorization_id !== intent.targets[0]!.authorization_id
+    || outcome.started_at !== reserve.payload.at || Date.parse(outcome.completed_at) < Date.parse(complete.payload.at!)) {
+    throw new Error("RECOVERY_UPSTREAM_MISMATCH");
+  }
+  const reservePath = `production-source-state/continuous/records/${canonicalHash({ record_id: reserve.record_id })}.json`;
+  const reserveCommit = git(repositoryPath, "log", "-1", "--format=%H", "--", reservePath).trim();
+  const originalIntentCommit = git(repositoryPath, "log", "-1", "--format=%H", `${reserveCommit}^`, "--", intentFile(intent)).trim();
+  const latestPreReservationIntent = git(repositoryPath, "log", "-1", "--format=%H", `${reserveCommit}^`, "--", "production-runs/source-request-intents").trim();
+  if (originalIntentCommit !== proof.intent_commit
+    || latestPreReservationIntent !== originalIntentCommit
+    || git(repositoryPath, "show", `${proof.intent_commit}:${intentFile(intent)}`).trim() !== canonicalSerialize(intent)) {
+    throw new Error("RECOVERY_ORIGINAL_INTENT_MISMATCH");
+  }
+}
+
+function intentFile(intent: SourceExecutionRequestIntent) {
+  return `production-runs/source-request-intents/${canonicalHash({ source_execution_id: intent.source_execution_id })}.json`;
 }
 
 function validTrustedChainFailure(value: TrustedChainFailureDiagnostic): boolean {

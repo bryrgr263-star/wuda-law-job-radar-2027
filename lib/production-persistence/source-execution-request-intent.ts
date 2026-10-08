@@ -48,10 +48,11 @@ export function writeSourceExecutionRequestIntent(repositoryPath: string, intent
 }
 
 export function readSourceExecutionRequestIntents(repositoryPath: string,
-  versions: readonly SourcePersistenceVersion[], records: readonly ContinuousRecord[]) {
+  versions: readonly SourcePersistenceVersion[], records: readonly ContinuousRecord[], sourceExecutionId?: string) {
   const directory = path.join(repositoryPath, "production-runs", "source-request-intents");
   let names: string[];
-  try { names = readdirSync(directory).filter(name => name.endsWith(".json")).sort(); }
+  try { names = readdirSync(directory).filter(name => name.endsWith(".json")
+    && (sourceExecutionId === undefined || name === path.basename(intentPath(sourceExecutionId)))).sort(); }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw error;

@@ -66,9 +66,11 @@ import { resolveContinuousSourceContext } from "./continuous-source-context";
 import { executeContinuousRequest } from "./continuous-request-gate";
 import {
   readSourceExecutionOutcomes,
+  prepareEvidenceLossRecoveryOutcome,
   sealSourceExecutionOutcome,
   writeSourceExecutionOutcome,
   type SourceExecutionOutcome,
+  type EvidenceLossRecoveryDecision,
   type SourceExecutionStatus
 } from "./source-execution-outcome";
 import { classifyTrustedAcquisition, type TrustedAcquisitionClassification,
@@ -278,6 +280,27 @@ export function bootstrapZeroCostProductionCompositionRoot(
   }
 
   const root = Object.freeze({
+    async prepareEvidenceLossRecovery(input: EvidenceLossRecoveryDecision) {
+      const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), "source-recovery-prepare-"));
+      const checkoutPath = path.join(temporaryRoot, "checkout");
+      try {
+        cloneRemote(remoteUrl, branch, checkoutPath);
+        const sourceRepository = new GitSourceRegistryPersistence({ repository_path: checkoutPath,
+          fencing_verifier: options.continuous_fencing_verifier });
+        const versions = await sourceRepository.listVersions();
+        const records = sourceRepository.listContinuousRecords();
+        const rawPersistence = new GitRawObjectPersistence({ repository_path: checkoutPath });
+        const acquisitions = await rawPersistence.listVerifiedAcquisitions();
+        const outcomes = await readSourceExecutionOutcomes(checkoutPath, acquisitions, versions, records,
+          manifest => rawPersistence.read({ bucket: manifest.bucket_id, object_key: manifest.object_key }));
+        const outcome = prepareEvidenceLossRecoveryOutcome(checkoutPath, input, versions, records, outcomes);
+        if (acquisitions.some(bundle => bundle.acquisition_run.acquisition_run_id.startsWith(`${input.source_execution_id}:acquisition:`))) {
+          throw new Error("RECOVERY_ACQUISITION_ALREADY_PRESENT");
+        }
+        return { expected_parent: input.expected_parent, outcome };
+      } finally { rmSync(temporaryRoot, { recursive: true, force: true }); }
+    },
+
     async runProduction(input: ZeroCostProductionEntryInput): Promise<ZeroCostProductionRunResult> {
       if ("execute_trusted_chain" in input || "source_role_for_record" in input
         || "candidate_evidence_source_verifier" in input) {
@@ -1314,6 +1337,11 @@ function assertCommittedIntentCoverage(intents: readonly SourceExecutionRequestI
   outcomes: readonly SourceExecutionOutcome[]) {
   const byExecution = new Map(intents.map(intent => [intent.source_execution_id, intent]));
   for (const outcome of outcomes) {
+    if (outcome.outcome_kind === "RECOVERY_TERMINATION") {
+      const intent = byExecution.get(outcome.source_execution_id);
+      if (!intent || intent.integrity_hash !== outcome.recovery?.intent_hash) throw new Error("RECOVERY_INTENT_COVERAGE_MISMATCH");
+      continue;
+    }
     if (!outcome.request_plan) continue;
     const intent = byExecution.get(outcome.source_execution_id);
     if (!intent) throw new Error("SOURCE_REQUEST_INTENT_MISSING");
