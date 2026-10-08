@@ -16,13 +16,13 @@ Unknown evidence never implies a negative eligibility/relevance conclusion.
 | --- | --- | --- |
 | P0 Autonomous Discovery Pilot | VERIFIED | SD-023 and SD-025 bounded live windows plus independent fixed-SHA restoration PASS. Fifty untrusted clues, not fifty recruitment sources or new jobs; scheduled Discovery and useful 2027/legal yield remain unverified. |
 | P1 Production Stability | IMPLEMENTED | `9535bcb` pushed; cadence-only v4 DEFERRED and committed-source publication isolation validated offline. Natural validation remains pending. |
-| P2 National Energy Expansion | IN_PROGRESS | Authorization 2/2. Approved failed termination `ebaa639` is remote after normal exact-parent FF push; full Process B PASS (117 journal, 24 acquisitions, 17 outcomes, zero unresolved RESERVE/unbound COMPLETE). Cadence is not reset. No new request/public job yet; finish public exact-link validation before the never-requested compliance target. |
+| P2 National Energy Expansion | IN_PROGRESS | Authorization 2/2. Natural Run 37754305712 requested both targets and retained Raw; both failed extraction because current HTML lacks campaign/project binding. No new public job. Older never-requested/cadence notes are historical only; latest authoritative COMPLETE governs future requests. |
 | P3 Real Source Expansion | NOT_STARTED | Existing official candidates first; never invent 2027/position binding. |
 | P4 Capability A | DEFERRED_WITH_EVIDENCE | This bounded National Energy HTML/query recovery does not require dynamic content. Future candidate demand is not denied; implement only after a concrete recurring admitted-source blocker. |
 | P5 Capability C | DEFERRED_WITH_EVIDENCE | No PDF extraction is required for the current exact HTML targets. Text-layer PDF only when demonstrated necessary; no OCR. |
 | P6 Requirement Coverage | IN_PROGRESS | Existing four-record domain inventory prepared. Stored Source Compositions remain UNRESOLVED; no production Requirement/RSV command or trusted Candidate Evidence is present. No business rules/domain expansion. |
 | P7 Eligibility Coverage | DEFERRED_WITH_EVIDENCE | User explicitly chose public jobs/review display first; personal qualification is disabled. No personal evidence is issued into public Git. Missing evidence remains review/blocked, never a negative conclusion. |
-| P8 Publication | NOT_STARTED | Natural handoff proof plus last-known-good preservation. |
+| P8 Publication | VERIFIED_WITH_LIMITS | Natural Run 37754305712 publication/deploy PASS despite truthful PARTIAL batch. Live current binds e001dff and four unique Positions. All four listed snapshots downloaded and passed existing file/payload integrity and loader validation. Existing rollback/LKG tests PASS; no live rollback or new browser interaction pass is claimed. |
 | P9 Production Scale | NOT_STARTED | Independent sources, partial failure, replay, CAS and dedup. |
 | P10 Legacy Cutover | NOT_STARTED | Dependency audit after stable new production delivery. |
 | P11 Legacy Cleanup | NOT_STARTED | Delete only proven unused business logic, preserving reusable UI and immutable historical evidence. |
