@@ -11,6 +11,8 @@ import { restorePinnedCurrent } from "../../lib/public-presentation/restore";
 import { createPublicSnapshot } from "../../lib/public-presentation/snapshot";
 import { BASELINE_SHA, STREAM_ID } from "./helpers";
 
+const RUN1_REPLAY_SHA = "6efa49f2c55e49ea23c0fd4df42ec43f109d3353";
+
 test("fresh Process B pins committed Run1 and produces same bytes across timezones", async () => {
   const before = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   const first = await restorePinnedCurrent({ repository_path: process.cwd(), authoritative_sha: BASELINE_SHA, stream_id: STREAM_ID });
@@ -56,7 +58,7 @@ test("existing processor appends safe revision in temporary fork; existing curre
   const temporary = mkdtempSync(path.join(os.tmpdir(), "pub-revision-"));
   try {
     execFileSync("git", ["clone", "--local", process.cwd(), temporary], { stdio: "pipe" });
-    execFileSync("git", ["checkout", "--detach", BASELINE_SHA], { cwd: temporary, stdio: "pipe" });
+    execFileSync("git", ["checkout", "--detach", RUN1_REPLAY_SHA], { cwd: temporary, stdio: "pipe" });
     const worker = spawnSync(process.execPath, ["--import", pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href,
       path.resolve("tests/production-persistence/production-business-chain-worker.ts"), temporary, "execute"],
     { encoding: "utf8", windowsHide: true, timeout: 900_000 });
@@ -68,7 +70,7 @@ test("existing processor appends safe revision in temporary fork; existing curre
     assert.equal(payload.position_count, 4);
     assert.ok(payload.positions.every((item: { decision_revision: number }) => item.decision_revision === 2));
     assert.equal(new Set(payload.positions.map((item: { position_id: string }) => item.position_id)).size, 4);
-    assert.equal(execFileSync("git", ["diff", "--name-only", BASELINE_SHA, sha, "--", "trusted-objects", "production-source-state"],
+    assert.equal(execFileSync("git", ["diff", "--name-only", RUN1_REPLAY_SHA, sha, "--", "trusted-objects", "production-source-state"],
       { cwd: temporary, encoding: "utf8" }).trim(), "");
   } finally {
     assert.equal(path.dirname(temporary), path.resolve(os.tmpdir()));
