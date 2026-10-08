@@ -9,8 +9,8 @@ it clones, validates immutable references and returns a proposed sealed outcome.
 commit, push, send HTTP, issue authorization, execute processors or publish data.
 
 Production execution is not granted by these tests. The user subsequently explicitly approved
-failed termination after offline validation. It still requires final review, regression,
-fixed-history verification and fresh-parent CAS. No production outcome has been appended.
+failed termination after offline validation. Final review, regression, fixed-history verification
+and fresh-parent CAS preceded the production append documented at the end of this record.
 
 ## Additive schema
 
@@ -83,13 +83,20 @@ persistence, Architecture and Network Guard controls were included. TypeScript a
 passed. Independent final static review found no Critical/Important blocker, explicitly checked
 the three repaired associations, and did not claim to have rerun tests or production operations.
 
-## Unchanged production breakpoint
+## Production append checkpoint
 
-Last reliably fetched production SHA: `1634441ca0d5221150288d1be856e63a2279408c`.
-The National Energy execution remains pending and both grants remain issued. Original business
-bytes are unavailable. No production recovery, re-acquisition, new public job or publication is
-claimed. Earliest cadence-only eligibility remains `2026-10-08 16:13:49.932 Asia/Shanghai`, subject
-to fresh time/authorization/pending gates; failed termination does not authorize an early request.
+The approved evidence-loss FAILED termination was created in child commit
+`ebaa63918050a829e75efd77c780b65609c14206`, parent exactly
+`94f99e7b86fde30c9a92a9afb1fb3284397cb8c2`. Independent fresh Process B passed with 117 journal
+records, 24 acquisitions, 17 Source Outcomes, four current Positions, zero unresolved RESERVE
+and zero unbound COMPLETE. At 2026-10-08 13:26 Asia/Shanghai, a fresh remote-parent check passed;
+normal fast-forward push succeeded and remote main was read back equal to the verified child.
+
+Original HTTP COMPLETE SUCCESS and historical bytes remain unchanged. Both grants remain issued;
+lost original business bytes are not restored or invented. No re-acquisition, new public job or
+publication accompanied this append. Earliest first-target cadence-only eligibility remains
+`2026-10-08 16:13:49.932 Asia/Shanghai`, subject to fresh authorization/pending gates; failed
+termination does not authorize an early request.
 
 No historical record, continuous policy, Scheduler/Pages workflow, candidate judgment, Legacy
 business logic or old schema interpretation is modified by this implementation.

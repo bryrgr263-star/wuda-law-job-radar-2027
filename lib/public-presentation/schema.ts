@@ -21,6 +21,10 @@ function field<Value extends z.ZodTypeAny>(value: Value) {
   return z.union([z.object({ state: z.literal("AVAILABLE"), value }).strict(),
     z.object({ state: z.literal("NOT_YET_AVAILABLE") }).strict()]);
 }
+const approvedPublicQueryLinks = new Set([
+  "https://zhaopin.chnenergy.com.cn/annc/showgw?id=5a798bfe-a4d6-0be4-e063-98b4d40a088a",
+  "https://zhaopin.chnenergy.com.cn/annc/showgw?id=5a798bfe-ac8c-0be4-e063-98b4d40a088a"
+]);
 const url = text.refine(value => {
   try {
     const parsed = new URL(value);
@@ -30,7 +34,8 @@ const url = text.refine(value => {
       if (next === decodedPath) break;
       decodedPath = next;
     }
-    return parsed.protocol === "https:" && !parsed.username && !parsed.password && !parsed.search && !parsed.hash
+    return parsed.protocol === "https:" && !parsed.username && !parsed.password
+      && (!parsed.search || approvedPublicQueryLinks.has(value)) && !parsed.hash
       && !decodedPath.includes("%")
       && !/(?:^|\/)(?:login|sign[-_]?in|captcha|challenge|auth(?:entication|orization)?|oauth|session(?:[-_]?id)?|(?:access[-_]?)?token|api[-_]?key|credential|reset[-_]?password|password[-_]?reset)(?:\/|$)/iu.test(decodedPath);
   } catch { return false; }

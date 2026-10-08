@@ -64,3 +64,33 @@ test("public loader rejects origin, redirect, hash, SHA and schema mismatch; emp
     expected_payload_hash: empty.payload_sha256, fetcher: async () => new Response(JSON.stringify(empty)) });
   assert.equal(result.jobs.length, 0);
 });
+
+test("public JobBoard renders only the exact approved query announcement without acquiring it", async () => {
+  const input = fixtureInput();
+  const announcement = "https://zhaopin.chnenergy.com.cn/annc/showgw?id=5a798bfe-ac8c-0be4-e063-98b4d40a088a";
+  Object.assign(input.current_snapshot.current_position_read_models[0], {
+    announcement_link: { state: "AVAILABLE", value: announcement },
+    application_link: { state: "NOT_YET_AVAILABLE", reason: "NOT_ACQUIRED" }
+  });
+  const snapshot = createPublicSnapshot(input);
+  let requests = 0;
+  const board = await loadPublicPresentationBoard({
+    snapshot_url: `/presentation/snapshots/${snapshot.payload_sha256}.json`,
+    expected_sha: input.authoritative_sha, expected_payload_hash: snapshot.payload_sha256, origin: "https://delivery.invalid",
+    fetcher: async (url, options) => {
+      assert.equal(String(url), `https://delivery.invalid/presentation/snapshots/${snapshot.payload_sha256}.json`);
+      assert.equal(options?.credentials, "omit");
+      assert.equal(options?.redirect, "error");
+      requests++;
+      return new Response(JSON.stringify(snapshot));
+    }
+  });
+  const job = board.jobs.find(item => item.announcementLink === announcement);
+  assert.ok(job);
+  assert.equal(job.applicationLink, null);
+  const details = renderToStaticMarkup(createElement(JobDetails, { job }));
+  assert.ok(details.includes(`href="${announcement}"`));
+  assert.match(details, /投递链接尚未取得/);
+  assert.equal(requests, 1);
+  assert.equal(board.jobs.length, 4);
+});

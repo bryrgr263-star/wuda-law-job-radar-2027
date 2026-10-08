@@ -5,6 +5,13 @@ import { createPublicSnapshot, validatePublicSnapshot } from "../../lib/public-p
 import { fixtureInput } from "./helpers";
 import { canonicalSerialize } from "../../lib/ingestion/normalization/canonical-artifact-registry";
 
+test("pinned historical no-query snapshot retains the published canonical hash", () => {
+  const input = fixtureInput();
+  assert.equal(input.authoritative_sha, "fd2b64685cbce8faa03267a0a8fbce593bba70cc");
+  assert.equal(createPublicSnapshot(input).payload_sha256,
+    "2d124ce10da19328d7f781933bdd0f21b6cb09b86fc777dbcefa62abebc0185b");
+});
+
 test("snapshot same SHA canonical bytes, explicit whitelist, four current truthful positions", () => {
   const input = fixtureInput();
   const envelope = createPublicSnapshot(input);
@@ -91,6 +98,40 @@ test("authentication or token embedded in decoded URL path rejects whole publica
     "https://example.org/%61ccess_token/SECRET", "https://example.org/%2561ccess_token/SECRET", "https://example.org/session/SECRET"]) {
     const input = fixtureInput();
     Object.assign(input.current_snapshot.current_position_read_models[0], { application_link: { state: "AVAILABLE", value } });
+    assert.throws(() => createPublicSnapshot(input), /LINK/);
+  }
+});
+
+test("approved public National Energy job links preserve exact query identity", () => {
+  for (const value of [
+    "https://zhaopin.chnenergy.com.cn/annc/showgw?id=5a798bfe-a4d6-0be4-e063-98b4d40a088a",
+    "https://zhaopin.chnenergy.com.cn/annc/showgw?id=5a798bfe-ac8c-0be4-e063-98b4d40a088a"
+  ]) {
+    const input = fixtureInput();
+    Object.assign(input.current_snapshot.current_position_read_models[0], {
+      announcement_link: { state: "AVAILABLE", value }, application_link: { state: "NOT_YET_AVAILABLE", reason: "NOT_ACQUIRED" }
+    });
+    const envelope = createPublicSnapshot(input);
+    const payload = validatePublicSnapshot(envelope, input.authoritative_sha, envelope.payload_sha256);
+    assert.ok(payload.positions.some(position => position.announcement_link.state === "AVAILABLE"
+      && position.announcement_link.value === value && position.application_link.state === "NOT_YET_AVAILABLE"));
+    assert.equal(canonicalSerialize(envelope), canonicalSerialize(createPublicSnapshot(structuredClone(input))));
+  }
+});
+
+test("public query link exceptions never authorize a different target or sensitive parameter", () => {
+  const approved = "https://zhaopin.chnenergy.com.cn/annc/showgw?id=5a798bfe-a4d6-0be4-e063-98b4d40a088a";
+  for (const value of [
+    `${approved}&token=SECRET`, `${approved}&page=2`, `${approved}#SECRET`,
+    approved.replace("5a798bfe-a4d6", "5a798bfe-ffff"),
+    approved.replace("zhaopin.chnenergy.com.cn", "other.chnenergy.com.cn"),
+    approved.replace("/annc/showgw", "/annc/other"),
+    approved.replace("?id=", "?%69d="), approved.replace("https:", "http:"),
+    approved.replace("https://", "https://user:SECRET@"),
+    "https://example.org/position?id=5a798bfe-a4d6-0be4-e063-98b4d40a088a"
+  ]) {
+    const input = fixtureInput();
+    Object.assign(input.current_snapshot.current_position_read_models[0], { announcement_link: { state: "AVAILABLE", value } });
     assert.throws(() => createPublicSnapshot(input), /LINK/);
   }
 });
