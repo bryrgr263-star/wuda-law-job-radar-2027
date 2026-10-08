@@ -1,0 +1,1562 @@
+
+<!-- 热招岗位 -->
+<!DOCTYPE html>
+ 	<script type="text/javascript" src="/js/jquery.min.js"></script>
+ 	<script type="text/javascript" src="/bootstrap/js/bootstrap.min.js"></script>
+	<script src="/js/jquery.validate.js"></script>
+	<script src="/js/reg.validate.js"></script>
+	<script src="/js/messages_cn.js"></script>
+	<script src="/bootstrap/table/bootstrap-table.js"></script>
+	<script src="/bootstrap/table/bootstrap-table-zh-CN.min.js"></script>
+	<script src="/bootstrap/dialog/dialog-min.js"></script>
+	<script src="/js/My97DatePicker/WdatePicker.js"></script>
+	<script src="/js/jquery.PrintArea.js"></script>
+	<script type="text/javascript" src="/js/ztree/js/jquery.ztree.core.js"></script>
+	<script type="text/javascript" src="/js/ztree/js/jquery.ztree.excheck.js"></script>
+	<script src="/js/main.js" type="text/javascript" charset="utf-8"></script>
+	<script src="/js/jsencrypt.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="/js/pubfunc.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript">
+		function grey(){
+                myalert("您还未登录或登录已超时，请重新登录！");
+    	}
+		function grey2(){
+               myalert("您还未登录或登录已超时，请重新登录！");
+    	}
+		function grey5(){
+        		myalert("您还未登录或登录已超时，请重新登录！");
+    	}
+		var applyResumeKind = '1';
+
+		function hoomIndexApply(stationid, projectid, cnstation, cnorg,kind){
+	            myalert("您还未登录或登录已超时，请重新登录！");
+	            return;
+			if(kind!=undefined) applyResumeKind = kind;
+			apply(stationid, projectid, cnstation, cnorg);
+		}
+		if ("3"==applyResumeKind) {
+			applyResumeKind = '3';
+		} else if ("1"==applyResumeKind) {
+			applyResumeKind = '1';
+		} else if ("2"==applyResumeKind) {
+			applyResumeKind = '2';
+		} else if ("9"==applyResumeKind) {
+			applyResumeKind = '4';
+		} else {
+			applyResumeKind = '';
+		}
+		function applydialog(stationid, projectid, cnstation, cnorg) {
+        	if ($('input:radio[name="choosewriteplace_' + stationid + '"]').length > 1) {
+        		$("#mask").css('display','block');
+				var d = dialog({
+                    title: '请选择笔试地点',
+                    content: $("#choosewriteplace_" + stationid),
+                    width:420,
+                    zIndex: 3000,
+                    button: [
+                    	{
+                            value: '确定',
+                            callback: function () {
+                            	var wpVal = $('input:radio[name="choosewriteplace_' + stationid + '"]:checked').val();
+	                    		if (wpVal == undefined || wpVal=='' || wpVal==null) {
+                            		myalert('请先选择笔试地点');
+                            		return;
+                            	}
+                            	this.title('提交中…');
+                                $.get("/apply/firstApply", {applyResumeKind: applyResumeKind, stationid: stationid, projectid: projectid, writeplace: $('input:radio[name="choosewriteplace_' + stationid + '"]:checked').val(), random: Math.random()},
+                                        function (result) {
+                                            d.close();
+                                            if (typeof(result) != "object")
+                                                result = JSON.parse(result);
+                                            dialog({
+                                                title: '提示',
+                                                content: result.msg,
+                                                zIndex: 3000,
+                                                width: 420,
+                                                okValue: '确定',
+                                                ok: function () {
+                                                	$("#mask").css('display','none');
+                                                    if (result.success) {
+                                                        window.location.href = "/apply/list"
+                                                    } else if (result.msg == '您还没有登录，或者登录超时！') {
+                                                        window.location.href = "/"
+                                                    }
+                                                }
+                                            }).show();
+                                        });
+                                return false;
+                           }
+                        }, {
+                            value: '取消',
+                           	callback: function () {
+                           		$("#mask").css('display','none');
+                            }
+                        }
+                    ]
+                });
+                d.width(420).show();
+            } else {
+            	$("#mask").css('display','block');
+            	$.get("/apply/firstApply", {applyResumeKind: applyResumeKind, stationid: stationid, projectid: projectid, writeplace: $('input:radio[name="choosewriteplace_' + stationid + '"]').first().val(), random: Math.random()},
+                	function (result) {
+                    	if (typeof(result) != "object")
+                        	result = JSON.parse(result);
+                        dialog({
+                        	title: '提示',
+                            content: result.msg,
+                            zIndex: 3000,
+                            width: 420,
+                            okValue: '确定',
+                            ok: function () {
+                          		$("#mask").css('display','none');
+                                if (result.success) {
+                                    window.location.href = "/apply/list"
+                                } else if (result.msg == '您还没有登录，或者登录超时！') {
+                                    window.location.href = "/"
+                                }
+                        	}
+                    	}).show();
+                    });
+            }
+
+        }
+        function applydialogSchool(stationid, projectid, cnstation, cnorg) {
+        	var treeObj=$.fn.zTree.getZTreeObj("writePlaceZTree");
+        	var nodes = treeObj.getNodes();
+        	if (nodes != undefined && (nodes.length > 1 || nodes.length == 1 && nodes[0].children != undefined && nodes[0].children.length > 1 )  ) {
+        		$("#mask").css('display','block');
+				var d = dialog({
+                    title: '请选择笔试地点',
+                    content: $("#writePlaceZTree"),
+                    width:420,
+                    zIndex: 3000,
+                    button: [
+                    	{
+                            value: '确定',
+                            callback: function () {
+                		        nodes = treeObj.getCheckedNodes(true);
+	                    		if (nodes == undefined || nodes == null || nodes.length == 0) {
+                            		myalert('请先选择笔试地点');
+                            		return;
+                            	}
+	                    		var node = nodes[0];
+                            	this.title('提交中…');
+                            	$.get("/apply/first", {applyResumeKind: applyResumeKind, stationid: stationid, projectid: projectid, writeplace: node.ID, random: Math.random()},
+	                                function (result) {
+	                                    d.close();
+	                                    if (typeof(result) != "object")
+	                                        result = JSON.parse(result);
+	                                    dialog({
+	                                        title: '提示',
+	                                        content: result.msg,
+	                                        zIndex: 3000,
+	                                        width: 420,
+	                                        okValue: '确定',
+	                                        ok: function () {
+	                                        	$("#mask").css('display','none');
+	                                            if (result.success) {
+	                                                window.location.href = "/apply/list"
+	                                            } else if (result.msg == '您还没有登录，或者登录超时！') {
+	                                                window.location.href = "/"
+	                                            }
+	                                        }
+	                                    }).show();
+	                                });
+                                return false;
+                           }
+                        }, {
+                            value: '取消',
+                           	callback: function () {
+                           		$("#mask").css('display','none');
+                            }
+                        }
+                    ]
+                });
+                d.width(420).show();
+        	} else {
+            	$("#mask").css('display','block');
+            	var writePlaceId = null;
+
+            	if (nodes != undefined && nodes.length > 0) {
+            	   if(nodes[0].children != undefined){
+             		   writePlaceId = nodes[0].children[0].ID;
+             	   }else{
+             		   writePlaceId = nodes[0].ID;
+             	   }
+            	}
+
+            	$.get("/apply/firstApply", {applyResumeKind: applyResumeKind, stationid: stationid, projectid: projectid, writeplace: writePlaceId, random: Math.random()},
+                	function (result) {
+                    	if (typeof(result) != "object")
+                        	result = JSON.parse(result);
+                        dialog({
+                        	title: '提示',
+                            content: result.msg,
+                            zIndex: 3000,
+                            width: 420,
+                            okValue: '确定',
+                            ok: function () {
+                          		$("#mask").css('display','none');
+                                if (result.success) {
+                                    window.location.href = "/apply/list"
+                                } else if (result.msg == '您还没有登录，或者登录超时！') {
+                                    window.location.href = "/"
+                                }
+                        	}
+                    	}).show();
+                });
+            }
+        }
+        /*20201118提交应聘申请*/
+        function applydialogNoWritePlace(stationid, projectid, cnstation, cnorg,province,city){
+        	$.get("/apply/firstApply", {applyResumeKind: applyResumeKind, stationid: stationid, projectid: projectid
+        		, writeplace: '',faceplaceP: province,faceplaceC: city,
+        		random: Math.random()},
+
+                	function (result) {
+                    	if (typeof(result) != "object")
+                        	result = JSON.parse(result);
+                        dialog({
+                        	title: '提示',
+                            content: result.msg,
+                            zIndex: 3000,
+                            width: 420,
+                            okValue: '确定',
+                            ok: function () {
+                          		$("#mask").css('display','none');
+                                if (result.success) {
+                                    window.location.href = "/apply/list"
+                                } else if (result.msg == '您还没有登录，或者登录超时！') {
+                                    window.location.href = "/"
+                                }
+                        	}
+                    	}).show();
+             });
+
+        }
+
+		function beforeApply(stationType,stationid, projectid, cnstation, cnorg){
+            	myalert("您还未登录或登录已超时，请重新登录！");
+            	return;
+		}
+		function beforeA2pply(chooseType,stationid, projectid, cnstation, cnorg) {
+			var content ="";
+			if(1==chooseType){
+				content="校园招聘";
+			}else if(2==chooseType){
+				content="内部招聘";
+			}else if(3==chooseType){
+				content="社会招聘";
+			}else if(4==chooseType){
+				content="村官招聘";
+			}
+			var d = dialog({
+                title: '提示',
+                content: '确认选择'+content+'吗？',
+                width: 420,
+                zIndex: 2030,
+                button: [
+                    {
+                        value: '确定',
+                        callback: function () {
+                            d.close();
+                           $('#socialFormModal_station').modal('hide');
+							applyResumeKind=chooseType;
+							apply(stationid, projectid, cnstation, cnorg);
+                            return false;
+                        }
+                    }, {
+                        value: '取消'
+                    }
+                ]
+            });
+            d.show();
+		}
+        function apply(stationid, projectid, cnstation, cnorg, endDate) {
+                myalert("您还未登录或登录已超时，请重新登录！");
+                return;
+
+            jQuery.ajax({
+    	        url : '/resume/checkResumeIntegrity',
+    	        type : 'post',
+    	        dataType : 'json',
+    	        data:{isApplyCheckData:"1", stationId:stationid,projectId:projectid ,applyResumeKind: applyResumeKind, random: Math.random()},
+    	        success : function (data) {
+    	        	var msg="";
+    	        	var resumeType = data.resumeType;
+    	            if(data.FINISH1!=1&&resumeType==1){
+    	            	msg="校园招聘";
+    	            }
+    	            if(data.FINISH2!=1&&resumeType==2){
+    	            	msg="内部招聘";
+    	            }
+    	            if(data.FINISH3!=1&&resumeType==3){
+    	            	msg="社会招聘";
+    	            }
+    	            if(msg!=""){
+    	            	//myalert('您的简历未通过验证，请返回我的简历完善 '+msg+'简历信息并验证后，再申请该岗位！');
+    	            	myalert('您的简历未通过验证，请返回我的简历完善简历信息并验证后，再申请该岗位！');
+    	            	return;
+    	            }else{
+    	            	/* 小于18岁不能应聘 */
+    	            	var isAge18 = false;
+    	                jQuery.ajax({
+    	        	        url : '/resume/statisfyApplyCondition',
+    	        	        type : 'post',
+    	        	        async: false,
+    	        	        dataType : 'json',
+    	        	        success : function (data) {
+    	        	        	if(data){
+    	        	        		isAge18 = true;
+    	        	        	}
+    	        	        }
+    	        	    });
+    	                if (!isAge18) {
+    	                	myalert('您未满18周岁还不可参加应聘！');
+    	    	        	return;
+    	                }
+    	            	// 全日制岗位校验 毕业证 和学位证
+    	            	var flagCert = data.flagCert;
+    	            	if("N" == flagCert){
+    	    	        	myalert('申请学历要求：全日制岗位时，个人简历-电子附件需上传毕业证和学位证！');
+    	    	        	return;
+    	            	}
+
+    	            	var flagCert1009 = data.flagCert1009;
+    	            	if("N" == flagCert1009){
+    	    	        	myalert('申请此岗位要求：个人简历-电子附件需上传资质证书！');
+    	    	        	return;
+    	            	}
+
+
+//      	               var facePlace = data.facePlaceFlag;
+//     	               var place1v = data.place1;
+//     	               var place2v = data.place2;
+//     	               if("Y" == facePlace){
+//
+//     	            	$("select[name=place1]").val(place1v);
+//     	            	getCityDefault('place',place2v);
+//
+// //     	            	$("select[name=place2]").val(place2v);
+//
+//        	                $("#mask").css('display','block');
+//     					var da = dialog({
+//     	                    title: '首选考试城市',
+//     	                    content: $("#createFileMModalContent"),
+//     	                    width:420,
+//     	                    zIndex: 3000,
+//     	                    button: [
+//     	                    	{
+//     	                            value: '确定',
+//     	                            callback: function () {
+//    	                		        	var province=$("select[name=place1]").val();
+// 										var city=$("select[name=place2]").val();
+// 										if(province&&province!=""&&city&&city!=""){
+// 											da.close();
+// 											$("#mask").css('display','none');
+//
+// 	    		        	            	var dateMsg="请确认是否应聘【" + cnorg + "】的【" + cnstation + "】职位";
+// 	    		        	            	if(endDate!=undefined && endDate!='' && endDate!=null) {
+// 	    		        	                	dateMsg+="该职位的报名截止日期是"+endDate;
+// 	    		        	                }
+// 	    		        	            	applyqueren(dateMsg,
+// 	    		       	                        function () {
+// 	    		       	                        	applyqueren(
+// 	    		       	                        		"简历投递后将不能再对简历内容进行修改!!!",
+// 	    		       	                            	//"简历投递后将不能再对简历内容进行修改！简历投递后，如您想应聘其他岗位，可撤销对当前岗位的应聘申请后申请应聘其他岗位，但不能再申请当前岗位!",
+// 	    		       	                                function () {
+// 	    		       	                        			showWritePlace(stationid, projectid, cnstation, cnorg,province,city);
+// 	    		       	                                }
+// 	    		       	                            )
+// 	    		       	                        }
+// 	    		       	                    );
+//
+// 	    	                                return false;
+// 										}else{
+// 											$("#mask").css('display','none');
+// 											myalert("请选择首选考试城市！");
+//
+// 											return;
+// 										}
+//
+//     	                           }
+//     	                        }, {
+//     	                            value: '取消',
+//     	                           	callback: function () {
+//     	                           		$("#mask").css('display','none');
+//     	                            }
+//     	                        }
+//     	                    ]
+//     	                });
+//     					da.width(420).show();
+//     	               }else{
+
+       	            	var dateMsg="请确认是否应聘【" + cnorg + "】的【" + cnstation + "】职位";
+    	            	if(endDate!=undefined && endDate!='' && endDate!=null) {
+    	                	dateMsg+="该职位的报名截止日期是"+endDate;
+    	                }
+                        let tips = "简历投递后将不能再对简历内容进行修改 ！";
+    	            	applyqueren(dateMsg,
+   	                        function () {
+   	                        	applyqueren(
+                                    tips,
+   	                            	//"简历投递后将不能再对简历内容进行修改！简历投递后，如您想应聘其他岗位，可撤销对当前岗位的应聘申请后申请应聘其他岗位，但不能再申请当前岗位!",
+   	                                function () {
+   	                        			showWritePlace(stationid, projectid, cnstation, cnorg);
+   	                                }
+   	                            )
+   	                        }
+   	                    );
+
+
+    	               // }
+
+
+    	            }
+   	           	}
+   	        });
+        }
+        function applyqueren(content, func) {
+        	$("#mask").css('display','block');
+            var d = dialog({
+                title: '提示',
+                content: content,
+                width: 420,
+                zIndex: 3000,
+                button: [
+                    {
+                        value: '确定',
+                        callback: function () {
+                        	$("#mask").css('display','none');
+                            d.close();
+                            func();
+                            return false;
+                        }
+                    }, {
+                        value: '取消',
+                       	callback: function () {
+                       		$("#mask").css('display','none');
+                        }
+                    }
+                ]
+            });
+            d.show();
+		}
+		function applyqueren1(content, func) {
+			$("#mask").css('display','block');
+        	var d = dialog({
+            	title: '提示',
+                content: content,
+                width: 420,
+                zIndex: 2030,
+                button: [
+                	{
+                        value: '取消',
+                       	callback: function () {
+                       		$("#mask").css('display','none');
+                        }
+                	}
+                ]
+            });
+            d.show();
+        }
+		function myalert(content){
+        	$("#mask").css('display','block');
+            var mydialog=dialog({
+                title: '提示',
+                content:content,
+                okValue: '确定',
+                width: 420,
+                zIndex: 3000,
+                ok: function () {
+                	$("#mask").css('display','none');
+                	location.reload();
+                    return true;
+                }
+            });
+            mydialog.show();
+        }
+
+
+        function getCity(ename){
+        	var province=$("select[name="+ename+1+"]").val();
+        	console.log(province);
+        	$("select[name="+ename+"]").html('<option value="">请选择县市区</option>');
+        	if(province&&province!=""){
+        		jQuery.ajax({
+        	        url : '/resume/getCity',
+        	        type : 'post',
+        	        data : { "propId" : province.substr(0,2)+"____" },
+        	        dataType : 'json',
+        	        success : function (opts) {
+        	            if (opts && opts.length > 0) {
+                            var html = [];
+                            html.push('<option value="">请选择市（州）</option>');
+                            for (var i = 0; i < opts.length; i++) {
+                            	/* if(opts[i].propId.substr(2,2)!="00"){
+                                	html.push('<option value="'+opts[i].propId+'">'+opts[i].propName+'</option>');
+                                } */
+                            	html.push('<option value="'+opts[i].propId+'">'+opts[i].propName+'</option>');
+                            }
+                            $("select[name="+ename+2+"]").html('');
+                            $("select[name="+ename+2+"]").append(html.join(''));
+                        }
+        	    	}
+                });
+        	}else{
+        	 	$("select[name="+ename+2+"]").html('<option value="">请选择市（州）</option>');
+        	}
+
+        }
+        function getCounty(ename){
+        	var city=$("select[name="+ename+2+"]").val();
+        	if(city&&city!=""){
+        		 jQuery.ajax({
+                url : '/resume/getCity',
+                type : 'post',
+                data : { "propId" : city.substr(0,4)+"__"},
+                dataType : 'json',
+                success : function (opts) {
+                    if (opts && opts.length > 0) {
+                            var html = [];
+                             html.push('<option value="">请选择县市区</option>');
+                            for (var i = 0; i < opts.length; i++) {
+                            	if(opts[i].propId.substr(4,2)!="00"){
+                            		html.push('<option value="'+opts[i].propId+'">'+opts[i].propName+'</option>');
+                            	}
+                            }
+                            $("select[name="+ename+"]").html('');
+                            $("select[name="+ename+"]").append(html.join(''));
+                        }
+                    }
+                });
+        	}else{
+        	 	$("select[name="+ename+"]").html('<option value="">请选择县市区</option>');
+        	}
+        }
+
+        function getCityDefault(ename,vala){
+        	var province=$("select[name="+ename+1+"]").val();
+        	console.log(vala);
+        	$("select[name="+ename+"]").html('<option value="">请选择县市区</option>');
+        	if(province&&province!=""){
+        		jQuery.ajax({
+        	        url : '/resume/getCity',
+        	        type : 'post',
+        	        data : { "propId" : province.substr(0,2)+"____" },
+        	        dataType : 'json',
+        	        success : function (opts) {
+        	            if (opts && opts.length > 0) {
+                            var html = [];
+                            html.push('<option value="">请选择市（州）</option>');
+                            for (var i = 0; i < opts.length; i++) {
+                            	/* if(opts[i].propId.substr(2,2)!="00"){
+                                	html.push('<option value="'+opts[i].propId+'">'+opts[i].propName+'</option>');
+                                } */
+                            	html.push('<option value="'+opts[i].propId+'">'+opts[i].propName+'</option>');
+                            }
+                            $("select[name="+ename+2+"]").html('');
+                            $("select[name="+ename+2+"]").append(html.join(''));
+
+                            $("select[name=place2]").val(vala);
+                        }
+        	    	}
+                });
+        	}else{
+        	 	$("select[name="+ename+2+"]").html('<option value="">请选择市（州）</option>');
+        	}
+
+        }
+
+
+	</script>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- 强制Chromium内核，作用于360浏览器、QQ浏览器等国产双核浏览器 -->
+    <meta name="renderer" content="webkit"/>
+    <!-- 强制Chromium内核，作用于其他双核浏览器 -->
+    <meta name="force-rendering" content="webkit"/>
+    <!-- 如果有安装 Google Chrome Frame 插件则强制为Chromium内核，否则强制本机支持的最高版本IE内核，作用于IE浏览器 -->
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1"/>
+    <!-- 不缓存 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <title>岗位详情</title>
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/bootstrap/css/bootstrapFont.css">
+    <link rel="stylesheet" href="/css/custom.min.css">
+    <link rel="stylesheet" href="/css/public.css">
+    <link rel="stylesheet" href="/css/jobdetails.css">
+    <link rel="stylesheet" href="/bootstrap/dialog/ui-dialog.css">
+    <link rel="stylesheet" type="text/css" href="/js/ztree/css/zTreeStyle/zTreeStyle.css" />
+    <link rel="stylesheet" type="text/css" href="/js/ztree/css/demo2.css" />
+      <link rel="stylesheet" type="text/css" href="/bootstrap/select/bootstrap-select.css" />
+      <script type="text/javascript" src="/bootstrap/select/bootstrap-select.js"></script>
+  </head>
+  <style>
+  	.offset-md-1{margin-left:3.33%;}
+  </style>
+
+  <style>
+      /* 重置 Bootstrap-select 的样式 */
+      .dropdown-menu .dropdown-item {
+          background-color: white !important; /* 设置选项的背景颜色为白色 */
+          color: black !important; /* 设置选项的文字颜色为黑色 */
+      }
+
+      .dropdown-menu .dropdown-item:hover {
+          background-color: grey !important; /* 设置鼠标悬停时的背景颜色 */
+      }
+  </style>
+  <body>
+
+
+	 <div class="header">
+      <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+          <a class="navbar-brand pull-left" href="#"><img src="/images/logo.png" alt=""></a>
+          <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarColor03" aria-controls="navbarColor03" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="navbar-collapse collapse" id="navbarColor03">
+            <form class="form-inline" id="changeForm" method="post"  onsubmit="return getAction()">
+              <input type="hidden" name="ggtype" id="ggtype" value="1"/>
+              <input type="hidden" name="kinds" id="kinds" value="1"/>
+              <input type="hidden" name="schType" id="schType" value="2"/>
+              <div class="form-group pull-left">
+                <select class="form-control selectpicker" name="kinds1" id="kinds1" onChange="changePlaceholder()" data-size="4">
+                  <option value ="1"  >招聘公告</option>
+                  <option value ="32"  >总部“菁英”管培生专招</option>
+                  <option value ="31"  >直招</option>
+                  <option value ="30"  selected="selected">统招</option>
+                  <option value ="40"  >藏青疆专招</option>
+                  <option value ="39"  >乡村振兴专招</option>
+                  <option value ="4" >内部招聘</option>
+                  <option value ="5"  >社会招聘</option>
+                  <option value ="2"  >招聘公示</option>
+                </select>
+              </div>
+	               	   <input type="text" class="form-control ml-2" id="unitOrStation"  name ="unitOrStation" placeholder="请输入单位或岗位...">
+              <button class="btn btn-primary my-2 my-sm-0"  type="submit"> <img src="/images/search.png" alt=""> </button>
+            </form>
+			<ul class="navlist pull-right">
+              	<li > <a href="javascript:myjump('/index1')">首页</a> </li>
+              	<li > <a href="javascript:myjump('/annc/annclist?ggtype=1')">招聘公告</a> </li>
+<!--               	<li > <a href="javascript:myjump('/annc/annclist?ggtype=2')">招聘公示</a> </li> -->
+              	<li role="presentation" class="dropdown">
+              		<a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+               			 校园招聘 <span class="caret"></span>
+              		</a>
+              		<ul class="dropdown-menu" style="width: max-content">
+                    <li > <a href="javascript:recTypeSerch('1', 18)">总部“菁英”管培生专招</a> </li>
+                    <li > <a href="javascript:recTypeSerch('1', 1)">直招</a> </li>
+                    <li > <a href="javascript:recTypeSerch('1', 2)">统招</a> </li>
+                    <li > <a href="javascript:recTypeSerch('1', 19)">藏青疆专招</a> </li>
+                    <li > <a href="javascript:recTypeSerch('1', 7)">乡村振兴专招</a> </li>
+              		</ul>
+              	</li>
+              	<li > <a href="javascript:recTypeSerch('3')">社会招聘</a> </li>
+              	<li > <a href="javascript:recTypeSerch('2')">内部招聘</a> </li>
+			    	<li > <a href="javascript:myjump('/resume/editResume?type=1')">我的简历</a> </li>
+            </ul>
+            <ul class="navbar-nav mr-auto" id="mobterminal">
+               <li class="nav-item">
+                 <a class="nav-link"  href="javascript:myjump('/goPhonePage')">首页</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="javascript:myjump('/annc/annclist?ggtype=1')">招聘公告</a>
+              </li>
+            </ul>
+          </div>
+          <div class="topMsg">
+	            <a href="/signup"><span class="glyphicon glyphicon-user"></span> 注册</a>
+		  		<a href="javascript:void(0)" onclick="loginBtn()"><span class="glyphicon glyphicon-pencil"></span> 登录</a>
+          </div>
+        </div>
+      </nav>
+    </div>
+    <div id="mask" style="position:fixed;opacity: 0.5;filter:Alpha(opacity=0.5);width:100%;height:100%;z-index:2;top:0px;left:0px;background:#555;display:none;"></div>
+    <div id="bg" style="display:none;">&nbsp;</div>
+    <style>
+    	.modal .table th,.modal .table td { padding: 0.25rem; padding: 4px\0; line-height: 2.5\0; text-align: center;}
+		.modal-title { float: left\0; }
+		.modal-dialog {
+		  max-width: auto;
+		  min-width: 600px;
+		  margin: 1.75rem auto;
+		  margin: 28px auto\0;
+		}
+		.ui-popup {
+			top: 300px!important;
+		}
+		.longinrow{width:100%;margin:5px 10px 5px 5px;}
+		.modal-header{border-bottom:none;}
+		.modal.fade .modal-dialog{transform:translate(0px, 80px);}
+		.form-controllg{height:38px;border-radius:0px;}
+		.modal .table th, .modal .table td{width:80px;}
+		.forgetPassWord a, .forgetPassWord a:hover{color:#2fa4e7;text-decoration:underline;}
+		.nav-link{padding:0.5rem 1rem;}
+		.nav-tabs .nav-link{color:#2fa4e7;}
+		.tabStyle.nav-tabs > li > a{padding-bottom:2px;}
+    </style>
+    <div class="modal fade text-center"  id="loginformModal" style="margin:30px auto;" tabindex="-1" role="dialog"  aria-labelledby="myModalLabel">
+	    <div class="modal-dialog" role="document">
+	        <div class="modal-content" style="border-radius:4px;">
+				<div id="col-md-10">
+	              <div class="modal-header" style="padding-bottom: 0px;">
+						<div class="container-fluid">
+							<ul class="nav nav-tabs tabStyle" role="tablist" style="border-bottom:none;margin-bottom:5px;">
+								<li class="active" role="presentation"><a id="tabNavSocialLogin" class="active" role="tab" data-toggle="tab"  href="#tabSocialLogin"  onclick="refreshCaptcha(1)">社会公众登录</a></li>
+								<li role="presentation"><a id="tabNavInnerLogin" role="tab" data-toggle="tab"  href="#tabInnerLogin"  onclick="refreshCaptcha(2)">内部员工登录</a></li>
+							</ul>
+				        </div>
+				        <div>
+							<button class="close" type="button" data-dismiss="modal">×</button>
+				        </div>
+				    </div>
+				    <div class="tab-content" style="width:100%">
+							<div id="tabSocialLogin" class="tab-pane active show">
+								<form class="row" action="/login" id="loginform" method="post">
+			            			<input type="hidden" name="myToken" value=""/>
+									<div class="col-sm-12">
+									   <div class="longinrow row">
+											<label for="pidtype" class="col-sm-4 col-form-label">证件类型：</label>
+											<select id="pidtype" name="pidtype" class="col-sm-6  form-control custom-select form-controllg">
+												<option value="0" selected="selected">身份证</option>
+												<option value="1">护照</option>
+											</select>
+									   </div>
+									</div>
+									<div class="col-sm-12">
+										 <div class="longinrow row">
+											<label for="pid" class="col-sm-4 col-form-label">证件号码：</label>
+											<input type="text" class="col-sm-6 form-control form-controllg" id="pid" name="pid" style="text-transform:uppercase;" onkeyup="this.value=this.value.toUpperCase()">
+										</div>
+									</div>
+									<div class="col-sm-12">
+										 <div class="longinrow row">
+											<label for="password" class="col-sm-4 col-form-label">登录密码：</label>
+											<input type="password" class="col-sm-6 form-control form-controllg" id="password" name="password" >
+										</div>
+									</div>
+									<div class="col-sm-12">
+										 <div class="longinrow row">
+											<label for="smscode" class="col-sm-4 col-form-label">手机动态码：</label>
+											<input type="text" class="col-sm-3 form-control form-controllg" id="smscode" name="smscode">
+											<div class="col-sm-3" style="margin-top:5px;">
+												<button type="button" class="btn btn-default btn-sm" style="width:100%;height:34px;background:#fff;border:1px solid #ccc;color:#333;border-radius:17px;font-size:14px;line-height:1.5;" onclick="sendLoginSms(this)">发送动态码</button>
+											</div>
+										</div>
+									</div>
+									<div class="col-sm-12">
+										 <div class="longinrow row">
+											<label for="yzm1" class="col-sm-4 col-form-label">验证码：</label>
+											<input type="text" class="col-sm-3 form-control form-controllg" id="yzm1" name="yzm1">
+											<div  class="col-sm-3" style="margin-top:5px;">
+												<img src="/static/images/kaptcha.jpg" width="56" height="25" id="yzmimg1">
+												<span class="glyphicon glyphicon-refresh" onclick="refreshCaptcha(1)"></span>
+											</div>
+										</div>
+									</div>
+									<div class="col-sm-12 longinrow forgetPassWord">
+									    <div class="col-sm-4" style="display:none">
+											<input type="checkbox" name="remember" style="margin-left:40px;" />&nbsp;记住我&emsp;
+									    </div>
+									    <div class="col-sm-10">
+									         <a class="pull-right" href="/forgetpwd">忘记密码</a>
+									    </div>
+									</div>
+									<div class="col-sm-12 form-group center-block longinrow " style="margin-top: 10px;">
+									 		<button type="button" class="btn btn-primary" onclick="dosubmit('loginform')"   style="width:90%">登录</button>
+									</div>
+								</form>
+							</div>
+
+						 	<div id="tabInnerLogin" class="tab-pane">
+								<form class="row" action="/idmlogin" id="idmform" method="post">
+		          					<input type="hidden" name="myToken" value=""/>
+		          					<div class="container-fluid" style="padding-left:34px;">
+		          					<ul class="nav nav-tabs" role="tablist">
+										<li class="nav-item" >
+											<a href="/ssologin" class="nav-link">内网环境登录</a>
+										</li>
+										<li class="nav-item">
+											<a href="#" class="nav-link active">外网环境登录</a>
+										</li>
+									</ul>
+									</div>
+									<div class="col-sm-12">
+									   <div class="longinrow row">
+											<label for="empnum" class="col-sm-4 control-label">登录账号：</label>
+											<input type="text" class="col-sm-6  form-control form-controllg" id="empnum" name="empnum" style="text-transform:uppercase;">
+										</div>
+									</div>
+									<div class="col-sm-12">
+									   <div class="longinrow row">
+											<label for="idmpwd" class="col-sm-4 control-label">登录密码：</label>
+											<input type="password" class="col-sm-6  form-control form-controllg" id="idmpwd" name="idmpwd">
+										</div>
+									</div>
+									<div class="col-sm-12">
+									   <div class="longinrow row">
+											<label for="yzm2" class="col-sm-4 control-label">验证码：</label>
+											<input type="text" class="col-sm-3  form-control form-controllg" id="yzm2"  name="yzm2">
+											<!-- <a href="#"><img src="" width="56" height="25" id="yzmimg2"></a> -->
+											<div  class="col-sm-3" style="margin-top:5px;">
+												<img src="/static/images/kaptcha.jpg" width="56" height="25" id="yzmimg2">
+												<span class="glyphicon glyphicon-refresh" onclick="refreshCaptcha(2)"></span>
+											</div>
+										</div>
+									</div>
+									<div class="col-sm-12 form-group center-block longinrow" style="margin-top: 10px;">
+										<button type="button" class="btn btn-primary" onclick="dosubmit('idmform')"  style="width:90%">登录</button>
+									</div>
+								</form>
+							</div>
+						  </div>
+						  <div class="modal-footer">
+
+				          </div>
+					 </div>
+				</div>
+		</div>
+	</div>
+    <script type="text/javascript">
+    	function myjump(url) {
+			if(''==""&&url.indexOf('/resume/editResume')!=-1){
+				myalert('请先登录，再进入我的简历!');
+				return;
+			}
+	       	if(''==""&&url=='/apply/list'){
+	       		myalert('请先登录，再进入我的简历!');
+	      		return;
+	       	}
+	       	if(url=='/cg') {
+	       		myalert('暂无招聘相关信息，敬请期待!');
+	       		return;
+	       	}
+	    	window.location.href = url;
+       }
+       function myalert(content){
+            var mydialog=dialog({
+                title: '提示',
+                content:content,
+                okValue: '确定',
+                width: 420,
+                zIndex: 3000,
+                ok: function () {
+                    return true;
+                }
+            });
+            mydialog.show();
+        }
+       function myalert(content,isreload){
+           var mydialog=dialog({
+               title: '提示',
+               content:content,
+               okValue: '确定',
+               width: 420,
+               zIndex: 3000,
+               ok: function () {
+            	   if(isreload != undefined){
+               	   		location.reload();
+            	   }
+                   return true;
+               }
+           });
+           mydialog.show();
+       }
+    	function modifyUserInfo() {
+    		$.get("/checkUserStatusForE", {randomRecall: Math.random()},
+    	        function (data) {
+    	            if (typeof(data) != "object")
+    	            	data = JSON.parse(data);
+    	            if (data.success == true) {
+    	            	location.href = "/yanzhenUserInfo"
+    	            	/* location.href = "/modifyUserInfo"; */
+    	            } else {
+    	            	myalert(data.msg);
+    	            }
+    	    });
+    	}
+		function closeAccount() {
+			$("#mask").css('display','block');
+			document.body.style.overflow = 'hidden';
+			var dd = dialog({
+				title: '提示',
+				content:'账户一旦注销将无法恢复，是否注销账户？',
+				width: 400,
+				top:100,
+				zIndex: 3000,
+				cancelValue: '取消',
+				cancel: function () {
+					$("#mask").css('display','none');
+					document.body.style.overflow = 'auto';
+					return;
+				},
+				okValue: '确定',
+				ok: function () {
+					var ing = dialog({
+						title: "正在注销,请稍后...",
+						width:420,
+						zIndex: 3000,
+					}).show();
+					dd.close();
+					$.post("/closeAccount", function (data) {
+						ing.close();
+						data = JSON.parse(data);
+						if(data.code == 304){
+							closeAccount304(data);
+						}else {
+							dialog({
+								title: '提示',
+								content: data.msg,
+								okValue: '确定',
+								width: 420,
+								zIndex: 3000,
+								ok: function () {
+									$("#mask").css('display', 'none');
+									document.body.style.overflow = 'auto';
+									if (data.code == 200) {
+										window.location.href = "/loginout";
+									}
+									return true;
+								}
+							}).show();
+						}
+					}).error(function(){
+						ing.close();
+						dialog({
+							title: '提示',
+							content: '账户注销异常',
+							okValue: '确定',
+							width: 420,
+							zIndex: 3000,
+							ok: function () {
+								$("#mask").css('display','none');
+								document.body.style.overflow = 'auto';
+								return true;
+							}
+						}).show();
+					});
+				}
+			}).show();
+		}
+		function closeAccount304(data){
+			$("#mask").css('display','block');
+			document.body.style.overflow = 'hidden';
+			var okValue = '确定';
+			var cancelValue = '取消';
+			if(data.type == 4){
+				okValue = '注销入职';
+				cancelValue = '注销不入职';
+			}
+			var dd = dialog({
+				title: '提示',
+				content: data.msg,
+				width: 400,
+				top:100,
+				zIndex: 3000,
+				cancelValue: cancelValue,
+				cancel: function () {
+					dd.close();
+					if(data.type == 4){
+						entryCancellation(0);
+					}
+				},
+				okValue: okValue,
+				ok: function () {
+					dd.close();
+					if(data.type == 4){
+						entryCancellation(1);
+					}
+				}
+			}).show();
+		}
+		//注销入职(0:不入职；1:入职)
+		function entryCancellation(type){
+			$("#mask").css('display','block');
+			document.body.style.overflow = 'hidden';
+			var ing = dialog({
+				title: "正在注销,请稍后...",
+				width:420,
+				zIndex: 3000,
+			}).show();
+			var url = type==0?"/unEntryCancellation":"/entryCancellation";
+			$.post(url, function (data) {
+				ing.close();
+				data = JSON.parse(data);
+				dialog({
+					title: '提示',
+					content: data.msg,
+					okValue: '确定',
+					width: 420,
+					zIndex: 3000,
+					ok: function () {
+						$("#mask").css('display','none');
+						document.body.style.overflow = 'auto';
+						if (data.code == 200 ) {
+							window.location.href = "/loginout";
+						}
+						return true;
+					}
+				}).show();
+			}).error(function(){
+				ing.close();
+				dialog({
+					title: '提示',
+					content: '账户注销异常',
+					okValue: '确定',
+					width: 420,
+					zIndex: 3000,
+					ok: function () {
+						$("#mask").css('display','none');
+						document.body.style.overflow = 'auto';
+						return true;
+					}
+				}).show();
+			})
+		}
+    	function recTypeSerch(sun, schType){
+			location.href ="/recTypeSerch?kinds=" + sun + "&schType=" + schType;
+		};
+
+    	function getAction(){
+    		var kinds = $("#kinds1").val();
+    		if(kinds == "1" || kinds =="2"){
+    		    $("#ggtype").val(kinds);
+    			$("#changeForm").attr('action','/annc/annclist');
+    		}else{
+    			if(kinds =='31'){
+    				$("#kinds").val("1");
+    				$("#schType").val("1");
+    			}if(kinds =='32'){
+                    $("#kinds").val("1");
+                    $("#schType").val("18");
+                }else if(kinds =='30'){
+    				$("#kinds").val("1");
+    				$("#schType").val("2");
+    			}else if(kinds =='37'){
+    				$("#kinds").val("1");
+    				$("#schType").val("7");
+    			}else if(kinds =='33'){
+    				$("#kinds").val("1");
+    				$("#schType").val("3");
+    			}else if(kinds =='38'){
+    				$("#kinds").val("1");
+    				$("#schType").val("8");
+    			}else if(kinds =='4'){
+    				$("#kinds").val("2");
+    			}else if(kinds =='5'){
+    				$("#kinds").val("3");
+    			}else if(kinds =='39'){
+                    $("#kinds").val("1");
+                    $("#schType").val("7");
+                }else if(kinds =='40'){
+                    $("#kinds").val("1");
+                    $("#schType").val("19");
+                }else if(kinds =='41'){
+                    $("#kinds").val("1");
+                    $("#schType").val("20");
+                }
+    		    $("#changeForm").attr('action','/recTypeSerch');
+    		}
+    		return true;
+    	}
+    	function changePlaceholder(){
+    		var kinds = $("#kinds1").val();
+    		if(kinds == "1"){
+    			$("#unitOrStation").attr('placeholder','请输入公告名称');
+    		}else if( kinds =="2"){
+	   			$("#unitOrStation").attr('placeholder','请输入公示名称');
+	   		}else{
+    			$("#unitOrStation").attr('placeholder','请输入单位或岗位...');
+    		}
+        }
+
+    	function loginBtn() {
+            $('#loginformModal').modal({backdrop: 'static', keyboard: false});
+            if($('#tabNavSocialLogin').attr("class")=='active'){
+            	refreshCaptcha(1);
+            }
+           	if($('#tabNavInnerLogin').attr("class")=='active'){
+               	refreshCaptcha(2);
+            }
+
+        }
+    	function refreshCaptcha(shownum) {
+            document.getElementById("yzmimg"+shownum).src = "/static/images/kaptcha.jpg?t=" + Math.random();
+        }
+    	function dosubmit(formid){
+            dialog({
+                title: "正在登录,请稍后...",
+                width:420
+            }).show();
+            var passWd = $('input[name="password"]').val();
+            $('input[name="password"]').val(encryptRsa("", passWd, true));
+            $("#" + formid).submit();
+        }
+    	var loginSmsCountdown = 60;
+    	function setLoginSmsTime(val) {
+            if (loginSmsCountdown == 0) {
+                val.removeAttribute("disabled");
+                val.innerHTML = "发送动态码";
+                loginSmsCountdown = 60;
+                return;
+            } else {
+                val.setAttribute("disabled", true);
+                val.innerHTML = "重新发送(" + loginSmsCountdown + ")";
+                loginSmsCountdown--;
+            }
+            setTimeout(function() {
+                setLoginSmsTime(val)
+            }, 1000)
+        }
+    	function sendLoginSms(val) {
+            var pidNo = $.trim($("#pid").val());
+            if (pidNo == "") {
+                dialog({
+                    title: '提示',
+                    content: '请先填写证件号码！',
+                    zIndex: 2000,
+                    width: 420,
+                    okValue: '确定',
+                    ok: function() {
+                        return true;
+                    }
+                }).show();
+                return;
+            }
+            var yzm1 = $.trim($("#yzm1").val());
+            if (yzm1 == "") {
+                dialog({
+                    title: '提示',
+                    content: '请先填写图形验证码！',
+                    zIndex: 2000,
+                    width: 420,
+                    okValue: '确定',
+                    ok: function() {
+                        return true;
+                    }
+                }).show();
+                return;
+            }
+            $.ajax({
+                type: "POST",
+                url: "/loginMobileVerCode?rdmnum=" + Math.random(),
+                data: {
+                    pid: pidNo,
+                    pidtype: $("#pidtype").val(),
+                    yzm1: yzm1
+                },
+                dataType: "json",
+                success: function(result) {
+                    if (result.success) {
+                        setLoginSmsTime(val);
+                        dialog({
+                            title: '提示',
+                            content: result.msg,
+                            zIndex: 2000,
+                            width: 420,
+                            okValue: '确定',
+                            ok: function() {
+                                return true;
+                            }
+                        }).show();
+                    } else {
+                        dialog({
+                            title: '提示',
+                            content: result.msg,
+                            zIndex: 2000,
+                            width: 420,
+                            okValue: '确定',
+                            ok: function() {
+                                refreshCaptcha(1);
+                                $("#yzm1").val("");
+                                return true;
+                            }
+                        }).show();
+                    }
+                }
+            });
+        }
+    	//字符数提示
+    	function LimitedNnumber(eventBox, viewBox, textLength) {//调用函数需要传入三个参数，分别为，输入框、显示框、限制的长度
+            $(document).on('input propertychange', eventBox, function(event) {
+                /* this.value = this.value.replace(this.value.slice(textLength), "")//超出长度的部分替换为空 */
+               // $(viewBox).html(this.value.length + "/" + textLength)
+                var len = getByteLen(eventBox,this.value,textLength);
+                $(viewBox).html(len + "/" + textLength);
+        })}
+
+    	function  getByteLen(eventBox,val,textLength){
+    		if (val == null) {
+    			return 0;
+    		} else {
+    			var result = '';
+    			chrlen = val.replace(/[^\x00-\xff]/g, 'xx').length;
+    			strlen = val.length;// 字符串长度
+    			if(chrlen >textLength){
+    				for(var i=0,j=0;i<strlen;i++){
+    		            var chr = val.charAt(i);
+    		            if(/[\x00-\xff]/.test(chr)){
+    		                j++; // ascii码为0-255，一个字符就是一个字节的长度
+    		            }else{
+    		                j+=2; // ascii码为0-255以外，一个字符就是两个字节的长度
+    		            }
+    		            if(j<=textLength){ // 当加上当前字符以后，如果总字节长度小于等于L，则将当前字符真实的+在result后
+    		                result += chr;
+    		            }else{ // 反之则说明result已经是不拆分字符的情况下最接近L的值了，直接返回
+    		            	 $(eventBox).val(result);
+    		            	if(/[\x00-\xff]/.test(chr)){
+    		            	    return j-1;
+	    		            }else{
+	    		            	return j-2;
+	    		            }
+
+    		            }
+    		        }
+    			}else{
+    				return chrlen;
+    			}
+    		}
+    	}
+        function getLen(val){
+        	if (val == null) {
+    			return 0;
+    		} else {
+    			return val.replace(/[^\x00-\xff]/g, 'xx').length;
+    		}
+        }
+    	/* $(function () {
+            $('textarea[maxlength]').on('keyup blur', function(event) {
+                var maxlength = $(this).attr('maxlength');
+                var val = $(this).val();
+                if (val.length > maxlength) {
+                    $(this).hide().show();
+                    $(this).val(val.substr(0, maxlength));
+                }
+                event.stopImmediatePropagation();
+            });
+        })  */
+      //字数提示
+      function LimitedNnumberZ(eventBox, viewBox, textLength) {//调用函数需要传入三个参数，分别为，输入框、显示框、限制的长度
+            $(document).on('input propertychange paste keyup', eventBox, function(event) {
+                /* this.value = this.value.replace(this.value.slice(textLength), "")//超出长度的部分替换为空 */
+                $(viewBox).html(this.value.length + "/" + textLength)
+       })}
+   </script>
+    <div class="container m20 " style="margin-bottom: 80px;">
+
+      <ol class="breadcrumb">
+        <li>
+          <svg width="1.4em" height="1.4em" viewBox="0 0 18 18" class="bi bi-house-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M8 3.293l6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293l6-6zm5-.793V6l-2-2V2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5z"/>
+            <path fill-rule="evenodd" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z"/>
+          </svg>
+        </li>
+         <li class="breadcrumb-item">
+		        	<a href="#">统招</a>
+         </li>
+         <li class="breadcrumb-item active">合规管理岗</li>
+      </ol>
+
+      <ul class="list-group recruitList" id="recruitList">
+        <li class="list-group-item clearfix">
+          <div class="col-md-3 offset-md-1 col-md-offset-1">
+            <h3 class="text-elip"> <a class="text-red" href="#" title="合规管理岗">合规管理岗</a> </h3>
+            <ul class="list-inline text-elip">
+              <li title="大学本科">大学本科</li>
+              <!-- <li>|</li>
+              <li title="法学,诉讼法学,法学类相关专业,法律">法学,诉讼法学,...</li> -->
+            </ul>
+          </div>
+          <div class="col-md-4 offset-md-1 col-md-offset-1 applyBtn">
+            <h5 class="text-elip">国能西部能源青松新疆矿业有限公司</h5>
+            <p class="text-elip">新疆阿克苏 </p>
+
+          </div>
+          <div class="col-md-3 text-center applyBtn">
+    					<button class="btn btn-grey" type="button"  onclick="grey5()">申请</button>
+
+    		<button type="button" class="btn bg-red" onclick="back()">返回</button>
+
+          </div>
+           <div class="col-md-3 text-center backbtn">
+                <button type="button" class="btn bg-red" onclick="back()">返回</button>
+           </div>
+        </li>
+      </ul>
+      <div class="content row">
+
+          <div class="col-md-12">
+            <blockquote class="blockquote">
+               <a class="">发布时间： <strong>2026年09月02日</strong> </a> <a class="offset-md-1 col-md-offset-1 ">截止时间：<strong>2026年10月07日</strong></a>
+            </blockquote>
+          </div>
+          <div class="col-md-12">
+            <h4 class="listTitle"> <span>岗位基本信息</span> </h4>
+          </div>
+          <ul class="col-md-12 list-group">
+            <li class="list-group-item ">所属单位：新疆能源</li>
+            <li class="list-group-item ">招聘单位：国能西部能源青松新疆矿业有限公司</li>
+            <li class="list-group-item">
+              <div class="row">
+                <div class="col-md-5">招聘岗位：合规管理岗</div>
+                <div class="col-md-5">岗位类别：管理</div>
+              </div>
+            </li>
+            <li class="list-group-item">
+              <div class="row">
+                <div class="col-md-5">岗位性质：合同工</div>
+                <div class="col-md-5">工作地点：新疆阿克苏</div>
+              </div>
+            </li>
+            <li class="list-group-item">
+              <div class="row">
+                <div class="col-md-5">招聘人数：1 人</div>
+                <div class="col-md-5"></div>
+              </div>
+            </li>
+          </ul>
+
+	        <div class="col-md-12">
+	          <h4 class="listTitle"> <span>岗位职责</span> </h4>
+	        </div>
+	          <ol class="col-md-12" >
+	            <li  style="list-style-type:none;"><div id="descDetail" style="white-space: pre-wrap;">负责合同管理制度、法务管理制度及相关工作流程，完善合规体系建设，健全合规风险识别预警等工作</div></li>
+	          </ol>
+          <div class="col-md-12">
+              <h4 class="listTitle"> <span>岗位要求</span> </h4>
+          </div>
+          <ul class="col-md-12">
+              <li>学历要求：大学本科</li>
+            	<li style="list-style-type:none;">专业要求：<div  style="white-space: pre-wrap;margin-left:15px;">法学,诉讼法学,法学类相关专业,法律</div></li>
+          </ul>
+      </div>
+    </div>
+    <div class="modal fade text-center" id="socialFormModal2">
+	    <div class="modal-dialog text-left custom-class">
+	        <div class="modal-content">
+	        </div>
+	    </div>
+	</div>
+    <div class="footer" style="position: fixed; bottom: 0; left: 0;   width: 100%;">
+      <p>国家能源投资集团有限责任公司</p>
+    </div>
+
+    <div class="modal fade" id="createFileMModal" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content" id="createFileMModalContent" style="width:100%; height:100%;border:0px" >
+      <div class="modal-body">
+			<div class="form-group col-sm-13">
+		  <div class="row">
+			<select unrequired class="col-sm-4 form-control custom-select"  name="place1" onChange="getCity('place')">
+				<option value="">请选择省</option>
+				<option  value="110000">北京</option>
+				<option  value="120000">天津</option>
+				<option  value="310000">上海</option>
+				<option  value="500000">重庆</option>
+				<option  value="130000">河北</option>
+				<option  value="140000">山西</option>
+				<option  value="150000">内蒙古</option>
+				<option  value="210000">辽宁</option>
+				<option  value="220000">吉林</option>
+				<option  value="230000">黑龙江</option>
+				<option  value="320000">江苏</option>
+				<option  value="330000">浙江</option>
+				<option  value="340000">安徽</option>
+				<option  value="350000">福建</option>
+				<option  value="360000">江西</option>
+				<option  value="370000">山东</option>
+				<option  value="410000">河南</option>
+				<option  value="420000">湖北</option>
+				<option  value="430000">湖南</option>
+				<option  value="440000">广东</option>
+				<option  value="450000">广西</option>
+				<option  value="460000">海南</option>
+				<option  value="510000">四川</option>
+				<option  value="520000">贵州</option>
+				<option  value="530000">云南</option>
+				<option  value="540000">西藏</option>
+				<option  value="610000">陕西</option>
+				<option  value="620000">甘肃</option>
+				<option  value="630000">青海</option>
+				<option  value="640000">宁夏</option>
+				<option  value="650000">新疆</option>
+				<option  value="710000">台湾</option>
+				<option  value="810000">香港</option>
+				<option  value="820000">澳门</option>
+				<option  value="AA0000">澳大利亚</option>
+				<option  value="AB0000">美国</option>
+				<option  value="AC0000">印度尼西亚</option>
+				<option  value="AD0000">俄罗斯</option>
+				<option  value="AE0000">蒙古国</option>
+				<option  value="AF0000">希腊</option>
+				<option  value="AG0000">孟加拉</option>
+				<option  value="AH0000">南非</option>
+				<option  value="AX0000">海外</option>
+			</select>
+	        <select  class="col-sm-4 offset-sm-1 form-control custom-select"   name="place2" onChange="getCounty('place')">
+	        		<option value="">请选择市（州）</option>
+			</select>
+       	</div>
+			</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<div id="writePlaceZTreeDiv" class="writePlaceZTreeDiv" style="display: none; position: absolute; z-index: 99;">
+	<ul id="writePlaceZTree" class="ztree" style="margin-top: 0; width: 345px; height: 200px; background: #f9f9f9;"></ul>
+</div>
+<script type="text/javascript">
+function showWritePlace(stationid, projectid, cnstation, cnorg,province,city){
+	/* 20201118 无需选择笔试地点;20230421 增加意向面试地点 */
+	applydialogNoWritePlace(stationid, projectid, cnstation, cnorg,province,city);
+	
+	/* 选择笔试地点 后提交应聘申请  20201118日注销*/
+	/* var setting = {
+		check: {
+            enable: true,
+            chkStyle: "radio",
+            radioType: "all"
+        },
+		view: {
+			dblClickExpand: false, 
+			showLine: true,
+			selectedMulti: false
+		},
+		data: {
+			simpleData: {
+	            enable: true,
+	            idKey: "ID",
+	            pIdKey: "PID",
+	            rootPId: 0
+       		},
+        	key:{
+        		name:"NAME"
+        	}
+		}
+	};
+	$(document).ready(function (){
+		$.ajax({
+			type: "POST",
+			url:"/writePlaceZTree?stationId=" + stationid,
+			dataType:"json",
+			async:true,
+			success:function(data){
+				zNodes=data;
+				$.fn.zTree.init($("#writePlaceZTree"), setting, zNodes);
+				applydialogSchool(stationid, projectid, cnstation, cnorg);
+			}
+		}) 
+	}); */
+}
+</script>
+  </body>
+  <script type="text/javascript">
+	window.onload=function(){
+		init();
+	};
+		var observe;
+	if (window.attachEvent) {
+	    observe = function (element, event, handler) {
+	        element.attachEvent('on'+event, handler);
+	    };
+	}
+	else {
+	    observe = function (element, event, handler) {
+	        element.addEventListener(event, handler, false);
+	    };
+	}
+
+	function init(){
+	    //var major = document.getElementById('major');
+	    //var other = document.getElementById('other');
+	    //var desc = document.getElementById('desc');
+	}
+    function resize () {
+    	/*if(major!=null){
+	        major.style.height = 'auto';
+        	major.style.height = major.scrollHeight+'px';
+	    }
+	    if(other!=null){
+	        other.style.height = 'auto';
+        	other.style.height = other.scrollHeight+'px';
+	    }
+	    if(desc!=null){
+	        desc.style.height = 'auto';
+        	desc.style.height = desc.scrollHeight+'px';
+	    }*/
+    }
+    resize();
+
+
+	function closeCurrentWindow() {
+		var winWidth = $(window).width();
+		if(winWidth<=768){
+			//手机端关闭，返回上一页
+			window.history.back(-1);
+		}else{
+			console.log("关闭")
+			window.opener=null;
+			window.open('','_self');
+			window.close();
+		}
+
+	}
+
+	function showstation(gw) {
+		$('#socialFormModal2').modal('show').find('.modal-content').load('/annc/showgw1?id='+gw);
+    }
+
+	function back(){
+	  	window.history.back()//返回上一个页面
+	}
+</script>
+<script>
+	$(document).ready(function(){
+	    resize();
+	    $(window).on('resize', resize);
+        $('.selectpicker').selectpicker({
+            size: 4// 设置下拉菜单中显示的最大选项数量
+        });
+	});
+
+	function resize() {
+		//屏幕宽度发生变化改变banner
+		var windowWidth = $(window).width();
+		var isMiddle = windowWidth < 768;
+		var imgSrc = isMiddle ? $('.xyzp_banner').data('image-md') : $('.xyzp_banner').data('image-lg')
+
+		if (isMiddle) { // 小于840px使用img元素添加banner
+		    $('.xyzp_banner').html('<img src="'+imgSrc+'">')
+		} else {
+		    $('.xyzp_banner').empty();
+		    $('.xyzp_banner').css('backgroundImage', 'url('+imgSrc+')');
+		}
+	}
+
+	//
+	// var recruitList = $("#recruitList"),
+	// offTop = $("#recruitList").offset().top
+	// if($(window).width()>=1366){
+
+
+	//     $(window).scroll(function(){
+	//       sTop = $(document).scrollTop()
+	//       if(offTop-sTop-$("#recruitList").height()<0){
+	//         $("#recruitList").css({'position':'fixed','top':0,'z-index':'99','background':'#fff','width':'1138px'})
+	//       }else{
+	//         $("#recruitList").css({"position":"static","top":0})
+	//       }
+	//     })
+	// }
+</script>
+</html>
