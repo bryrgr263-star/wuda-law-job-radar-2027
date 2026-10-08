@@ -26,6 +26,7 @@ import {
   type TrustedSourceOccurrenceVersionResolver
 } from "../normalization";
 import { SOVDiscoverySupportError, type SOVDiscoverySupportCommand } from "../normalization/source-discovery-support";
+import { verifyNationalCampaignBinding } from "./national-campaign-binding";
 import {
   canonicalHash,
   canonicalSerialize
@@ -692,9 +693,20 @@ async function executeTrustedCommand(
   historicalReplay = false
 ): Promise<unknown> {
   switch (command.kind) {
-    case "SOURCE_DISCOVERY_SUPPORT_VERIFY":
+    case "SOURCE_DISCOVERY_SUPPORT_VERIFY": {
+      const original = runtime.source_occurrences.resolve(command.input.sov_id);
+      if (original?.endpoint.adapter_key === "cn-chnenergy-2027-reviewed-official-html") {
+        if (!runtime.repository.readVerifiedDiscovery) throw new SOVDiscoverySupportError("EVIDENCE_BLOCKED", "National retained discovery reader is required");
+        const evidence = await runtime.repository.readVerifiedDiscovery(command.input.snapshot_id, command.input.extracted_record_id);
+        await verifyNationalCampaignBinding({ source_role: command.input.source_role, endpoint: evidence.endpoint,
+          snapshot: evidence.snapshot, extracted_record: evidence.extracted_record }, scope,
+        runtime.repository.readVerifiedDiscovery.bind(runtime.repository));
+      }
       return runtime.source_occurrences.processDiscoverySupport(command.input);
+    }
     case "SOURCE_OCCURRENCE_MATERIALIZE":
+      await verifyNationalCampaignBinding(command.input, scope,
+        runtime.repository.readVerifiedDiscovery?.bind(runtime.repository));
       return runtime.source_occurrences.process(command.input);
     case "OPPORTUNITY_REGISTER":
       if (command.source_binding?.kind === "VERIFIED_DISCOVERY_SUPPORT") {
