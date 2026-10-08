@@ -144,6 +144,7 @@ PrivateRawObjectStorage, ProductionSourceFactRepository {
   readonly #remote: GitRawObjectPersistenceOptions["remote"];
   readonly #faultInjector: GitRawObjectPersistenceOptions["fault_injector"];
   readonly #stagedObjects = new Map<string, StagedObject>();
+  #validatedState: { readonly commit: string; readonly state: LoadedRawState } | undefined;
 
   constructor(options: GitRawObjectPersistenceOptions) {
     this.#repositoryPath = path.resolve(options.repository_path);
@@ -509,6 +510,15 @@ PrivateRawObjectStorage, ProductionSourceFactRepository {
   }
 
   #loadState(commit: string): LoadedRawState {
+    if (this.#validatedState?.commit === commit) {
+      return structuredClone(this.#validatedState.state);
+    }
+    const state = this.#validateState(commit);
+    this.#validatedState = { commit, state: structuredClone(state) };
+    return state;
+  }
+
+  #validateState(commit: string): LoadedRawState {
     const stateBytes = this.#tryReadCommittedBytes(commit, this.#stateManifestPath());
     if (!stateBytes) {
       this.#validateOrphanObjects(commit, new Set());

@@ -14,7 +14,7 @@ import {
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
+import test, { mock } from "node:test";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -51,6 +51,47 @@ const PROVENANCE: ProductionPersistenceProvenance = {
   actor_role: "TEST_FIXTURE",
   evidence_references: ["fixture:git-raw"]
 };
+
+test("verified immutable Raw state is read once per commit and cannot be changed by callers", async () => {
+  const repository = createRepository();
+  try {
+    const persistence = new GitRawObjectPersistence({ repository_path: repository.path });
+    const boundary = new ProductionRawObjectBoundary(persistence, persistence);
+    await persistFixture(boundary, rawFixture("validated-cache", textBytes("official bytes")));
+    const subprocess = createRequire(import.meta.url)("node:child_process");
+    const originalExecute = subprocess.execFileSync;
+    let committedReads = 0;
+    const spy = mock.method(subprocess, "execFileSync", (...args: Parameters<typeof execFileSync>) => {
+      const argumentsList = args[1];
+      if (Array.isArray(argumentsList) && argumentsList.includes("show")) committedReads += 1;
+      return originalExecute(...args);
+    });
+    try {
+      const first = await persistence.listVerifiedAcquisitions();
+      const verifiedReads = committedReads;
+      assert.ok(verifiedReads > 0);
+      const expected = canonicalSerialize(first);
+      Object.defineProperty(first, "length", { value: 0 });
+      assert.equal(canonicalSerialize(await persistence.listVerifiedAcquisitions()), expected);
+      assert.equal(committedReads, verifiedReads, "same immutable commit must not repeat complete Git traversal");
+      writeFileSync(path.join(repository.path, "README.md"), "next commit", "utf8");
+      git(repository.path, "add", "README.md");
+      commit(repository.path, "advance unrelated immutable head");
+      assert.equal(canonicalSerialize(await persistence.listVerifiedAcquisitions()), expected);
+      assert.ok(committedReads > verifiedReads, "new commit must undergo complete validation");
+      const manifestPath = path.join(repository.path, "trusted-objects", "state-manifest.json");
+      writeFileSync(manifestPath, "{}", "utf8");
+      git(repository.path, "add", "trusted-objects/state-manifest.json");
+      commit(repository.path, "test-only corrupt new head");
+      await assert.rejects(persistence.listVerifiedAcquisitions());
+      await assert.rejects(persistence.listVerifiedAcquisitions());
+    } finally {
+      spy.mock.restore();
+    }
+  } finally {
+    repository.remove();
+  }
+});
 
 test("RawBlob uses deterministic SHA-256 paths and exact replay is idempotent", async () => {
   const repository = createRepository();
