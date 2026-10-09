@@ -20,6 +20,7 @@ import {
   type HttpTransportRequest
 } from "../collection-runtime";
 import {
+  AdapterExtractionError,
   InMemoryRawBlobRepository,
   InMemorySnapshotRepository,
   InMemorySourceRegistry,
@@ -50,6 +51,7 @@ import {
 } from "../ingestion/normalization/canonical-artifact-registry";
 import {
   assertOfficialRequestAllowed,
+  ProductionPersistenceError,
   type AcquisitionPersistenceBundle,
   type ProductionPersistenceProvenance,
   type SourcePersistenceVersion
@@ -82,6 +84,10 @@ import { assertSourceExecutionIntentOutcome, readSourceExecutionRequestIntents,
   type SourceExecutionRequestIntent } from "./source-execution-request-intent";
 import { readSchedulerBatchManifests, type SchedulerBatchManifest } from "./scheduler-batch-manifest";
 import { pendingContinuousAttempt, type ContinuousRecord, type ContinuousScope, type ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
+import { Chnenergy2027CampaignHtmlAdapter } from "../production-sources/chnenergy-2027-source";
+import { ChnenergySupportingEvidenceAdapter, CHNENERGY_SUPPORT_ADAPTER_KEY } from "../production-sources/chnenergy-supporting-evidence";
+import { prepareNationalCampaignRecord } from "../ingestion/pipeline/national-campaign-binding";
+import { SOVDiscoverySupportError, type SOVDiscoveryEvidence } from "../ingestion/normalization/source-discovery-support";
 
 const RUN_SCHEMA_VERSION = "zero-cost-production-run/1.0.0" as const;
 const activeWriters = new Set<string>();
@@ -753,6 +759,76 @@ export function bootstrapZeroCostProductionCompositionRoot(
             requests_made: capturedRequests.length
           };
         }
+        const nationalV2 = input.adapter instanceof Chnenergy2027CampaignHtmlAdapter
+          && input.adapter.descriptor.version === "2.0.0";
+        const nationalDependencies = new Map<string, SOVDiscoveryEvidence>();
+        let nationalJournalStore: GitAppendOnlyExecutionStore<TrustedChainCommand> | undefined;
+        const nationalRole = (record: ExtractedRecord) => {
+          const key = record.raw_source_record_id;
+          const locator = record.source_record_locator;
+          if (locator.kind !== "HTML" || locator.path !== key
+            || !key || !/^chnenergy:[a-f0-9-]+:(package|position)$/u.test(key)) {
+            throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "National source role metadata is invalid");
+          }
+          if (key.endsWith(":package") && locator.selector === "h4.listTitle") return "PACKAGE";
+          if (key.endsWith(":position") && locator.selector === "#descDetail") return "POSITION_BEARING";
+          throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "National source role metadata is invalid");
+        };
+        if (nationalV2 && collection.status === "PARTIAL" && collection.request_results.length === 1
+          && collection.request_results[0]!.response.status === "SUCCESS" && collection.snapshots.length === 1
+          && collection.pages_collected === 1 && collection.extracted_records.length === 2
+          && collection.reason_codes.length === 1 && collection.reason_codes[0] === "ADAPTER_REPORTED_PARTIAL") {
+          try {
+            if (new Set(collection.extracted_records.map(nationalRole)).size !== 2) {
+              throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "National single-page roles are incomplete");
+            }
+            nationalJournalStore = new GitAppendOnlyExecutionStore<TrustedChainCommand>({
+              repository_path: checkoutPath, stream_id: streamId, scope: "PRODUCTION", commit_identity: commitIdentity
+            });
+            const discovery = createRawValidatedRestorationJournal(rawPersistence, nationalJournalStore, sourceRepository);
+            const supportingAdapter = new ChnenergySupportingEvidenceAdapter();
+            const readDependency = async (snapshotId: string, recordId: string) => {
+              const evidence = await discovery.readVerifiedDiscovery!(snapshotId, recordId);
+              if (evidence.endpoint.adapter_key !== CHNENERGY_SUPPORT_ADAPTER_KEY
+                || evidence.extracted_record.adapter_metadata[CHNENERGY_SUPPORT_ADAPTER_KEY]?.source_role !== "PACKAGE"
+                || evidence.extracted_record.recruitment_context !== undefined) {
+                throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "National retained support must be an ordinary supporting PACKAGE");
+              }
+              let emitted: readonly ExtractedRecord[];
+              try {
+                emitted = supportingAdapter.extract({ endpoint: evidence.endpoint, snapshot: evidence.snapshot,
+                  raw_blob: { raw_blob_id: evidence.snapshot.raw_blob_id!, bytes: evidence.raw_blob.bytes,
+                    raw_content_sha256: evidence.snapshot.content_hash!, byte_length: evidence.raw_blob.byte_length,
+                    mime_type: evidence.raw_blob.content_type, created_at: evidence.snapshot.observed_at } });
+              } catch (error) {
+                if (!(error instanceof AdapterExtractionError)) throw error;
+                throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "National retained support parser rejected its Raw");
+              }
+              if (emitted.length !== 1) throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "National retained support record is ambiguous");
+              const { extracted_record_id, snapshot_id, ...fields } = emitted[0]!;
+              const canonical = createExtractedRecordV2(evidence.snapshot, { ...fields,
+                extraction: { ...fields.extraction, schema_version: `${CHNENERGY_SUPPORT_ADAPTER_KEY}-extracted-record/2.0.0` } });
+              if (canonicalSerialize(canonical) !== canonicalSerialize(evidence.extracted_record)) {
+                throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "National retained support record differs from its Raw");
+              }
+              nationalDependencies.set(`${snapshotId}\u0000${recordId}`, evidence);
+              return evidence;
+            };
+            const prepared: ExtractedRecord[] = [];
+            for (const record of collection.extracted_records) {
+              const snapshot = collection.snapshots.find(candidate => candidate.snapshot_id === record.snapshot_id);
+              if (!snapshot) throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "National detail Snapshot is unavailable");
+              prepared.push(await prepareNationalCampaignRecord({ source_role: nationalRole(record), endpoint,
+                snapshot, extracted_record: record }, "PRODUCTION", readDependency));
+            }
+            collection = { ...collection, extracted_records: prepared, status: "SUCCESS", reason_codes: [] };
+          } catch (error) {
+            if (!(error instanceof SOVDiscoverySupportError && ["REVIEW_REQUIRED", "EVIDENCE_BLOCKED"].includes(error.code))
+              && !(error instanceof ProductionPersistenceError && error.code === "EVIDENCE_BLOCKED")) throw error;
+            nationalDependencies.clear();
+            collection = { ...collection, extracted_records: [], status: "FAILED", reason_codes: ["ADAPTER_EXTRACTION_FAILED"] };
+          }
+        }
         observedCollection = collection;
         const snapshots = [...collection.snapshots];
         const snapshotById = new Map(snapshots.map((snapshot) => {
@@ -875,7 +951,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
           });
         }
 
-        const journalStore = new GitAppendOnlyExecutionStore<TrustedChainCommand>({
+        const journalStore = nationalJournalStore ?? new GitAppendOnlyExecutionStore<TrustedChainCommand>({
           repository_path: checkoutPath,
           stream_id: streamId,
           scope: "PRODUCTION",
@@ -897,12 +973,19 @@ export function bootstrapZeroCostProductionCompositionRoot(
           recorded_at: now()
         };
         const sourceOccurrences: unknown[] = [];
+        for (const evidence of nationalDependencies.values()) {
+          trustedFailureStage = "POST_ACQUISITION_EXECUTION";
+          trustedFailureSubjectId = evidence.extracted_record.extracted_record_id;
+          sourceOccurrences.push(await trusted.root.execute({ kind: "SOURCE_OCCURRENCE_MATERIALIZE",
+            input: { source_role: "PACKAGE", endpoint: evidence.endpoint, snapshot: evidence.snapshot,
+              extracted_record: evidence.extracted_record } }, metadata));
+        }
         for (const record of extractedRecords) {
           const snapshot = snapshots.find((candidate) => {
             return candidate.snapshot_id === record.snapshot_id;
           });
           if (!snapshot) throw new Error("ExtractedRecord Snapshot is unavailable");
-          const sourceRole = input.source_role_for_record?.(record)
+          const sourceRole = nationalV2 ? nationalRole(record) : input.source_role_for_record?.(record)
             ?? (record.recruitment_context ? "POSITION_BEARING" : "PACKAGE");
           const sourceInput = {
             source_role: sourceRole,
