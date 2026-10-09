@@ -245,4 +245,3 @@ test("two publishers of identical claim at the same parent cannot both return re
     current.cleanup();
   }
 });
-
