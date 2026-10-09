@@ -44,24 +44,7 @@ export function chnenergyEndpoint(job: ReviewedJob): RecruitmentEndpoint {
     collection_config: { timeout_ms: 20000, max_items: 2, max_pages: 1, follow_redirects: false, retry_limit: 0 }, enabled: true };
 }
 
-export class Chnenergy2027HtmlAdapter implements RecruitmentAdapter {
-  readonly descriptor = { adapter_key: CHNENERGY_ADAPTER_KEY, name: "Chnenergy2027ReviewedOfficialHtmlAdapter", version: "1.0.0",
-    supported_content_kinds: ["HTML"] as const, capabilities: ["HTML_EXTRACTION"] as const };
-  validateEndpoint(endpoint: RecruitmentEndpoint): EndpointValidationResult {
-    try {
-      reviewedJob(endpoint);
-      if (endpoint.adapter_key !== CHNENERGY_ADAPTER_KEY || endpoint.request_method !== "GET" || endpoint.content_kind !== "HTML"
-        || endpoint.collection_config.max_pages !== 1 || endpoint.collection_config.retry_limit !== 0
-        || endpoint.collection_config.follow_redirects !== false) throw new Error("EXACT_ENDPOINT_CONFIG_REQUIRED");
-      return { valid: true as const, issues: [] };
-    } catch { return { valid: false as const, issues: ["UNAPPROVED_CHNENERGY_ENDPOINT"] }; }
-  }
-  plan(endpoint: RecruitmentEndpoint) {
-    if (!this.validateEndpoint(endpoint).valid) throw new AdapterExtractionError("ENDPOINT_NOT_SUPPORTED", "UNAPPROVED_CHNENERGY_ENDPOINT");
-    return [{ recruitment_endpoint_id: endpoint.recruitment_endpoint_id, locator: endpoint.locator, method: "GET" as const,
-      parameters: {}, pagination_state: { page_index: 1, cursor: null, visited_locators: [endpoint.locator] } }];
-  }
-  extract(input: AdapterExtractionInput): readonly ExtractedRecord[] {
+function parseChnenergyDetail(input: AdapterExtractionInput, requireProject: boolean) {
     const job = reviewedJob(input.endpoint);
     const raw = input.raw_blob;
     if (!raw || input.snapshot.transport_status !== "SUCCESS" || input.snapshot.request_metadata.locator !== job.url
@@ -93,7 +76,7 @@ export class Chnenergy2027HtmlAdapter implements RecruitmentAdapter {
       return ids?.length === 2 && ids[0] === job.id && ids[1] === approvedProject;
     });
     const employer = field("招聘单位"); const title = field("招聘岗位"); const location = field("工作地点");
-    if (clean($("title").text()) !== "岗位详情" || title !== job.title || employer !== job.employer || !projectBound) {
+    if (clean($("title").text()) !== "岗位详情" || title !== job.title || employer !== job.employer || (requireProject && !projectBound)) {
       throw new AdapterExtractionError("MALFORMED_CONTENT", "CHNENERGY_2027_OFFICIAL_BINDING_MISMATCH");
     }
     const dutyText = section("岗位职责").find("#descDetail").text().trim();
@@ -101,6 +84,28 @@ export class Chnenergy2027HtmlAdapter implements RecruitmentAdapter {
     if (!requirements.some(text => text.startsWith("学历要求：")) || !requirements.some(text => text.startsWith("专业要求："))) {
       throw new AdapterExtractionError("MALFORMED_CONTENT", "CHNENERGY_REQUIREMENT_SURFACE_MISSING");
     }
+    return { job, employer, title, location, dutyText, requirements };
+}
+
+export class Chnenergy2027HtmlAdapter implements RecruitmentAdapter {
+  readonly descriptor = { adapter_key: CHNENERGY_ADAPTER_KEY, name: "Chnenergy2027ReviewedOfficialHtmlAdapter", version: "1.0.0",
+    supported_content_kinds: ["HTML"] as const, capabilities: ["HTML_EXTRACTION"] as const };
+  validateEndpoint(endpoint: RecruitmentEndpoint): EndpointValidationResult {
+    try {
+      reviewedJob(endpoint);
+      if (endpoint.adapter_key !== CHNENERGY_ADAPTER_KEY || endpoint.request_method !== "GET" || endpoint.content_kind !== "HTML"
+        || endpoint.collection_config.max_pages !== 1 || endpoint.collection_config.retry_limit !== 0
+        || endpoint.collection_config.follow_redirects !== false) throw new Error("EXACT_ENDPOINT_CONFIG_REQUIRED");
+      return { valid: true as const, issues: [] };
+    } catch { return { valid: false as const, issues: ["UNAPPROVED_CHNENERGY_ENDPOINT"] }; }
+  }
+  plan(endpoint: RecruitmentEndpoint) {
+    if (!this.validateEndpoint(endpoint).valid) throw new AdapterExtractionError("ENDPOINT_NOT_SUPPORTED", "UNAPPROVED_CHNENERGY_ENDPOINT");
+    return [{ recruitment_endpoint_id: endpoint.recruitment_endpoint_id, locator: endpoint.locator, method: "GET" as const,
+      parameters: {}, pagination_state: { page_index: 1, cursor: null, visited_locators: [endpoint.locator] } }];
+  }
+  extract(input: AdapterExtractionInput): readonly ExtractedRecord[] {
+    const { job, employer, title, location, dutyText, requirements } = parseChnenergyDetail(input, true);
     const record = (packageRecord: boolean): ExtractedRecord => {
       const recordId = `chnenergy:${job.id}:${packageRecord ? "package" : "position"}`;
       const identity = { identity_state: "CONFIRMED" as const, official_identifier: original(job.id),
@@ -127,10 +132,81 @@ export class Chnenergy2027HtmlAdapter implements RecruitmentAdapter {
     return [record(true), record(false)];
   }
   nextPage() { return null; }
-  assessCompleteness(input: AdapterCompletenessInput) {
+  assessCompleteness(input: AdapterCompletenessInput): ReturnType<RecruitmentAdapter["assessCompleteness"]> {
     return input.extraction_errors.length || input.snapshots.length !== 1 || input.records.length !== 2
       ? { status: "FAILED" as const, reason_codes: ["REVIEWED_POSITION_PACKAGE_INCOMPLETE"] }
       : { status: "COMPLETE" as const, reason_codes: ["EXACT_POSITION_SURFACE_OBSERVED"] };
+  }
+}
+
+export interface ChnenergyRetainedReference {
+  readonly snapshot_id: string;
+  readonly extracted_record_id: string;
+  readonly raw_sha256: string;
+}
+
+export interface ChnenergyRetainedReferences {
+  readonly campaign: ChnenergyRetainedReference;
+  readonly membership: ChnenergyRetainedReference;
+}
+
+function retainedReferences(value: unknown): ChnenergyRetainedReferences {
+  const invalid = () => { throw new AdapterExtractionError("MALFORMED_CONTENT", "CHNENERGY_RETAINED_REFERENCES_INVALID"); };
+  if (!value || typeof value !== "object" || Array.isArray(value)
+    || Object.keys(value).sort().join(",") !== "campaign,membership") return invalid();
+  const binding = value as Record<string, unknown>;
+  const reference = (item: unknown): ChnenergyRetainedReference => {
+    if (!item || typeof item !== "object" || Array.isArray(item)
+      || Object.keys(item).sort().join(",") !== "extracted_record_id,raw_sha256,snapshot_id") return invalid();
+    const fields = item as Record<string, unknown>;
+    if (typeof fields.snapshot_id !== "string" || !fields.snapshot_id.trim()
+      || typeof fields.extracted_record_id !== "string" || !fields.extracted_record_id.trim()
+      || typeof fields.raw_sha256 !== "string" || !/^[a-f0-9]{64}$/u.test(fields.raw_sha256)) return invalid();
+    return Object.freeze({ snapshot_id: fields.snapshot_id, extracted_record_id: fields.extracted_record_id, raw_sha256: fields.raw_sha256 });
+  };
+  const campaign = reference(binding.campaign);
+  const membership = reference(binding.membership);
+  if (campaign.snapshot_id === membership.snapshot_id) return invalid();
+  return Object.freeze({ campaign, membership });
+}
+
+export class Chnenergy2027CampaignHtmlAdapter extends Chnenergy2027HtmlAdapter {
+  override readonly descriptor = { adapter_key: CHNENERGY_ADAPTER_KEY, name: "Chnenergy2027ReviewedOfficialHtmlAdapter", version: "2.0.0",
+    supported_content_kinds: ["HTML"] as const, capabilities: ["HTML_EXTRACTION"] as const };
+  private readonly references: ChnenergyRetainedReferences;
+
+  constructor(references: ChnenergyRetainedReferences) {
+    super();
+    this.references = retainedReferences(references);
+  }
+
+  override extract(input: AdapterExtractionInput): readonly ExtractedRecord[] {
+    if (!this.validateEndpoint(input.endpoint).valid) throw new AdapterExtractionError("ENDPOINT_NOT_SUPPORTED", "UNAPPROVED_CHNENERGY_ENDPOINT");
+    if ([this.references.campaign.snapshot_id, this.references.membership.snapshot_id].includes(input.snapshot.snapshot_id)) {
+      throw new AdapterExtractionError("MALFORMED_CONTENT", "CHNENERGY_RETAINED_DETAIL_REFERENCE_COLLISION");
+    }
+    const { job, employer, title, location, dutyText, requirements } = parseChnenergyDetail(input, false);
+    const record = (packageRecord: boolean): ExtractedRecord => {
+      const recordId = `chnenergy:${job.id}:${packageRecord ? "package" : "position"}`;
+      return { extracted_record_id: `chnenergy:${createHash("sha256").update(`${input.snapshot.snapshot_id}|${recordId}`).digest("hex")}` as never,
+        snapshot_id: input.snapshot.snapshot_id, source_definition_id: input.endpoint.source_definition_id,
+        identity_candidates: [{ kind: "SOURCE_RECORD_ID", value: recordId, confidence: "HIGH" }], raw_source_record_id: recordId,
+        raw_title: original(title), raw_organization_name: original(employer), raw_location_text: packageRecord ? [] : [original(location)],
+        raw_description: original(packageRecord ? `${employer} ${title}` : dutyText),
+        ...(!packageRecord ? { raw_requirement_text: original(requirements.join("\n")) } : {}),
+        announcement_url: job.url, application_url: job.url,
+        source_record_locator: { kind: "HTML", selector: packageRecord ? "h4.listTitle" : "#descDetail", path: recordId },
+        adapter_metadata: { [CHNENERGY_ADAPTER_KEY]: { binding_contract_version: "national-campaign-membership/1.0.0",
+          campaign: { ...this.references.campaign }, membership: { ...this.references.membership } } },
+        extraction: { extractor_name: this.descriptor.name, extractor_version: this.descriptor.version, extracted_at: input.snapshot.observed_at } };
+    };
+    return [record(true), record(false)];
+  }
+
+  override assessCompleteness(input: AdapterCompletenessInput) {
+    return input.extraction_errors.length || input.snapshots.length !== 1 || input.records.length !== 2
+      ? { status: "FAILED" as const, reason_codes: ["REVIEWED_POSITION_PACKAGE_INCOMPLETE"] }
+      : { status: "PARTIAL" as const, reason_codes: ["RETAINED_CAMPAIGN_BINDING_AND_GENERAL_CONDITIONS_PENDING"] };
   }
 }
 
