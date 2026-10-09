@@ -8,6 +8,71 @@ import { InMemorySourceRegistry } from "../ingestion/registry/source-registry";
 import { resolveContinuousSourceContext } from "./continuous-source-context";
 import { GitSourceRegistryPersistence } from "./git-source-registry-persistence";
 import { rehydrateProductionSourceOwners } from "./source-owner-rehydration";
+import { publishSupportingInspectionClaim, type SupportingInspectionPublicationOptions } from "./supporting-inspection-publisher";
+import { supportingInspectionReplay } from "./source-inspection-replay";
+import { canonicalSerialize } from "../ingestion/normalization/canonical-artifact-registry";
+import { execFileSync } from "node:child_process";
+
+export async function executeSupportingInspectionRequest(
+  inputOptions: SupportingInspectionPublicationOptions & { readonly collection_run_id: string },
+  inputRequest: HttpTransportRequest
+) {
+  const options = structuredClone(inputOptions);
+  const request = structuredClone(inputRequest);
+  const now = () => new Date().toISOString();
+  const claim = options.claim;
+  if (claim.artifact.kind !== "SUPPORTING_INSPECTION_EXECUTION" || claim.artifact.payload.state !== "CLAIMED") {
+    throw new Error("SUPPORTING_INSPECTION_NEW_CLAIM_REQUIRED");
+  }
+  const record = claim.artifact.payload;
+  const validateTime = () => {
+    const actual = Date.parse(now());
+    for (const value of [record.claimed_at, record.authorization.issued_at, claim.created_at, claim.effective_at, request.requested_at]) {
+      if (!Number.isFinite(Date.parse(value)) || Date.parse(value) > actual) throw new Error("SUPPORTING_INSPECTION_FUTURE_TIME_DENIED");
+    }
+  };
+  validateTime();
+  if (request.locator !== record.exact_url || request.method !== record.method
+    || request.recruitment_endpoint_id !== record.authorization.recruitment_endpoint_id
+    || options.collection_run_id !== record.authorization.collection_run_id
+    || request.body !== undefined || Object.keys(request.headers).length || Object.keys(request.parameters).length
+    || !Number.isSafeInteger(request.timeout_ms) || request.timeout_ms < 1
+    || Reflect.has(options, "controlled_transport") || Reflect.has(options, "now")) {
+    throw new Error("SUPPORTING_INSPECTION_EXACT_REQUEST_DENIED");
+  }
+  const initial = new GitSourceRegistryPersistence({ repository_path: options.repository_path });
+  initial.assertAuthoritativeHead(options.branch, options.expected_parent);
+  const initialVersions = await initial.listVersions();
+  const proposed = supportingInspectionReplay([...initialVersions, claim]);
+  const proposedIndex = proposed.records.length - 1;
+  const proposedContext = proposed.resolve(record, proposedIndex);
+  assertApprovedQueryRequest(request.locator, proposedContext.query_contract);
+  if (proposedContext.query_contract.request_budget !== 1) throw new Error("SUPPORTING_INSPECTION_BUDGET_DENIED");
+  const publication = await publishSupportingInspectionClaim(options);
+  const fresh = new GitSourceRegistryPersistence({ repository_path: options.repository_path });
+  fresh.assertAuthoritativeHead(options.branch, publication.committed_head);
+  const versions = await fresh.listVersions();
+  if (canonicalSerialize(versions.at(-1)) !== canonicalSerialize(claim)) throw new Error("SUPPORTING_INSPECTION_READBACK_DENIED");
+  const replay = supportingInspectionReplay(versions);
+  const index = replay.records.findIndex(item => item.authorization.authorization_id === record.authorization.authorization_id);
+  if (index < 0 || canonicalSerialize(replay.current.find(item => item.authorization.authorization_id === record.authorization.authorization_id))
+    !== canonicalSerialize(record)) throw new Error("SUPPORTING_INSPECTION_CURRENT_CLAIM_DENIED");
+  const context = replay.resolve(record, index);
+  for (const id of Object.values(record.bindings)) {
+    const version = versions.find(item => item.artifact_id === id);
+    if (!version || versions.filter(item => item.stream_id === version.stream_id && item.artifact.kind === version.artifact.kind).at(-1)?.artifact_id !== id) {
+      throw new Error("SUPPORTING_INSPECTION_STALE_SOURCE_DENIED");
+    }
+  }
+  assertApprovedQueryRequest(request.locator, context.query_contract);
+  validateTime();
+  if (execFileSync("git", ["status", "--porcelain=v1"], { cwd: options.repository_path, encoding: "utf8", windowsHide: true }).trim()) {
+    throw new Error("SUPPORTING_INSPECTION_DIRTY_STATE_DENIED");
+  }
+  fresh.assertAuthoritativeHead(options.branch, publication.committed_head);
+  const response = await executeVerifiedOfficialRequest(request, now, context.query_contract);
+  return { response, committed_claim_head: publication.committed_head };
+}
 
 export interface ContinuousRequestGateOptions {
   readonly repository_path: string;
