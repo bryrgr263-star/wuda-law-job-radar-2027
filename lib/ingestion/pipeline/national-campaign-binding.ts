@@ -3,6 +3,7 @@ import { Chnenergy2027HtmlAdapter } from "../../production-sources/chnenergy-202
 import type { TrustedSourceOccurrenceMaterializationInput } from "../normalization/trusted-source-occurrence-registry";
 import { canonicalSerialize } from "../normalization/canonical-artifact-registry";
 import { createExtractedRecordV2 } from "../normalization/extracted-record-identity";
+import type { ExtractedRecord } from "../domain";
 import { SOVDiscoverySupportError, validateDiscoveryEvidence,
   type DiscoverySupportScope, type SOVDiscoveryEvidence } from "../normalization/source-discovery-support";
 
@@ -14,6 +15,46 @@ interface Dependency {
   readonly snapshot_id: string;
   readonly extracted_record_id: string;
   readonly raw_sha256: string;
+}
+
+interface NationalCampaignPreparationInput extends Omit<TrustedSourceOccurrenceMaterializationInput, "extracted_record"> {
+  readonly extracted_record: ExtractedRecord;
+}
+
+export async function prepareNationalCampaignRecord(
+  input: NationalCampaignPreparationInput,
+  scope: DiscoverySupportScope,
+  readDiscovery: DiscoveryReader | undefined
+): Promise<ExtractedRecord> {
+  const record = input.extracted_record;
+  const schema = "schema_version" in record.extraction ? record.extraction.schema_version : undefined;
+  requireBinding(input.endpoint.adapter_key === adapterKey
+    && record.extraction.extractor_name === "Chnenergy2027ReviewedOfficialHtmlAdapter"
+    && record.extraction.extractor_version === "2.0.0"
+    && (schema === undefined || schema === `${adapterKey}-extracted-record/2.0.0`)
+    && record.source_definition_id === input.endpoint.source_definition_id
+    && record.snapshot_id === input.snapshot.snapshot_id
+    && input.snapshot.recruitment_endpoint_id === input.endpoint.recruitment_endpoint_id
+    && input.snapshot.transport_status === "SUCCESS"
+    && (input.source_role === "PACKAGE" || input.source_role === "POSITION_BEARING"),
+    "National preparation requires an ordinary v2 detail record");
+  requireBinding(!("contract_version" in record) && record.recruitment_year === undefined
+    && record.recruitment_batch === undefined && record.recruitment_context === undefined,
+    "National preparation cannot overwrite existing campaign or historical claims");
+  requireBinding(!record.deadline?.text.trim() && !record.publish_time?.text.trim(),
+    "National date claims have no supported retained Raw binding");
+  requireBinding(!!readDiscovery, "National retained discovery reader is required");
+  const proof = await readNationalCampaignProof(input, scope, readDiscovery);
+  const recordKey = `chnenergy:${proof.jobId}:${input.source_role === "PACKAGE" ? "package" : "position"}`;
+  requireBinding(record.raw_source_record_id === recordKey, "National occurrence key differs from exact job");
+  same(record.identity_candidates, [{ kind: "SOURCE_RECORD_ID", value: recordKey, confidence: "HIGH" }],
+    "National identity candidates differ from exact job");
+  same(record.source_record_locator, { kind: "HTML", selector: input.source_role === "PACKAGE" ? "h4.listTitle" : "#descDetail", path: recordKey },
+    "National record locator differs from exact detail surface");
+  requireBinding(record.announcement_url === input.endpoint.locator && record.application_url === input.endpoint.locator,
+    "National public job URL claim mismatch");
+  return { ...structuredClone(record), recruitment_year: proof.year, recruitment_batch: proof.batch,
+    ...(input.source_role === "POSITION_BEARING" ? { recruitment_context: proof.context } : {}) };
 }
 
 export async function verifyNationalCampaignBinding(
@@ -80,46 +121,12 @@ export async function verifyNationalCampaignBinding(
   same(detail.endpoint, input.endpoint, "National endpoint differs from persisted evidence");
   same(detail.snapshot, input.snapshot, "National Snapshot differs from persisted evidence");
   same(detail.extracted_record, input.extracted_record, "National record differs from persisted evidence");
-  const binding = input.extracted_record.adapter_metadata[adapterKey];
-  requireBinding(!!binding && typeof binding === "object" && !Array.isArray(binding), "National retained binding references are missing");
-  requireBinding(Object.keys(binding).sort().join(",") === "binding_contract_version,campaign,membership"
-    && binding.binding_contract_version === bindingVersion, "National binding contract or claims are unsupported");
-  const campaignRef = dependency(binding.campaign);
-  const memberRef = dependency(binding.membership);
-  requireBinding(new Set([campaignRef.snapshot_id, memberRef.snapshot_id, input.snapshot.snapshot_id]).size === 3,
-    "National binding requires three distinct captured surfaces");
-  const campaign = await readDependency(campaignRef, readDiscovery, scope);
-  const membership = await readDependency(memberRef, readDiscovery, scope);
+  const proof = await readNationalCampaignProof(input, scope, readDiscovery);
+  const { campaign, membership, jobId } = proof;
   for (const evidence of [campaign, membership]) {
-    requireBinding(evidence.endpoint.source_definition_id === detail.endpoint.source_definition_id
-      && evidence.extracted_record.source_definition_id === detail.extracted_record.source_definition_id,
-    "National binding source identity mismatch");
     same(evidence.source_reference.source_definition, detail.source_reference.source_definition, "National source definition proof mismatch");
   }
-  const campaignId = endpointId(campaign, "/annc/showgg", ["id"]);
-  const jobId = endpointId(detail, "/annc/showgw", ["id"]);
-  const memberId = endpointId(membership, "/annc/showggStationList", ["id", "zhaopingangwei"]);
-  requireBinding(campaignId === memberId, "National membership campaign mismatch");
-  const campaignDom = html(campaign);
-  const memberDom = html(membership);
   const detailDom = html(detail);
-  const titles = campaignDom("p.lead.text-center");
-  requireBinding(titles.length === 1 && clean(titles.text()) === "国家能源投资集团有限责任公司2027年度高校毕业生统招公告",
-    "National explicit 2027 campaign heading is missing or ambiguous");
-  const campaignLinks = campaignDom("a[href]").toArray().filter(node =>
-    resolvedUrl(campaignDom(node).attr("href"), campaign.snapshot.request_metadata.locator)
-      === `${origin}/annc/showggStationList?id=${campaignId}`);
-  requireBinding(campaignLinks.length === 1, "National campaign membership link is missing or ambiguous");
-  const forms = memberDom("form#annclistform");
-  requireBinding(forms.length === 1 && resolvedUrl(forms.attr("action"), membership.snapshot.request_metadata.locator)
-    === `${origin}/annc/showggStationList`, "National member form boundary mismatch");
-  const campaignInputs = forms.find('input[type="hidden"][name="id"]');
-  requireBinding(campaignInputs.length === 1 && campaignInputs.attr("value") === campaignId,
-    "National member form campaign mismatch");
-  const jobLinks = memberDom("a[href]").toArray().filter(node =>
-    resolvedUrl(memberDom(node).attr("href"), membership.snapshot.request_metadata.locator) === detail.snapshot.request_metadata.locator);
-  requireBinding(jobLinks.length === 1 && memberDom(jobLinks[0]).closest("li.list-group-item").length === 1,
-    "National exact job membership is missing or ambiguous");
   const sections = (label: string) => {
     const headers = detailDom("h4.listTitle").filter((_index, node) => clean(detailDom(node).text()) === label);
     requireBinding(headers.length === 1, "National detail section is missing or ambiguous");
@@ -140,8 +147,7 @@ export async function verifyNationalCampaignBinding(
   const title = field("招聘岗位");
   const location = field("工作地点");
   requireBinding(clean(detailDom("title").text()) === "岗位详情"
-    && clean(memberDom(jobLinks[0]).text()) === title
-    && new URL(membership.snapshot.request_metadata.locator).searchParams.get("zhaopingangwei") === title,
+    && proof.jobTitle === title,
   "National job title/filter binding mismatch");
   const description = sections("岗位职责").find("#descDetail");
   requireBinding(description.length === 1, "National duty surface is missing or ambiguous");
@@ -159,8 +165,8 @@ export async function verifyNationalCampaignBinding(
     "National record locator differs from exact detail surface");
   same(record.raw_title, original(title), "National title claim differs from Raw");
   same(record.raw_organization_name, original(employer), "National employer claim differs from Raw");
-  same(record.recruitment_year, original("2027"), "National year claim differs from campaign");
-  same(record.recruitment_batch, original(clean(titles.text()).replace(/公告$/u, "")), "National batch claim differs from campaign");
+  same(record.recruitment_year, proof.year, "National year claim differs from campaign");
+  same(record.recruitment_batch, proof.batch, "National batch claim differs from campaign");
   requireBinding(record.announcement_url === detail.snapshot.request_metadata.locator
     && record.application_url === detail.snapshot.request_metadata.locator, "National public job URL claim mismatch");
   if (input.source_role === "PACKAGE") {
@@ -175,14 +181,69 @@ export async function verifyNationalCampaignBinding(
   same(record.raw_requirement_text, original(requirements.join("\n")), "National requirements claim differs from Raw");
   const context = record.recruitment_context;
   requireBinding(!!context && context.recruitment_plan === undefined, "National project identity is unproven");
-  const campaignClaim = { identity_state: "CONFIRMED", official_identifier: original(campaignId),
+  same(context, proof.context, "National recruitment identity claims differ from retained chain");
+}
+
+async function readNationalCampaignProof(
+  input: NationalCampaignPreparationInput,
+  scope: DiscoverySupportScope,
+  readDiscovery: DiscoveryReader
+) {
+  const binding = input.extracted_record.adapter_metadata[adapterKey];
+  requireBinding(!!binding && typeof binding === "object" && !Array.isArray(binding), "National retained binding references are missing");
+  requireBinding(Object.keys(binding).sort().join(",") === "binding_contract_version,campaign,membership"
+    && binding.binding_contract_version === bindingVersion, "National binding contract or claims are unsupported");
+  const campaignRef = dependency(binding.campaign);
+  const memberRef = dependency(binding.membership);
+  requireBinding(new Set([campaignRef.snapshot_id, memberRef.snapshot_id, input.snapshot.snapshot_id]).size === 3,
+    "National binding requires three distinct captured surfaces");
+  const campaign = await readDependency(campaignRef, readDiscovery, scope);
+  const membership = await readDependency(memberRef, readDiscovery, scope);
+  for (const evidence of [campaign, membership]) {
+    requireBinding(evidence.endpoint.source_definition_id === input.endpoint.source_definition_id
+      && evidence.extracted_record.source_definition_id === input.extracted_record.source_definition_id,
+    "National binding source identity mismatch");
+  }
+  const campaignId = endpointId(campaign, "/annc/showgg", ["id"]);
+  const jobId = endpointId(input, "/annc/showgw", ["id"]);
+  const memberId = endpointId(membership, "/annc/showggStationList", ["id", "zhaopingangwei"]);
+  requireBinding(campaignId === memberId, "National membership campaign mismatch");
+  const campaignDom = html(campaign);
+  const memberDom = html(membership);
+  const titles = campaignDom("p.lead.text-center");
+  requireBinding(titles.length === 1 && clean(titles.text()) === "国家能源投资集团有限责任公司2027年度高校毕业生统招公告",
+    "National explicit 2027 campaign heading is missing or ambiguous");
+  const campaignLinks = campaignDom("a[href]").toArray().filter(node =>
+    resolvedUrl(campaignDom(node).attr("href"), campaign.snapshot.request_metadata.locator)
+      === `${origin}/annc/showggStationList?id=${campaignId}`);
+  requireBinding(campaignLinks.length === 1, "National campaign membership link is missing or ambiguous");
+  const forms = memberDom("form#annclistform");
+  requireBinding(forms.length === 1 && resolvedUrl(forms.attr("action"), membership.snapshot.request_metadata.locator)
+    === `${origin}/annc/showggStationList`, "National member form boundary mismatch");
+  const campaignInputs = forms.find('input[type="hidden"][name="id"]');
+  requireBinding(campaignInputs.length === 1 && campaignInputs.attr("value") === campaignId,
+    "National member form campaign mismatch");
+  const jobLinks = memberDom("a[href]").toArray().filter(node =>
+    resolvedUrl(memberDom(node).attr("href"), membership.snapshot.request_metadata.locator) === input.snapshot.request_metadata.locator);
+  requireBinding(jobLinks.length === 1 && memberDom(jobLinks[0]).closest("li.list-group-item").length === 1,
+    "National exact job membership is missing or ambiguous");
+  same(campaign.source_reference.source_definition, membership.source_reference.source_definition,
+    "National source definition proof mismatch");
+  const jobTitle = clean(memberDom(jobLinks[0]).text());
+  requireBinding(jobTitle === input.extracted_record.raw_title?.text
+    && new URL(membership.snapshot.request_metadata.locator).searchParams.get("zhaopingangwei") === jobTitle,
+    "National job title/filter binding mismatch");
+  const heading = clean(titles.text());
+  const year = heading.match(/(2027)年度/u)![1]!;
+  const campaignClaim = { identity_state: "CONFIRMED" as const, official_identifier: original(campaignId),
     identifier_namespace: "official:chnenergy:recruitment-campaign",
-    evidence_locator: { kind: "SOURCE_RECORD", locator: `${campaign.snapshot.snapshot_id}#p.lead.text-center` } };
-  const jobClaim = { identity_state: "CONFIRMED", official_identifier: original(jobId),
+    evidence_locator: { kind: "SOURCE_RECORD" as const, locator: `${campaign.snapshot.snapshot_id}#p.lead.text-center` } };
+  const jobClaim = { identity_state: "CONFIRMED" as const, official_identifier: original(jobId),
     identifier_namespace: "official:chnenergy:campus-position",
-    evidence_locator: { kind: "SOURCE_RECORD", locator: `${membership.snapshot.snapshot_id}#a[href]` } };
-  same(context, { announcement: campaignClaim, recruitment_batch: { applicability: "APPLICABLE", identity: campaignClaim },
-    position: jobClaim, opportunity: jobClaim }, "National recruitment identity claims differ from retained chain");
+    evidence_locator: { kind: "SOURCE_RECORD" as const, locator: `${membership.snapshot.snapshot_id}#a[href]` } };
+  return { campaign, membership, jobId, jobTitle, year: original(year), batch: original(heading.replace(/公告$/u, "")),
+    context: { announcement: campaignClaim, recruitment_batch: { applicability: "APPLICABLE" as const, identity: campaignClaim },
+      position: jobClaim, opportunity: jobClaim } };
 }
 
 function dependency(value: unknown): Dependency {
@@ -204,7 +265,7 @@ async function readDependency(reference: Dependency, readDiscovery: DiscoveryRea
   return evidence;
 }
 
-function endpointId(evidence: SOVDiscoveryEvidence, path: string, parameters: string[]) {
+function endpointId(evidence: Pick<SOVDiscoveryEvidence, "endpoint" | "snapshot">, path: string, parameters: string[]) {
   requireBinding(evidence.endpoint.locator === evidence.snapshot.request_metadata.locator
     && evidence.snapshot.request_metadata.method === "GET", "National capture request binding mismatch");
   const url = new URL(evidence.snapshot.request_metadata.locator);
@@ -227,7 +288,7 @@ function resolvedUrl(value: string | undefined, base: string) {
 }
 
 function clean(value: string) { return value.replace(/\s+/gu, " ").trim(); }
-function original(value: string) { return { text: value, encoding: "UTF-8" }; }
+function original(value: string) { return { text: value, encoding: "UTF-8" as const }; }
 function same(actual: unknown, expected: unknown, message: string) {
   requireBinding(canonicalSerialize(actual ?? null) === canonicalSerialize(expected ?? null), message);
 }
