@@ -25,11 +25,41 @@ export function prepareProductionSourceCompositionInput(
   const sourceIds = [...new Set(context.available_artifact_references
     .filter(reference => reference.artifact_kind === "SOURCE_OCCURRENCE_VERSION")
     .map(reference => reference.artifact_id))].sort();
+  const campaignSources = new Set<string>();
+  const linkedPackages = new Set<string>();
+  for (const positionSource of positionSources) {
+    if (positionSource.endpoint.adapter_key !== "cn-chnenergy-2027-reviewed-official-html"
+      || positionSource.extracted_record.extraction.extractor_version !== "2.0.0") continue;
+    const metadata = positionSource.extracted_record.adapter_metadata["cn-chnenergy-2027-reviewed-official-html"];
+    if (metadata?.binding_contract_version !== "national-campaign-membership/1.0.0") {
+      throw new Error("EVIDENCE_BLOCKED: National composition requires retained campaign dependencies");
+    }
+    for (const kind of ["campaign", "membership"] as const) {
+      const dependency = metadata[kind];
+      if (!dependency || typeof dependency !== "object" || Array.isArray(dependency)
+        || !("snapshot_id" in dependency) || !("extracted_record_id" in dependency) || !("raw_sha256" in dependency)) {
+        throw new Error("EVIDENCE_BLOCKED: National composition dependency is unavailable");
+      }
+      const matches = sourceIds.flatMap(id => {
+        const source = context.resolvers.source_occurrences.resolve(id as never);
+        return source?.source_role === "PACKAGE"
+          && source.endpoint.source_definition_id === positionSource.endpoint.source_definition_id
+          && source.snapshot.snapshot_id === dependency.snapshot_id
+          && source.extracted_record.extracted_record_id === dependency.extracted_record_id
+          && source.snapshot.content_hash === dependency.raw_sha256 ? [source] : [];
+      });
+      if (matches.length !== 1) throw new Error("EVIDENCE_BLOCKED: National composition dependency is missing or ambiguous");
+      const sourceId = matches[0]!.version.source_occurrence_version_id;
+      linkedPackages.add(sourceId);
+      if (kind === "campaign") campaignSources.add(sourceId);
+    }
+  }
   const packages = sourceIds.flatMap(id => {
     const source = context.resolvers.source_occurrences.resolve(id as never);
-    return source?.source_role === "PACKAGE" && positionSources.some(positionSource =>
+    return source?.source_role === "PACKAGE" && (positionSources.some(positionSource =>
       source.endpoint.source_definition_id === positionSource.endpoint.source_definition_id
       && source.endpoint.recruitment_endpoint_id === positionSource.endpoint.recruitment_endpoint_id)
+      || linkedPackages.has(source.version.source_occurrence_version_id))
       ? [source] : [];
   });
   const sources = [...positionSources, ...packages].sort((left, right) =>
@@ -46,33 +76,34 @@ export function prepareProductionSourceCompositionInput(
   const entries = sources.map(source => {
     const sourceKey = source.version.source_occurrence_version_id;
     const isPosition = source.source_role === "POSITION_BEARING";
+    const isCampaign = campaignSources.has(source.version.source_occurrence_version_id);
     const evidenceId = id("SourceCompositionEvidenceId", sourceKey);
     const surfaceId = id("SourceSurfaceId", sourceKey);
     const bindingId = id("SourceSurfaceBindingId", sourceKey);
-    const locator = sourceLocator(source);
+    const locator = isCampaign ? { ...sourceLocator(source), field_path: "raw_description" } : sourceLocator(source);
     const extractorVersion = source.version.materialization.extractor_version;
     const bindingContext = { source_occurrence_version_id: sourceKey,
       snapshot_id: source.snapshot.snapshot_id, extracted_record_id: source.extracted_record.extracted_record_id,
       observed_at: source.snapshot.observed_at, resolver_version: preparationVersion };
-    const targetScope = isPosition ? opportunityVersionId : sourceKey;
+    const targetScope = isPosition || isCampaign ? opportunityVersionId : sourceKey;
     return {
       evidence: { source_composition_evidence_id: evidenceId, ...bindingContext, locator,
         extractor_version: extractorVersion },
       surface: { source_surface_id: surfaceId, surface_kind: "OTHER_REQUIREMENT_SURFACE" as const,
         ...bindingContext, locator, surface_content_hash: canonicalHash(source.extracted_record),
         effective_period: { effective_from: source.snapshot.observed_at },
-        surface_status: "PARSED" as const, composition_role: isPosition ? "PRIMARY" as const : "REFERENCE" as const,
+        surface_status: "PARSED" as const, composition_role: isPosition ? "PRIMARY" as const : isCampaign ? "SUPPLEMENT" as const : "REFERENCE" as const,
         target_scope: targetScope, evidence_ids: [evidenceId], extractor_version: extractorVersion,
         parser_version: preparationVersion, schema_version: SOURCE_COMPOSITION_SCHEMA_VERSION },
       binding: { source_surface_binding_id: bindingId, source_surface_id: surfaceId,
-        target_type: isPosition ? "OPPORTUNITY_VERSION" as const : "SYSTEM_RECORD" as const,
+        target_type: isPosition || isCampaign ? "OPPORTUNITY_VERSION" as const : "SYSTEM_RECORD" as const,
         target_id: targetScope, binding_kind: "SURFACE_DECLARATION" as const, binding_status: "RESOLVED" as const,
         evidence_ids: [evidenceId], created_context: bindingContext, observed_context: bindingContext, locator,
         schema_version: SOURCE_COMPOSITION_SCHEMA_VERSION },
       manifest: { expected_surface_manifest_entry_id: id("ExpectedSurfaceManifestEntryId", sourceKey),
         expected_surface_key: sourceKey, source_surface_id: surfaceId,
-        expectedness: isPosition ? "REQUIRED" as const : "REFERENCE_ONLY" as const,
-        requirement_level: isPosition ? (source.extracted_record.raw_requirement_text
+        expectedness: isPosition || isCampaign ? "REQUIRED" as const : "REFERENCE_ONLY" as const,
+        requirement_level: isCampaign ? "REQUIREMENT_BEARING" as const : isPosition ? (source.extracted_record.raw_requirement_text
           ? "REQUIREMENT_BEARING" as const : "UNRESOLVED" as const) : "NON_REQUIREMENT_REFERENCE" as const,
         authority_status: "UNRESOLVED" as const, binding_status: "RESOLVED" as const,
         material_binding_ids: [bindingId], version_selection_status: "UNRESOLVED" as const,
