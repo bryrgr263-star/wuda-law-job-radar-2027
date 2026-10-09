@@ -317,7 +317,7 @@ export function createZhenghan2027SourceVersions(input: {
   const endpoint = createZhenghan2027RecruitmentEndpoint();
   const admission = createZhenghan2027SourceAdmission(input.observed_at);
   const versions: SourcePersistenceVersion[] = [];
-  const append = (artifact: SourcePersistenceVersion["artifact"]) => {
+  const append = (artifact: Exclude<SourcePersistenceVersion["artifact"], { kind: "SUPPORTING_INSPECTION_EXECUTION" }>) => {
     const streamId = artifact.kind === "ORGANIZATION"
       ? artifact.payload.organization_id
       : artifact.kind === "SOURCE_DEFINITION"
@@ -328,7 +328,9 @@ export function createZhenghan2027SourceVersions(input: {
             ? artifact.payload.adapter_key
             : artifact.kind === "SOURCE_ADMISSION"
               ? artifact.payload.source_admission_id
-              : artifact.payload.allowlist_entry_id;
+              : artifact.kind === "OFFICIAL_ENDPOINT_ALLOWLIST"
+                ? artifact.payload.allowlist_entry_id
+                : (() => { throw new Error("UNSUPPORTED_SOURCE_ARTIFACT"); })();
     const version = createSourcePersistenceVersion({
       stream_id: streamId,
       revision: 1,

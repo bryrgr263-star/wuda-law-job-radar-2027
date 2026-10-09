@@ -89,7 +89,7 @@ const endpoint: RecruitmentEndpoint = {
 };
 
 function version(
-  artifact: SourcePersistenceVersion["artifact"],
+  artifact: Exclude<SourcePersistenceVersion["artifact"], { kind: "SUPPORTING_INSPECTION_EXECUTION" }>,
   revision = 1,
   supersedesArtifactId: string | null = null
 ) {
@@ -103,7 +103,9 @@ function version(
           ? artifact.payload.adapter_key
           : artifact.kind === "SOURCE_ADMISSION"
             ? artifact.payload.source_admission_id
-            : artifact.payload.allowlist_entry_id;
+            : artifact.kind === "OFFICIAL_ENDPOINT_ALLOWLIST"
+              ? artifact.payload.allowlist_entry_id
+              : (() => { throw new Error("UNSUPPORTED_SOURCE_ARTIFACT"); })();
   return createSourcePersistenceVersion({
     stream_id: streamId,
     revision,

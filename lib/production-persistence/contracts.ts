@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { SourceAdmission } from "../application/source-admission";
+import { assertSupportingInspectionExecution, type SupportingInspectionExecution } from "../application/source-admission/supporting-inspection";
 import type {
   ExtractedRecord,
   Organization,
@@ -32,6 +33,7 @@ export type SourcePersistenceArtifact =
   | { readonly kind: "RECRUITMENT_ENDPOINT"; readonly payload: RecruitmentEndpoint }
   | { readonly kind: "ADAPTER_REGISTRATION"; readonly payload: AdapterKeyRegistration }
   | { readonly kind: "SOURCE_ADMISSION"; readonly payload: SourceAdmission }
+  | { readonly kind: "SUPPORTING_INSPECTION_EXECUTION"; readonly payload: SupportingInspectionExecution }
   | {
       readonly kind: "OFFICIAL_ENDPOINT_ALLOWLIST";
       readonly payload: OfficialEndpointAllowlist;
@@ -389,13 +391,18 @@ function validateSourceArtifactIdentity(
           ? artifact.payload.adapter_key
           : artifact.kind === "SOURCE_ADMISSION"
             ? artifact.payload.source_admission_id
-            : artifact.payload.allowlist_entry_id;
+            : artifact.kind === "SUPPORTING_INSPECTION_EXECUTION"
+              ? artifact.payload.authorization.authorization_id
+              : artifact.kind === "OFFICIAL_ENDPOINT_ALLOWLIST"
+                ? artifact.payload.allowlist_entry_id
+                : (() => { throw new ProductionPersistenceError("INTEGRITY_MISMATCH", "Unsupported source artifact kind"); })();
   if (streamId !== expected) {
     throw new ProductionPersistenceError(
       "INTEGRITY_MISMATCH",
       `${artifact.kind} stream ID does not match its stable identity`
     );
   }
+  if (artifact.kind === "SUPPORTING_INSPECTION_EXECUTION") assertSupportingInspectionExecution(artifact.payload);
   if (artifact.kind === "OFFICIAL_ENDPOINT_ALLOWLIST") {
     const allowlist = artifact.payload;
     if (

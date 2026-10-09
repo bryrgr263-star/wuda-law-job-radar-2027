@@ -5,6 +5,7 @@ import {
   assertContinuousRecord, replayContinuousRecords, pendingContinuousAttempt, type ContinuousRecord, type ContinuousFencingVerifier
 } from "../application/source-admission/continuous-acquisition";
 import { resolveContinuousSourceContext } from "./continuous-source-context";
+import { supportingInspectionReplay } from "./source-inspection-replay";
 
 import {
   canonicalDeserialize,
@@ -95,6 +96,7 @@ ProductionSourceRegistryRepository {
       );
     }
 
+    if (version.artifact.kind === "SUPPORTING_INSPECTION_EXECUTION") supportingInspectionReplay([...this.#versions, version]);
     const versionPath = this.#versionPath(version.artifact_id);
     this.#writeImmutable(versionPath, canonicalSerialize(version));
     this.#versions.push(structuredClone(version));
@@ -216,6 +218,7 @@ ProductionSourceRegistryRepository {
       }
       streams.set(key, version);
     }
+    supportingInspectionReplay(versions);
     const records = (state.continuous_records ?? []).map(reference => {
       const expectedPath = `${this.#rootPath}/continuous/records/${canonicalHash({ record_id: reference.record_id })}.json`;
       if (reference.path !== expectedPath) throw new Error("CONTINUOUS_REFERENCE_PATH_INVALID");

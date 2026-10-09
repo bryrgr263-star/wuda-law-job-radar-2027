@@ -87,6 +87,9 @@ TrustedRestorationJournalRepository<Command> {
 
   async appendVersion(version: SourcePersistenceVersion) {
     assertSourcePersistenceVersion(version);
+    if (version.artifact.kind === "SUPPORTING_INSPECTION_EXECUTION") {
+      throw new ProductionPersistenceError("EVIDENCE_BLOCKED", "Supporting inspection persistence is not implemented for PostgreSQL");
+    }
     const functionName = sourceAppendFunctions[version.artifact.kind];
     return this.#appendJson(functionName, version);
   }
@@ -100,6 +103,9 @@ TrustedRestorationJournalRepository<Command> {
       for (const row of result.rows) {
         const version = decodeRecord<SourcePersistenceVersion>(row.record_json);
         assertSourcePersistenceVersion(version);
+        if (version.artifact.kind === "SUPPORTING_INSPECTION_EXECUTION") {
+          throw new ProductionPersistenceError("EVIDENCE_BLOCKED", "Supporting inspection persistence is not implemented for PostgreSQL");
+        }
         versions.push(version);
       }
     }
@@ -177,6 +183,9 @@ function decodeRecord<Value>(value: unknown): Value {
 }
 
 function compareSourceVersions(left: SourcePersistenceVersion, right: SourcePersistenceVersion) {
+  if (left.artifact.kind === "SUPPORTING_INSPECTION_EXECUTION" || right.artifact.kind === "SUPPORTING_INSPECTION_EXECUTION") {
+    throw new ProductionPersistenceError("EVIDENCE_BLOCKED", "Supporting inspection persistence is not implemented for PostgreSQL");
+  }
   const kindOrder = sourceKindOrder.indexOf(left.artifact.kind)
     - sourceKindOrder.indexOf(right.artifact.kind);
   if (kindOrder !== 0) return kindOrder;

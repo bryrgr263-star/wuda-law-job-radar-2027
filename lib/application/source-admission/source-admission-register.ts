@@ -13,6 +13,7 @@ import {
   type ContinuousContextResolver, type ContinuousFencingVerifier
 } from "./continuous-acquisition";
 import { canonicalSerialize } from "../../ingestion/normalization/canonical-artifact-registry";
+import { replaySupportingInspections, type SupportingInspectionExecution, type SupportingInspectionContext } from "./supporting-inspection";
 
 const phaseTwoApprovedSourceTypes = new Set([
   "OFFICIAL_CAREER_SITE",
@@ -30,6 +31,14 @@ export class SourceAdmissionError extends Error {
 export class InMemorySourceAdmissionRegister {
   readonly #admissions = new Map<SourceAdmissionId, SourceAdmission>();
   #continuousRecords: ContinuousRecord[] = [];
+  #supportingInspections: SupportingInspectionExecution[] = [];
+
+  restoreSupportingInspections(records: readonly SupportingInspectionExecution[],
+    resolve: (record: SupportingInspectionExecution, index: number) => SupportingInspectionContext) {
+    this.#supportingInspections = replaySupportingInspections(records, resolve);
+  }
+
+  listSupportingInspections() { return clone(this.#supportingInspections); }
 
   restoreContinuousRecords(records: readonly ContinuousRecord[], resolve: ContinuousContextResolver, verifier?: ContinuousFencingVerifier) {
     const restored = replayContinuousRecords(records, resolve, verifier);
