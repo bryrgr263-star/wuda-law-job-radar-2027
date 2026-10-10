@@ -22,6 +22,7 @@ import {
   SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION,
   SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2,
   SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3,
+  SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4,
   assertSOVDiscoverySupportIntegrity,
   validatedDiscoverySupport,
   type DiscoverySupportScope,
@@ -101,7 +102,7 @@ implements TrustedSourceOccurrenceVersionResolver {
   async processDiscoverySupport(command: SOVDiscoverySupportCommand) {
     const options = this.#supportOptions;
     if (!options?.readDiscovery || ![SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION,
-      SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3].includes(command.schema_version)) {
+      SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4].includes(command.schema_version)) {
       throw new SOVDiscoverySupportError("EVIDENCE_BLOCKED", "Root-owned persisted discovery reader and supported contract are required");
     }
     const original = this.resolve(command.sov_id);

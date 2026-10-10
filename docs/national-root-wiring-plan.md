@@ -31,3 +31,22 @@ campaign general conditions remain required retained PACKAGE evidence and Source
 Same trusted root materializes exact campaign/member packages before detail, then invokes the unchanged production binding.
 Final owner rereads persisted detail and retained dependencies independently; prepared ordinary records convey no trust.
 Parent checkpoint/source factory files remain untouched. No real network, grants, source publishing, commit or push.
+
+## Bounded retained adapter selection
+
+Write set: root, new national-retained-adapter-selection helper, this dedicated root test and note.
+1. RED default v1 with committed synthetic inspection RECEIPTs and real owner-persisted Raw.
+2. Read fixed-clone existing SourceAdmission replay and independently verified Raw, never caller claims or timestamp selection.
+3. Select ordinary v2 refs only for campaign plus current job membership; final preparation and trusted owner reread dependencies.
+4. No relevant inspection retains historical v1. Existing missing/unknown/failed/ambiguous proof becomes honest failed extraction after capture.
+5. Focused actual-root and historical adapter tests, typecheck and diff; no heavy production replay or real acquisition.
+
+Selection RED: default v1 FAILED / ADAPTER_EXTRACTION_FAILED despite three complete receipts (41.470s), actual Raw persisted.
+Initial selection GREEN: 1/1 PASS (132.512s); no production capture/authorization was used.
+Locality RED: missing unrelated membership incorrectly prevented current job selection (40.157s).
+Scope correction: only exact campaign/current-job membership are dependencies. Existing relevant evidence with either dependency missing fails closed;
+unrelated job terminal receipts are not a dependency and no latest-time heuristic is used.
+Selection requires clean committed source state and pinned HEAD, exact current source bindings, receipt-to-verified-bundle equality,
+fixed supporting parser/canonical equality and existing verified journal reader. Returned adapter/refs carry no trust.
+Expected selection refusals are deferred into actual extraction so actual transport Raw/Snapshot and FAILED/NOT_RUN outcome remain durable.
+No registry, Scheduler, source installation, grants, persistence schema or historical v1 emitter changes.

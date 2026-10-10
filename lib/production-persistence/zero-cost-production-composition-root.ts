@@ -84,7 +84,8 @@ import { assertSourceExecutionIntentOutcome, readSourceExecutionRequestIntents,
   type SourceExecutionRequestIntent } from "./source-execution-request-intent";
 import { readSchedulerBatchManifests, type SchedulerBatchManifest } from "./scheduler-batch-manifest";
 import { pendingContinuousAttempt, type ContinuousRecord, type ContinuousScope, type ContinuousFencingVerifier } from "../application/source-admission/continuous-acquisition";
-import { Chnenergy2027CampaignHtmlAdapter } from "../production-sources/chnenergy-2027-source";
+import { Chnenergy2027CampaignHtmlAdapter, Chnenergy2027HtmlAdapter } from "../production-sources/chnenergy-2027-source";
+import { selectRetainedNationalAdapter } from "./national-retained-adapter-selection";
 import { ChnenergySupportingEvidenceAdapter, CHNENERGY_SUPPORT_ADAPTER_KEY } from "../production-sources/chnenergy-supporting-evidence";
 import { prepareNationalCampaignRecord } from "../ingestion/pipeline/national-campaign-binding";
 import { SOVDiscoverySupportError, type SOVDiscoveryEvidence } from "../ingestion/normalization/source-discovery-support";
@@ -613,6 +614,18 @@ export function bootstrapZeroCostProductionCompositionRoot(
           }
           return match;
         };
+        let nationalSelectionFailure: AdapterExtractionError | undefined;
+        if (input.execute_trusted_chain === executeProductionTrustedChainBinding
+          && input.adapter instanceof Chnenergy2027HtmlAdapter && input.adapter.descriptor.version === "1.0.0") {
+          try {
+            const selected = await selectRetainedNationalAdapter(checkoutPath, streamId, endpoint, options.continuous_fencing_verifier);
+            if (selected) input = { ...input, adapter: selected };
+          } catch (error) {
+            if (!(error instanceof SOVDiscoverySupportError && ["REVIEW_REQUIRED", "EVIDENCE_BLOCKED"].includes(error.code))
+              && !(error instanceof ProductionPersistenceError && error.code === "EVIDENCE_BLOCKED")) throw error;
+            nationalSelectionFailure = new AdapterExtractionError("MALFORMED_CONTENT", "CHNENERGY_RETAINED_SELECTION_FAILED");
+          }
+        }
         const plannedRequests = continuous ? [...input.adapter.plan(endpoint)] : null;
         if (plannedRequests) {
           const records = sourceRepository.listContinuousRecords();
@@ -677,6 +690,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
           validateEndpoint: candidate => input.adapter.validateEndpoint(candidate),
           plan: candidate => plannedRequests ?? input.adapter.plan(candidate),
           extract: source => {
+            if (nationalSelectionFailure) throw nationalSelectionFailure;
             const records = input.adapter.extract(source);
             observedRecords.push(...records);
             return records;
@@ -796,7 +810,9 @@ export function bootstrapZeroCostProductionCompositionRoot(
               }
               let emitted: readonly ExtractedRecord[];
               try {
-                emitted = supportingAdapter.extract({ endpoint: evidence.endpoint, snapshot: evidence.snapshot,
+                const parser = evidence.extraction_derivation
+                  ? new ChnenergySupportingEvidenceAdapter("1.1.0") : supportingAdapter;
+                emitted = parser.extract({ endpoint: evidence.endpoint, snapshot: evidence.snapshot,
                   raw_blob: { raw_blob_id: evidence.snapshot.raw_blob_id!, bytes: evidence.raw_blob.bytes,
                     raw_content_sha256: evidence.snapshot.content_hash!, byte_length: evidence.raw_blob.byte_length,
                     mime_type: evidence.raw_blob.content_type, created_at: evidence.snapshot.observed_at } });

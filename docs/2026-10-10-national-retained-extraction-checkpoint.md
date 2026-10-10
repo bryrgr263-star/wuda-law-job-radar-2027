@@ -42,3 +42,24 @@ committed state and concurrency, without duplicate authorization or requests.
 
 The public site has not gained National Energy jobs. Local parser success is
 not product closure, authoritative import, publication or online verification.
+
+## 08:59 Beijing continuation
+
+The Raw-owner derivation implementation is present locally, uncommitted.
+The author collected passing results for all eight dedicated cases across an
+initial collection and targeted corrections; this is not a single 8/8 run.
+Parent final combined verification is running in terminal session 51310;
+collect its final exit status before launching another copy. Independent
+read-only review is assigned to Ampere; Huygens owns the completed Raw patch.
+No production derivation or new request has been executed.
+
+Consumer integration is still outstanding: the existing discovery reader,
+journal Raw bindings, SOV explicit derived-proof branch and root retained
+selection must all use independently verified derivation. The original
+FAILED acquisition must never be returned as SUCCESS to satisfy the old gate.
+
+The historical production-entry test at chnenergy-source.test.ts:110 also
+fails on immutable 88e11be with the same canonical-record mismatch; it is
+not a new selector regression. Exact test: `existing production entry
+materializes two distinct reviewed positions and fresh Process B preserves
+their safe stops`. Combined collection was 13 PASS / 1 FAIL, not all PASS.

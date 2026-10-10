@@ -8,11 +8,28 @@ import type { TrustedSourceOccurrenceArtifact, TrustedSourceOccurrenceRole } fro
 export const SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION = "trusted-sov-discovery-support/1.0.0" as const;
 export const SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2 = "trusted-sov-discovery-support/2.0.0" as const;
 export const SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3 = "trusted-sov-discovery-support/3.0.0" as const;
+export const SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4 = "trusted-sov-discovery-support/4.0.0" as const;
 const ZHENGHAN_CACHE_TRAILER_RULE = "ZHENGHAN_TERMINAL_CACHE_TRAILER_V1" as const;
 export type DiscoverySupportScope = "PRODUCTION" | "SYNTHETIC_TEST";
 export interface DiscoverySourceReference {
   readonly artifact_id: string;
   readonly integrity_hash: string;
+}
+export interface DiscoveryExtractionDerivation {
+  readonly schema_version: "supporting-extraction-derivation/1.0.0";
+  readonly derivation_id: string;
+  readonly original: {
+    readonly acquisition_run_id: string; readonly acquisition_bundle_hash: string;
+    readonly acquisition_status: string; readonly extraction_status: "FAILED";
+    readonly snapshot_id: string; readonly snapshot_canonical_hash: string;
+    readonly raw_blob_id: string; readonly raw_manifest_hash: string; readonly raw_sha256: string;
+    readonly exact_endpoint: string; readonly source_definition_id: string; readonly recruitment_endpoint_id: string;
+  };
+  readonly source_references: Readonly<Record<"source_definition" | "endpoint" | "admission" | "allowlist" | "adapter", DiscoverySourceReference>>;
+  readonly parser: { readonly adapter_key: string; readonly extractor_name: string; readonly extractor_version: "1.1.0" };
+  readonly derived_at: string; readonly outcome: "COMPLETE" | "FAILED"; readonly failure_code: string | null;
+  readonly extracted_records: readonly ExtractedRecordV2[];
+  readonly extracted_records_hash: string; readonly integrity_hash: string;
 }
 export interface SOVDiscoveryEvidence {
   readonly scope: DiscoverySupportScope;
@@ -23,12 +40,13 @@ export interface SOVDiscoveryEvidence {
     readonly sha256: string; readonly byte_length: number; readonly content_type: string };
   readonly acquisition: { readonly acquisition_run_id: string; readonly status: string;
     readonly integrity_hash: string; readonly complete: boolean };
+  readonly extraction_derivation?: DiscoveryExtractionDerivation;
   readonly source_reference: { readonly source_definition: DiscoverySourceReference;
     readonly endpoint: DiscoverySourceReference; readonly admission: DiscoverySourceReference;
     readonly allowlist: DiscoverySourceReference; readonly authority_level: "OFFICIAL" | "AUTHORIZED" };
 }
 export interface SOVDiscoverySupportCommand {
-  readonly schema_version: typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION | typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2 | typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3;
+  readonly schema_version: typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION | typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2 | typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3 | typeof SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4;
   readonly sov_id: SourceOccurrenceVersionId;
   readonly snapshot_id: Snapshot["snapshot_id"];
   readonly extracted_record_id: ExtractedRecordV2["extracted_record_id"];
@@ -40,6 +58,10 @@ export interface SOVDiscoverySupport {
   readonly scope: DiscoverySupportScope;
   readonly source_role: TrustedSourceOccurrenceRole;
   readonly source_reference: SOVDiscoveryEvidence["source_reference"];
+  readonly extraction_derivations?: {
+    readonly original: DiscoveryDerivationReference | null;
+    readonly next: DiscoveryDerivationReference | null;
+  };
   readonly target: { readonly source_definition_id: string; readonly endpoint_id: string;
     readonly source_occurrence_id: string; readonly occurrence_identity_hash: string;
     readonly occurrence_identity_basis_hash: string; readonly sov_id: SourceOccurrenceVersionId;
@@ -72,13 +94,18 @@ export class SOVDiscoverySupportError extends Error {
     super(message); this.name = "SOVDiscoverySupportError";
   }
 }
+interface DiscoveryDerivationReference {
+  readonly derivation_id: string;
+  readonly integrity_hash: string;
+}
 
 export function validateDiscoveryEvidence(evidence: SOVDiscoveryEvidence, scope: DiscoverySupportScope) {
   const extractionKeys = new Set(["extractor_name", "extractor_version", "schema_version", "extracted_at"]);
   if (Object.keys(evidence.extracted_record.extraction).some((key) => !extractionKeys.has(key))) {
     throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "Unproven parser/adapter contract extension");
   }
-  if (evidence.scope !== scope || evidence.acquisition.status !== "SUCCESS" || !evidence.acquisition.complete
+  const originalComplete = evidence.acquisition.status === "SUCCESS" && evidence.acquisition.complete;
+  if (evidence.scope !== scope || (evidence.extraction_derivation ? !validExtractionDerivation(evidence) : !originalComplete)
       || evidence.snapshot.transport_status !== "SUCCESS") {
     throw new SOVDiscoverySupportError("EVIDENCE_BLOCKED", "Discovery scope, acquisition or extraction completeness is invalid");
   }
@@ -104,9 +131,52 @@ export function validateDiscoveryEvidence(evidence: SOVDiscoveryEvidence, scope:
   return prepareSourceOccurrenceMaterialization(evidence.endpoint, evidence.extracted_record, evidence.snapshot);
 }
 
+function validExtractionDerivation(evidence: SOVDiscoveryEvidence) {
+  const proof = evidence.extraction_derivation;
+  if (!proof) return false;
+  const { integrity_hash, derivation_id, ...content } = proof;
+  return proof.schema_version === "supporting-extraction-derivation/1.0.0"
+    && derivation_id === `supporting-extraction:${canonicalHash(content)}`
+    && integrity_hash === canonicalHash({ ...content, derivation_id })
+    && proof.outcome === "COMPLETE" && proof.failure_code === null
+    && ["SUCCESS", "FAILED"].includes(evidence.acquisition.status) && !evidence.acquisition.complete
+    && proof.original.acquisition_status === evidence.acquisition.status
+    && proof.original.acquisition_run_id === evidence.acquisition.acquisition_run_id
+    && proof.original.acquisition_bundle_hash === evidence.acquisition.integrity_hash
+    && proof.original.extraction_status === "FAILED"
+    && proof.original.snapshot_id === evidence.snapshot.snapshot_id
+    && proof.original.snapshot_canonical_hash === canonicalHash(evidence.snapshot)
+    && proof.original.raw_blob_id === evidence.raw_blob.raw_blob_id
+    && proof.original.raw_sha256 === evidence.raw_blob.sha256
+    && /^[a-f0-9]{64}$/u.test(proof.original.raw_manifest_hash)
+    && proof.original.exact_endpoint === evidence.endpoint.locator
+    && proof.original.source_definition_id === evidence.endpoint.source_definition_id
+    && proof.original.recruitment_endpoint_id === evidence.endpoint.recruitment_endpoint_id
+    && proof.parser.adapter_key === evidence.endpoint.adapter_key
+    && proof.parser.extractor_name === evidence.extracted_record.extraction.extractor_name
+    && proof.parser.extractor_version === "1.1.0"
+    && proof.parser.extractor_version === evidence.extracted_record.extraction.extractor_version
+    && Number.isFinite(Date.parse(proof.derived_at))
+    && Date.parse(proof.derived_at) >= Date.parse(evidence.snapshot.observed_at)
+    && evidence.snapshot.response_metadata.http_status === 200
+    && proof.extracted_records.length === 1
+    && proof.extracted_records_hash === canonicalHash(proof.extracted_records)
+    && canonicalSerialize(proof.extracted_records[0]) === canonicalSerialize(evidence.extracted_record)
+    && ["source_definition", "endpoint", "admission", "allowlist"].every(key =>
+      canonicalSerialize(proof.source_references[key as keyof typeof proof.source_references])
+        === canonicalSerialize(evidence.source_reference[key as keyof Pick<SOVDiscoveryEvidence["source_reference"], "source_definition" | "endpoint" | "admission" | "allowlist">]));
+}
+
 export function validatedDiscoverySupport(original: TrustedSourceOccurrenceArtifact, first: SOVDiscoveryEvidence,
   next: SOVDiscoveryEvidence, scope: DiscoverySupportScope,
   contractVersion: SOVDiscoverySupportCommand["schema_version"] = SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION): SOVDiscoverySupport {
+  const hasDerivation = !!(first.extraction_derivation || next.extraction_derivation);
+  if (hasDerivation && contractVersion !== SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4) {
+    throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "Derived extraction rediscovery requires a separately sealed derivation reference");
+  }
+  if (!hasDerivation && contractVersion === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4) {
+    throw new SOVDiscoverySupportError("REVIEW_REQUIRED", "Derived support contract requires independently verified derivation evidence");
+  }
   const originalPrepared = validateDiscoveryEvidence(first, scope);
   const prepared = validateDiscoveryEvidence(next, scope);
   same(first.endpoint, original.endpoint, "Original endpoint proof");
@@ -148,6 +218,9 @@ export function validatedDiscoverySupport(original: TrustedSourceOccurrenceArtif
   const payload = {
     schema_version: contractVersion, scope, source_role: original.source_role,
     source_reference: structuredClone(next.source_reference),
+    ...(contractVersion === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4 ? {
+      extraction_derivations: { original: derivationReference(first), next: derivationReference(next) }
+    } : {}),
     target: { source_definition_id: original.endpoint.source_definition_id,
       endpoint_id: original.endpoint.recruitment_endpoint_id, source_occurrence_id: original.occurrence.source_occurrence_id,
       occurrence_identity_hash: original.occurrence.identity_hash,
@@ -176,11 +249,16 @@ export function validatedDiscoverySupport(original: TrustedSourceOccurrenceArtif
 
 export function assertSOVDiscoverySupportIntegrity(support: SOVDiscoverySupport) {
   const { integrity_hash: integrityHash, ...payload } = support;
-  if (![SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3].includes(support.schema_version)
+  if (![SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V2, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3, SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4].includes(support.schema_version)
       || support.equivalence.verification_contract_version !== support.schema_version
       || (support.schema_version !== SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3 && !!support.equivalence.resource_equivalence)
+      || (support.schema_version === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4
+        ? !validDerivationReferences(support.extraction_derivations)
+        : support.extraction_derivations !== undefined)
       || (support.schema_version === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION
         ? support.equivalence.result !== "VERIFIED_IDENTICAL" || !!support.equivalence.raw_equivalence
+        : support.schema_version === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4
+          ? support.equivalence.result !== "VERIFIED_IDENTICAL" || !!support.equivalence.raw_equivalence
         : support.schema_version === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V3
           ? support.equivalence.result !== "VERIFIED_BUSINESS_EQUIVALENT" || !!support.equivalence.raw_equivalence
             || !validHaierProof(support.equivalence.resource_equivalence, support.discovery.raw_sha256)
@@ -299,7 +377,20 @@ function discoverySupportId(support: Omit<SOVDiscoverySupport, "support_id" | "i
   return `sov-discovery-support:${canonicalHash({ schema_version: support.schema_version, scope: support.scope,
     source_definition_id: support.target.source_definition_id, endpoint_id: support.target.endpoint_id,
     occurrence_id: support.target.source_occurrence_id, sov_id: support.target.sov_id,
-    snapshot_id: support.discovery.snapshot_id, extracted_record_id: support.discovery.extracted_record_id })}`;
+    snapshot_id: support.discovery.snapshot_id, extracted_record_id: support.discovery.extracted_record_id,
+    ...(support.schema_version === SOV_DISCOVERY_SUPPORT_SCHEMA_VERSION_V4
+      ? { extraction_derivations: support.extraction_derivations } : {}) })}`;
+}
+function derivationReference(evidence: SOVDiscoveryEvidence): DiscoveryDerivationReference | null {
+  const proof = evidence.extraction_derivation;
+  return proof ? { derivation_id: proof.derivation_id, integrity_hash: proof.integrity_hash } : null;
+}
+function validDerivationReferences(value: SOVDiscoverySupport["extraction_derivations"]) {
+  if (!value || Object.keys(value).sort().join(",") !== "next,original" || (!value.original && !value.next)) return false;
+  return [value.original, value.next].every(reference => reference === null || (reference
+    && Object.keys(reference).sort().join(",") === "derivation_id,integrity_hash"
+    && /^supporting-extraction:[a-f0-9]{64}$/u.test(reference.derivation_id)
+    && /^[a-f0-9]{64}$/u.test(reference.integrity_hash)));
 }
 function extractionDescriptor(evidence: SOVDiscoveryEvidence) {
   return { adapter_key: evidence.endpoint.adapter_key, extractor_name: evidence.extracted_record.extraction.extractor_name,

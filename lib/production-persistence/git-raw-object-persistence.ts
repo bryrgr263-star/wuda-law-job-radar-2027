@@ -12,6 +12,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  AdapterExtractionError,
   assertTrustedRestorationExecution,
   type TrustedChainCommand,
   type TrustedRestorationExecution,
@@ -39,8 +40,11 @@ import {
 } from "./contracts";
 import { evaluateSourceAutomationPermission } from "../application/source-admission";
 import type { SOVDiscoveryEvidence } from "../ingestion/normalization/source-discovery-support";
-import { isExtractedRecordV2 } from "../ingestion/normalization/extracted-record-identity";
+import { createExtractedRecordV2, isExtractedRecordV2 } from "../ingestion/normalization/extracted-record-identity";
 import { ProductionRawObjectBoundary } from "./raw-object-boundary";
+import { GitSourceRegistryPersistence } from "./git-source-registry-persistence";
+import { ChnenergySupportingEvidenceAdapter } from "../production-sources/chnenergy-supporting-evidence";
+import type { ExtractedRecordV2 } from "../ingestion/domain";
 
 export const GIT_RAW_STATE_SCHEMA_VERSION = "git-raw-state/1.0.0" as const;
 export const GIT_RAW_RECOMMENDED_OBJECT_BYTES = 25 * 1024 * 1024;
@@ -132,6 +136,34 @@ interface LoadedRawState {
 interface ProposedFiles {
   readonly immutable: ReadonlyMap<string, Uint8Array>;
   readonly mutable: ReadonlyMap<string, Uint8Array>;
+}
+
+export interface SupportingExtractionDerivation {
+  readonly schema_version: "supporting-extraction-derivation/1.0.0";
+  readonly derivation_id: string;
+  readonly original: {
+    readonly acquisition_run_id: string;
+    readonly acquisition_bundle_hash: string;
+    readonly acquisition_status: AcquisitionPersistenceBundle["acquisition_run"]["status"];
+    readonly extraction_status: "FAILED";
+    readonly snapshot_id: string;
+    readonly snapshot_canonical_hash: string;
+    readonly raw_blob_id: string;
+    readonly raw_manifest_hash: string;
+    readonly raw_sha256: string;
+    readonly exact_endpoint: string;
+    readonly source_definition_id: string;
+    readonly recruitment_endpoint_id: string;
+  };
+  readonly source_references: Readonly<Record<"source_definition" | "endpoint" | "admission" | "allowlist" | "adapter",
+    { readonly artifact_id: string; readonly integrity_hash: string }>>;
+  readonly parser: { readonly adapter_key: string; readonly extractor_name: string; readonly extractor_version: "1.1.0" };
+  readonly derived_at: string;
+  readonly outcome: "COMPLETE" | "FAILED";
+  readonly failure_code: string | null;
+  readonly extracted_records: readonly ExtractedRecordV2[];
+  readonly extracted_records_hash: string;
+  readonly integrity_hash: string;
 }
 
 export class GitRawObjectPersistence implements
@@ -291,6 +323,227 @@ PrivateRawObjectStorage, ProductionSourceFactRepository {
 
   async listVerifiedAcquisitions() {
     return structuredClone(this.#loadState(this.#headCommit()).acquisitions);
+  }
+
+  async appendSupportingExtractionDerivation(input: {
+    readonly acquisition_run_id: string;
+    readonly expected_parent: string;
+    readonly derived_at: string;
+  }): Promise<SupportingExtractionDerivation> {
+    if (!input || Object.keys(input).sort().join(",") !== "acquisition_run_id,derived_at,expected_parent"
+      || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/u.test(input.expected_parent)
+      || this.#headCommit() !== input.expected_parent) throw integrity("Supporting derivation input or HEAD is invalid");
+    if (this.#gitText(["status", "--porcelain=v1"]).trim()) throw integrity("Supporting derivation requires a clean worktree");
+    this.#assertRemoteExpectedParent(input.expected_parent);
+    const state = this.#loadState(input.expected_parent);
+    const artifact = await this.#deriveSupportingExtraction(input.expected_parent, state.acquisitions, input.acquisition_run_id, input.derived_at);
+    const existing = await this.#readSupportingDerivations(input.expected_parent, state.acquisitions);
+    const prior = existing.find(value => value.original.acquisition_run_id === input.acquisition_run_id);
+    if (prior) {
+      if (canonicalSerialize(prior) !== canonicalSerialize(artifact)) {
+        throw new ProductionPersistenceError("COLLISION", "Supporting derivation already exists for this acquisition/parser");
+      }
+      if (this.#headCommit() !== input.expected_parent || this.#gitText(["status", "--porcelain=v1"]).trim()) {
+        throw integrity("Supporting derivation reuse HEAD or worktree changed");
+      }
+      this.#assertRemoteExpectedParent(input.expected_parent);
+      return structuredClone(prior);
+    }
+    if (this.#headCommit() !== input.expected_parent || this.#gitText(["status", "--porcelain=v1"]).trim()) {
+      throw integrity("Supporting derivation HEAD or worktree changed");
+    }
+    const relativePath = this.#supportingDerivationPath(artifact.derivation_id);
+    const absolutePath = this.#absolutePath(relativePath);
+    mkdirSync(path.dirname(absolutePath), { recursive: true });
+    const artifactBytes = canonicalBytes(artifact);
+    if (artifactBytes.byteLength > this.#maxObjectBytes) throw integrity("Supporting derivation exceeds the Git object limit");
+    writeFileSync(absolutePath, artifactBytes, { flag: "wx" });
+    this.#gitText(["add", "--", relativePath]);
+    if (this.#gitText(["diff", "--cached", "--name-only"]).trim() !== relativePath
+      || this.#headCommit() !== input.expected_parent) throw integrity("Supporting derivation staging or parent changed");
+    this.#gitText(["-c", "user.name=Trusted Raw Persistence", "-c", "user.email=trusted-raw@invalid.local",
+      "commit", "--no-gpg-sign", "-m", `trusted-raw: supporting extraction ${artifact.derivation_id}`]);
+    const head = this.#headCommit();
+    if (this.#gitText(["rev-parse", `${head}^`]).trim() !== input.expected_parent) throw integrity("Supporting derivation parent changed");
+    if (this.#remote) {
+      this.#assertRemoteExpectedParent(input.expected_parent);
+      this.#gitText(["push", "--porcelain", this.#remote.name, `${head}:refs/heads/${this.#remote.branch}`]);
+      if (this.#remoteHead() !== head) throw integrity("Supporting derivation remote readback changed");
+    }
+    const fresh = new GitRawObjectPersistence({ repository_path: this.#repositoryPath, root_path: this.#rootPath });
+    const verified = await fresh.readSupportingExtractionDerivation(artifact.derivation_id);
+    if (!verified || canonicalSerialize(verified) !== canonicalSerialize(artifact)
+      || canonicalSerialize(await fresh.listVerifiedAcquisitions()) !== canonicalSerialize(state.acquisitions)
+      || this.#headCommit() !== head || this.#gitText(["status", "--porcelain=v1"]).trim()) {
+      throw integrity("Supporting derivation fresh readback failed");
+    }
+    this.#assertRemoteExpectedParent(head);
+    return structuredClone(verified);
+  }
+
+  async listVerifiedSupportingExtractionDerivations(): Promise<readonly SupportingExtractionDerivation[]> {
+    const commit = this.#headCommit();
+    const state = this.#loadState(commit);
+    return structuredClone(await this.#readSupportingDerivations(commit, state.acquisitions));
+  }
+
+  async readSupportingExtractionDerivation(derivationId: string): Promise<SupportingExtractionDerivation | null> {
+    this.#supportingDerivationPath(derivationId);
+    const matches = (await this.listVerifiedSupportingExtractionDerivations()).filter(value => value.derivation_id === derivationId);
+    if (matches.length > 1) throw integrity("Supporting derivation identity is ambiguous");
+    return matches[0] ?? null;
+  }
+
+  #supportingDerivationPath(derivationId: string) {
+    if (!/^supporting-extraction:[a-f0-9]{64}$/u.test(derivationId)) throw integrity("Supporting derivation ID is invalid");
+    return `${this.#rootPath}/supporting-extraction-derivations/${derivationId.split(":")[1]}.json`;
+  }
+
+  async #deriveSupportingExtraction(commit: string, acquisitions: readonly AcquisitionPersistenceBundle[], acquisitionId: string, derivedAt: string): Promise<SupportingExtractionDerivation> {
+    const matches = acquisitions.filter(value => value.acquisition_run.acquisition_run_id === acquisitionId);
+    if (matches.length !== 1) throw integrity("Supporting derivation acquisition is missing or ambiguous");
+    const bundle = matches[0]!;
+    const manifest = bundle.raw_blob_manifest;
+    const snapshot = bundle.snapshot;
+    const run = bundle.acquisition_run;
+    const timestamp = Date.parse(derivedAt);
+    if (!Number.isFinite(timestamp) || timestamp > Date.now() || timestamp < Date.parse(run.completed_at)
+      || !Number.isFinite(Date.parse(run.started_at)) || !Number.isFinite(Date.parse(run.completed_at))
+      || Date.parse(run.completed_at) < Date.parse(run.started_at)
+      || snapshot.observed_at !== run.completed_at
+      || !manifest || snapshot.transport_status !== "SUCCESS" || snapshot.response_metadata.http_status !== 200
+      || run.result_metadata.transport_status !== "SUCCESS" || run.result_metadata.extraction_status !== "FAILED"
+      || run.result_metadata.extracted_record_count !== 0 || bundle.extracted_records.length !== 0
+      || !["SUCCESS", "FAILED"].includes(run.status)
+      || acquisitions.filter(value => value.snapshot.snapshot_id === snapshot.snapshot_id).length !== 1
+      || snapshot.request_metadata.method !== "GET" || run.request_metadata.method !== "GET"
+      || run.request_metadata.locator !== snapshot.request_metadata.locator
+      || canonicalSerialize(run.request_metadata.parameters) !== canonicalSerialize(snapshot.request_metadata.parameters)) {
+      throw new ProductionPersistenceError("EVIDENCE_BLOCKED", "Supporting derivation requires retained successful transport and failed extraction");
+    }
+    const repository = new GitSourceRegistryPersistence({ repository_path: this.#repositoryPath });
+    if (repository.readCommittedHead() !== commit) throw integrity("Supporting derivation source HEAD changed");
+    const versions = await repository.listVersions();
+    versions.forEach(assertSourcePersistenceVersion);
+    const exact = (id: string) => {
+      const found = versions.filter(value => value.artifact_id === id);
+      if (found.length !== 1) throw integrity("Supporting derivation source reference is missing or ambiguous");
+      return found[0]!;
+    };
+    const endpointVersion = exact(run.endpoint_artifact_id);
+    const admissionVersion = exact(run.source_admission_artifact_id);
+    const allowlistVersion = exact(run.allowlist_artifact_id);
+    if (endpointVersion.artifact.kind !== "RECRUITMENT_ENDPOINT" || admissionVersion.artifact.kind !== "SOURCE_ADMISSION"
+      || allowlistVersion.artifact.kind !== "OFFICIAL_ENDPOINT_ALLOWLIST") throw integrity("Supporting derivation source reference kinds are invalid");
+    const endpoint = endpointVersion.artifact.payload;
+    const admission = admissionVersion.artifact.payload;
+    const allowlist = allowlistVersion.artifact.payload;
+    const definitions = versions.filter(value => value.artifact.kind === "SOURCE_DEFINITION"
+      && value.artifact.payload.source_definition_id === endpoint.source_definition_id);
+    const adapters = versions.filter(value => value.artifact.kind === "ADAPTER_REGISTRATION"
+      && value.artifact.payload.adapter_key === endpoint.adapter_key);
+    if (definitions.length !== 1 || adapters.length !== 1) throw integrity("Supporting derivation source/adapter versions are ambiguous");
+    const definitionVersion = definitions[0]!;
+    const adapterVersion = adapters[0]!;
+    if (definitionVersion.artifact.kind !== "SOURCE_DEFINITION" || adapterVersion.artifact.kind !== "ADAPTER_REGISTRATION") {
+      throw integrity("Supporting derivation source/adapter kinds are invalid");
+    }
+    const definition = definitionVersion.artifact.payload;
+    const adapter = new ChnenergySupportingEvidenceAdapter("1.1.0");
+    if (!definition.enabled || definition.authority_level !== "OFFICIAL" || !adapter.validateEndpoint(endpoint).valid
+      || endpoint.collection_config.max_items !== 1 || manifest.source_definition_id !== endpoint.source_definition_id
+      || manifest.recruitment_endpoint_id !== endpoint.recruitment_endpoint_id
+      || !evaluateSourceAutomationPermission(admission).allowed || admission.admission_decision !== "APPROVED"
+      || admission.recruitment_endpoint_id !== endpoint.recruitment_endpoint_id || admission.endpoint !== endpoint.locator
+      || admission.source_authority !== "OFFICIAL" || allowlist.authority_level !== definition.authority_level
+      || allowlist.recruitment_endpoint_artifact_id !== endpointVersion.artifact_id
+      || allowlist.source_admission_artifact_id !== admissionVersion.artifact_id
+      || adapterVersion.artifact.payload.adapter_key !== adapter.descriptor.adapter_key
+      || !adapterVersion.artifact.payload.supported_content_kinds.includes("HTML")
+      || snapshot.request_metadata.locator !== endpoint.locator
+      || [definitionVersion, endpointVersion, admissionVersion, allowlistVersion, adapterVersion].some(value =>
+        !Number.isFinite(Date.parse(value.effective_at)) || !Number.isFinite(Date.parse(value.created_at))
+        || Date.parse(value.effective_at) > Date.parse(run.started_at) || Date.parse(value.created_at) > Date.parse(run.started_at))) {
+      throw new ProductionPersistenceError("EVIDENCE_BLOCKED", "Supporting derivation source authority/bindings are invalid");
+    }
+    assertOfficialRequestAllowed(allowlist, endpoint.locator, "GET");
+    const bytes = this.#readCommittedBytes(commit, this.#objectPath(manifest.object_key));
+    verifyManifestObject(manifest, bytes);
+    let records: readonly ExtractedRecordV2[] = [];
+    let failureCode: string | null = null;
+    try {
+      const emitted = adapter.extract({ endpoint, snapshot, raw_blob: { raw_blob_id: manifest.raw_blob_id as never,
+        raw_content_sha256: manifest.raw_content_sha256 as never, byte_length: manifest.byte_length,
+        mime_type: manifest.content_type, bytes: new Uint8Array(bytes), created_at: snapshot.observed_at } });
+      if (emitted.length !== 1) throw integrity("Supporting derivation parser record count is invalid");
+      records = emitted.map(value => {
+        const { extracted_record_id, snapshot_id, ...fields } = value;
+        return createExtractedRecordV2(snapshot, { ...fields, extraction: { ...fields.extraction,
+          schema_version: `${adapter.descriptor.adapter_key}-extracted-record/2.0.0` } });
+      });
+    } catch (error) {
+      if (!(error instanceof AdapterExtractionError)) throw error;
+      failureCode = error.code;
+    }
+    const reference = (value: typeof endpointVersion) => ({ artifact_id: value.artifact_id, integrity_hash: value.integrity_hash });
+    const content = {
+      schema_version: "supporting-extraction-derivation/1.0.0" as const,
+      original: { acquisition_run_id: run.acquisition_run_id, acquisition_bundle_hash: canonicalHash(bundle),
+        acquisition_status: run.status, extraction_status: "FAILED" as const, snapshot_id: snapshot.snapshot_id,
+        snapshot_canonical_hash: canonicalHash(snapshot), raw_blob_id: manifest.raw_blob_id,
+        raw_manifest_hash: canonicalHash(manifest), raw_sha256: manifest.raw_content_sha256,
+        exact_endpoint: endpoint.locator, source_definition_id: endpoint.source_definition_id,
+        recruitment_endpoint_id: endpoint.recruitment_endpoint_id },
+      source_references: { source_definition: reference(definitionVersion), endpoint: reference(endpointVersion),
+        admission: reference(admissionVersion), allowlist: reference(allowlistVersion), adapter: reference(adapterVersion) },
+      parser: { adapter_key: adapter.descriptor.adapter_key, extractor_name: adapter.descriptor.name, extractor_version: "1.1.0" as const },
+      derived_at: derivedAt, outcome: failureCode === null ? "COMPLETE" as const : "FAILED" as const,
+      failure_code: failureCode, extracted_records: records, extracted_records_hash: canonicalHash(records)
+    };
+    const withId = { ...content, derivation_id: `supporting-extraction:${canonicalHash(content)}` };
+    if (this.#headCommit() !== commit) throw integrity("Supporting derivation HEAD changed during verification");
+    return { ...withId, integrity_hash: canonicalHash(withId) };
+  }
+
+  #supportingArtifacts(commit: string, expectedFiles?: Set<string>) {
+    const prefix = `${this.#rootPath}/supporting-extraction-derivations/`;
+    if (this.#gitText(["log", "--format=", "--name-only", "--diff-filter=D", commit, "--", prefix]).trim()) {
+      throw integrity("Supporting derivation append-only history contains deletion");
+    }
+    return this.#listCommittedFiles(commit).filter(file => file.startsWith(prefix)).map(file => {
+      const bytes = this.#readCommittedBytes(commit, file);
+      if (bytes.byteLength > this.#maxObjectBytes) throw integrity("Supporting derivation exceeds the Git object limit");
+      const artifact = decodeCanonical<SupportingExtractionDerivation>(bytes, "Supporting extraction derivation");
+      assertSealed(artifact, "Supporting extraction derivation");
+      const { integrity_hash, derivation_id, ...content } = artifact;
+      if (artifact.schema_version !== "supporting-extraction-derivation/1.0.0"
+        || derivation_id !== `supporting-extraction:${canonicalHash(content)}`
+        || file !== this.#supportingDerivationPath(derivation_id)) throw integrity("Supporting derivation content-address binding is invalid");
+      expectedFiles?.add(file);
+      return artifact;
+    });
+  }
+
+  async #readSupportingDerivations(commit: string, acquisitions: readonly AcquisitionPersistenceBundle[]) {
+    const artifacts = this.#supportingArtifacts(commit);
+    const acquisitionsSeen = new Set<string>();
+    const recordsSeen = new Set<string>();
+    for (const artifact of artifacts) {
+      if (acquisitionsSeen.has(artifact.original.acquisition_run_id)) throw integrity("Supporting derivation acquisition/parser is ambiguous");
+      acquisitionsSeen.add(artifact.original.acquisition_run_id);
+      const rebuilt = await this.#deriveSupportingExtraction(commit, acquisitions, artifact.original.acquisition_run_id, artifact.derived_at);
+      if (canonicalSerialize(rebuilt) !== canonicalSerialize(artifact)) throw integrity("Supporting derivation original bindings or parser output differ");
+      for (const record of artifact.extracted_records) {
+        const key = `${record.snapshot_id}\u0000${record.extracted_record_id}`;
+        if (recordsSeen.has(key) || acquisitions.some(bundle => bundle.extracted_records.some(value =>
+          value.snapshot_id === record.snapshot_id && value.extracted_record_id === record.extracted_record_id))) {
+          throw integrity("Supporting derivation Snapshot/record resolution is ambiguous");
+        }
+        recordsSeen.add(key);
+      }
+    }
+    if (this.#headCommit() !== commit) throw integrity("Supporting derivation read HEAD changed");
+    return artifacts;
   }
 
   prepareAtomicCommit(expectedParent: string) {
@@ -631,6 +884,7 @@ PrivateRawObjectStorage, ProductionSourceFactRepository {
     if (totalObjectBytes !== state.total_object_bytes) {
       throw integrity("Raw state object byte total is invalid");
     }
+    this.#supportingArtifacts(commit, expectedFiles);
     this.#validateCommittedLayout(commit, expectedFiles, referencedObjects);
     return {
       state_manifest: state,
@@ -966,12 +1220,18 @@ export function createRawValidatedRestorationJournal(
       if (matches.length !== 1) throw new ProductionPersistenceError("EVIDENCE_BLOCKED", "Exact discovery Snapshot is missing or ambiguous");
       const bundle = matches[0]!;
       const records = bundle.extracted_records.filter((record) => record.extracted_record_id === recordId);
-      const record = records[0];
+      const derivation = records.length === 0
+        ? await verifiedDerivedExtraction(rawPersistence, bundle, recordId) : null;
+      const record = records[0] ?? derivation?.extracted_records.find(value => value.extracted_record_id === recordId);
       const manifest = bundle.raw_blob_manifest;
-      if (records.length !== 1 || !record || !isExtractedRecordV2(record) || !manifest
-          || bundle.acquisition_run.status !== "SUCCESS"
-          || bundle.acquisition_run.result_metadata.extraction_status !== "COMPLETE"
-          || bundle.acquisition_run.result_metadata.extracted_record_count !== bundle.extracted_records.length) {
+      const originalComplete = records.length === 1 && bundle.acquisition_run.status === "SUCCESS"
+        && bundle.acquisition_run.result_metadata.extraction_status === "COMPLETE"
+        && bundle.acquisition_run.result_metadata.extracted_record_count === bundle.extracted_records.length;
+      const derivedComplete = records.length === 0 && derivation
+        && derivation.original.acquisition_run_id === bundle.acquisition_run.acquisition_run_id
+        && derivation.original.acquisition_bundle_hash === canonicalHash(bundle)
+        && derivation.original.snapshot_canonical_hash === canonicalHash(bundle.snapshot);
+      if ((!originalComplete && !derivedComplete) || !record || !isExtractedRecordV2(record) || !manifest) {
         throw new ProductionPersistenceError("EVIDENCE_BLOCKED", "Discovery acquisition/extraction completeness is not proved");
       }
       const versions = await sourceRepository.listVersions();
@@ -1021,10 +1281,11 @@ export function createRawValidatedRestorationJournal(
       const reference = (version: typeof endpointVersion) => ({ artifact_id: version.artifact_id, integrity_hash: version.integrity_hash });
       return {
         scope: "PRODUCTION", endpoint, snapshot: bundle.snapshot, extracted_record: record,
+        ...(derivation ? { extraction_derivation: derivation } : {}),
         raw_blob: { raw_blob_id: manifest.raw_blob_id, bytes: raw.bytes, sha256: manifest.raw_content_sha256,
           byte_length: manifest.byte_length, content_type: manifest.content_type },
         acquisition: { acquisition_run_id: bundle.acquisition_run.acquisition_run_id, status: bundle.acquisition_run.status,
-          integrity_hash: canonicalHash(bundle), complete: true },
+          integrity_hash: canonicalHash(bundle), complete: originalComplete },
         source_reference: { source_definition: reference(definitionVersion), endpoint: reference(endpointVersion),
           admission: reference(admissionVersion), allowlist: reference(allowlistVersion),
           authority_level: definition.authority_level === "OFFICIAL" ? "OFFICIAL" : "AUTHORIZED" }
@@ -1035,21 +1296,22 @@ export function createRawValidatedRestorationJournal(
         rawPersistence.listVerifiedAcquisitions(),
         restorationJournal.list()
       ]);
-      assertRawBindings(records, bundles);
+      await assertRawBindings(records, bundles, rawPersistence);
       return structuredClone(records);
     },
     async appendExecution(execution: TrustedRestorationExecution<TrustedChainCommand>) {
       const validated = assertTrustedRestorationExecution(execution);
       const bundles = await rawPersistence.listVerifiedAcquisitions();
-      assertRawBindings([validated.record], bundles);
+      await assertRawBindings([validated.record], bundles, rawPersistence);
       return restorationJournal.appendExecution(validated);
     }
   });
 }
 
-function assertRawBindings(
+async function assertRawBindings(
   records: readonly TrustedRestorationRecord<TrustedChainCommand>[],
-  bundles: readonly AcquisitionPersistenceBundle[]
+  bundles: readonly AcquisitionPersistenceBundle[],
+  rawPersistence: GitRawObjectPersistence
 ) {
   const snapshots = new Map(bundles.map((bundle) => [
     bundle.snapshot.snapshot_id,
@@ -1059,8 +1321,10 @@ function assertRawBindings(
     if (record.command.kind === "SOURCE_DISCOVERY_SUPPORT_VERIFY") {
       const input = record.command.input;
       const bundle = snapshots.get(input.snapshot_id);
+      const derivedRecord = bundle && !bundle.extracted_records.some(item => item.extracted_record_id === input.extracted_record_id)
+        ? await verifiedDerivedRecord(rawPersistence, bundle, input.extracted_record_id) : null;
       if (!bundle?.raw_blob_manifest || bundle.snapshot.transport_status !== "SUCCESS"
-          || !bundle.extracted_records.some((item) => item.extracted_record_id === input.extracted_record_id)) {
+          || (!derivedRecord && !bundle.extracted_records.some((item) => item.extracted_record_id === input.extracted_record_id))) {
         throw new ProductionPersistenceError("EVIDENCE_BLOCKED", "Discovery support lacks verified Raw evidence");
       }
       continue;
@@ -1070,7 +1334,7 @@ function assertRawBindings(
     const bundle = snapshots.get(snapshot.snapshot_id);
     const storedRecord = bundle?.extracted_records.find((candidate) => {
       return candidate.extracted_record_id === extractedRecord.extracted_record_id;
-    });
+    }) ?? (bundle ? await verifiedDerivedRecord(rawPersistence, bundle, extractedRecord.extracted_record_id) : null);
     if (!bundle
         || !bundle.raw_blob_manifest
         || snapshot.transport_status !== "SUCCESS"
@@ -1083,6 +1347,24 @@ function assertRawBindings(
       );
     }
   }
+}
+
+async function verifiedDerivedRecord(rawPersistence: GitRawObjectPersistence,
+  bundle: AcquisitionPersistenceBundle, recordId: string) {
+  const derivation = await verifiedDerivedExtraction(rawPersistence, bundle, recordId);
+  return derivation?.extracted_records.find(record => record.extracted_record_id === recordId) ?? null;
+}
+
+async function verifiedDerivedExtraction(rawPersistence: GitRawObjectPersistence,
+  bundle: AcquisitionPersistenceBundle, recordId: string) {
+  const matches = (await rawPersistence.listVerifiedSupportingExtractionDerivations()).filter(value =>
+    value.outcome === "COMPLETE" && value.original.snapshot_id === bundle.snapshot.snapshot_id
+    && value.original.acquisition_run_id === bundle.acquisition_run.acquisition_run_id
+    && value.original.acquisition_bundle_hash === canonicalHash(bundle)
+    && value.original.snapshot_canonical_hash === canonicalHash(bundle.snapshot)
+    && value.extracted_records.some(record => record.extracted_record_id === recordId));
+  if (matches.length !== 1) return null;
+  return matches[0]!;
 }
 
 function assertAcquisitionBundle(bundle: AcquisitionPersistenceBundle) {
