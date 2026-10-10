@@ -64,3 +64,35 @@ test("support capture rejects forged content address and link-only announcement"
     snapshot: { ...input.snapshot, raw_blob_id: `sha256:${"0".repeat(64)}` as never } }));
   assert.throws(() => adapter.extract(capture(CHNENERGY_CAMPAIGN_URL, campaign.replace('<p>TEST_ONLY 年龄条件必须保留</p>', ''))));
 });
+
+const outsideBodyCampaign = `<p class="lead text-center">国家能源投资集团有限责任公司2027年度高校毕业生统招公告</p><div id="anncTxt"><p>TEST_ONLY 年龄条件必须保留</p></div><a href="/annc/showggStationList?id=${campaignId}">招聘职位列表</a>`;
+
+test("opt-in supporting parser accepts one exact page-global link outside announcement prose", () => {
+  const adapter = new ChnenergySupportingEvidenceAdapter("1.1.0");
+  const input = capture(CHNENERGY_CAMPAIGN_URL, outsideBodyCampaign);
+  const records = adapter.extract(input);
+  assert.equal(records.length, 1);
+  assert.equal(records[0]!.extraction.extractor_version, "1.1.0");
+  assert.match(records[0]!.raw_description!.text, /年龄条件必须保留/);
+  assert.equal(records[0]!.recruitment_context, undefined);
+  assert.deepEqual(adapter.extract(input), records);
+});
+
+test("opt-in supporting parser rejects duplicate or wrong global links and empty prose", () => {
+  const adapter = new ChnenergySupportingEvidenceAdapter("1.1.0");
+  for (const html of [
+    outsideBodyCampaign + `<a href="/annc/showggStationList?id=${campaignId}">重复</a>`,
+    outsideBodyCampaign.replace(campaignId, "unapproved"),
+    outsideBodyCampaign.replace('<p>TEST_ONLY 年龄条件必须保留</p>', '<script>fake prose</script><style>fake prose</style>'),
+    outsideBodyCampaign.replace('<div id="anncTxt">', '<div>'),
+    outsideBodyCampaign + '<div id="anncTxt">重复正文</div>'
+  ]) assert.throws(() => adapter.extract(capture(CHNENERGY_CAMPAIGN_URL, html)));
+});
+
+test("default supporting parser preserves historical v1 output and rejection", () => {
+  const input = capture(CHNENERGY_CAMPAIGN_URL, campaign);
+  const historical = new ChnenergySupportingEvidenceAdapter();
+  assert.deepEqual(historical.extract(input), new ChnenergySupportingEvidenceAdapter("1.0.0").extract(input));
+  assert.equal(historical.descriptor.version, "1.0.0");
+  assert.throws(() => historical.extract(capture(CHNENERGY_CAMPAIGN_URL, outsideBodyCampaign)));
+});

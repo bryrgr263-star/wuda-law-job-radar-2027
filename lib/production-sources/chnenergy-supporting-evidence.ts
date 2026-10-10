@@ -21,8 +21,12 @@ export function chnenergySupportingEndpoint(url: string): RecruitmentEndpoint {
 }
 
 export class ChnenergySupportingEvidenceAdapter implements RecruitmentAdapter {
-  readonly descriptor = { adapter_key: CHNENERGY_SUPPORT_ADAPTER_KEY, name: "ChnenergyReviewedSupportingHtmlAdapter",
-    version: "1.0.0", supported_content_kinds: ["HTML"] as const, capabilities: ["HTML_EXTRACTION"] as const };
+  readonly descriptor;
+  constructor(version: "1.0.0" | "1.1.0" = "1.0.0") {
+    if (version !== "1.0.0" && version !== "1.1.0") throw new Error("CHNENERGY_SUPPORT_PARSER_VERSION_NOT_SUPPORTED");
+    this.descriptor = { adapter_key: CHNENERGY_SUPPORT_ADAPTER_KEY, name: "ChnenergyReviewedSupportingHtmlAdapter",
+      version, supported_content_kinds: ["HTML"] as const, capabilities: ["HTML_EXTRACTION"] as const };
+  }
   validateEndpoint(endpoint: RecruitmentEndpoint): EndpointValidationResult {
     const valid = urls.includes(endpoint.locator) && endpoint.recruitment_endpoint_id === endpointId(endpoint.locator)
       && endpoint.source_definition_id === CHNENERGY_SOURCE_ID && endpoint.adapter_key === CHNENERGY_SUPPORT_ADAPTER_KEY
@@ -59,7 +63,7 @@ export class ChnenergySupportingEvidenceAdapter implements RecruitmentAdapter {
       }
       title = clean(heading.text());
       const body = dom("#anncTxt");
-      const links = body.find("a[href]").toArray().filter(node => {
+      const links = (this.descriptor.version === "1.1.0" ? dom("a[href]") : body.find("a[href]")).toArray().filter(node => {
         try { return new URL(dom(node).attr("href")!, input.endpoint.locator).href === `https://zhaopin.chnenergy.com.cn/annc/showggStationList?id=${campaignId}`; }
         catch { return false; }
       });
