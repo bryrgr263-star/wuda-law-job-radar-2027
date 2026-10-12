@@ -16,7 +16,7 @@ Unknown evidence never implies a negative eligibility/relevance conclusion.
 | --- | --- | --- |
 | P0 Autonomous Discovery Pilot | VERIFIED | SD-023 and SD-025 bounded live windows plus independent fixed-SHA restoration PASS. Fifty untrusted clues, not fifty recruitment sources or new jobs; scheduled Discovery and useful 2027/legal yield remain unverified. |
 | P1 Production Stability | IMPLEMENTED | `9535bcb` pushed; cadence-only v4 DEFERRED and committed-source publication isolation validated offline. Natural validation remains pending. |
-| P2 National Energy Expansion | IN_PROGRESS | Authorization 2/2. Natural Run 37754305712 requested both targets and retained Raw; both failed extraction because current HTML lacks campaign/project binding. No new public job. Older never-requested/cadence notes are historical only; latest authoritative COMPLETE governs future requests. |
+| P2 National Energy Expansion | SKIPPED_BY_USER | User explicitly removed this source from current expansion on 2026-10-12. No further source-specific development, inspection, acquisition or publication work. Preserve existing evidence/history; the separate unresolved-request safety incident is not source expansion. Existing production grants are not automatically revoked by this administrative record. |
 | P3 Real Source Expansion | NOT_STARTED | Existing official candidates first; never invent 2027/position binding. |
 | P4 Capability A | DEFERRED_WITH_EVIDENCE | This bounded National Energy HTML/query recovery does not require dynamic content. Future candidate demand is not denied; implement only after a concrete recurring admitted-source blocker. |
 | P5 Capability C | DEFERRED_WITH_EVIDENCE | No PDF extraction is required for the current exact HTML targets. Text-layer PDF only when demonstrated necessary; no OCR. |
@@ -29,6 +29,34 @@ Unknown evidence never implies a negative eligibility/relevance conclusion.
 | P12 Final E2E | NOT_STARTED | End-to-end real evidence, fresh restore, privacy and regression gates. |
 
 ## Execution notes
+
+- 2026-10-12 approved RESERVE-only incident safety closure completed and
+  published as normal fast-forward main 7eddd52e562d009a6effb8c1cfd86e06ade3cb02.
+  Thirty focused recovery checks passed; actual local append-only recovery
+  and default network-guarded full root replay passed before publication.
+  Pending RESERVE is closed honestly as FENCED_UNKNOWN with a FAILED/NOT_RUN
+  outcome, not a manufactured HTTP completion. The full 86400-second legal
+  target interval starts at 2026-10-12T05:18:08.636Z. Existing four positions
+  restore unchanged; NEW PUBLIC WEBSITE JOBS remains zero for this work.
+  National Energy expansion remains skipped. No recurring Codex task exists.
+
+- 2026-10-12 latest user decision supersedes conditional National Energy
+  continuation: skip its expansion outright because the user already knows
+  its recruitment. Do not resume it automatically. Existing historical facts
+  and grants remain immutable; this note does not itself disable the natural
+  Scheduler. Only the separately approved incident-limited safety closure may
+  continue to avoid blocking unrelated sources. Recurring Codex follow-up has
+  been deleted at the user's request and must not be recreated automatically.
+
+- 2026-10-12 user priority override: do not let National Energy monopolize
+  source expansion if its remaining source-specific blockers persist. Finish
+  only the incident-limited safety closure needed to release the existing
+  pending request; this is not permission to bypass the global request gate.
+  Then prioritize already-discovered, approved-scope official static HTML
+  sources with explicit 2027 and legal-position evidence. Record and skip
+  login, unavailable binding or new-capability blockers rather than expand
+  National Energy implementation indefinitely. Preserve its evidence and
+  authorizations without duplicate acquisition or invented positions.
 
 - 2026-10-06: clean starting worktree and expected HEAD observed. Normal HTTPS fetch started; no production requests dispatched. No closed-module tests repeated.
 - Ruling: a live HTTP response must never be represented as OFFLINE_FIXTURE. Extend the existing root's transport boundary minimally before a real Pilot, retaining the same catalog, budget and admission validator.
