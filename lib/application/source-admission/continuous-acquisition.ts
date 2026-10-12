@@ -80,7 +80,7 @@ export interface ContinuousRecord {
   readonly integrity_hash: string;
 }
 export type ContinuousContextResolver = (bindings: ContinuousBindings) => ContinuousSourceContext;
-export type ContinuousFencingVerifier = (attempt: ContinuousRecord, evidence: Readonly<Record<string, unknown>>) => boolean;
+export type ContinuousFencingVerifier = (attempt: ContinuousRecord, evidence: Readonly<Record<string, unknown>>, closing_at?: string) => boolean;
 export interface ContinuousIssueCommand {
   readonly effective_from: string;
   readonly min_interval_seconds: number;
@@ -245,7 +245,7 @@ export function closeContinuousRecord(records: readonly ContinuousRecord[], atte
   const pending = pendingContinuousAttempt(records);
   if (!pending || pending.payload.attempt_id !== attemptId || pending.payload.holder !== holder) throw new Error("GATE_HOLDER_MISMATCH");
   if (continuousTime(at) < continuousTime(text(pending.payload.at))) throw new Error("CLOCK_OR_TIMESTAMP_INVALID");
-  if (outcome === "FENCED_UNKNOWN" && (!evidence || !verifier?.(pending, evidence))) throw new Error("FENCING_NOT_VERIFIED");
+  if (outcome === "FENCED_UNKNOWN" && (!evidence || !verifier?.(pending, evidence, at))) throw new Error("FENCING_NOT_VERIFIED");
   return sealContinuousRecord(records, outcome === "FENCED_UNKNOWN" ? "RECOVER" : "COMPLETE", attemptId,
     { attempt_id: attemptId, holder, target_key: pending.payload.target_key, at, outcome,
       min_interval_seconds: pending.payload.min_interval_seconds, ...(outcome === "FENCED_UNKNOWN" ? { fencing_evidence: evidence } : {}) });

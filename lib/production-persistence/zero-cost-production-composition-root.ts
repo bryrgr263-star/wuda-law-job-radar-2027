@@ -266,7 +266,8 @@ export function bootstrapZeroCostProductionCompositionRoot(
     throw new Error("CONTROLLED_TRANSPORT_NOT_ALLOWED");
   }
 
-  async function control(command: (owner: InMemorySourceAdmissionRegister, versions: readonly SourcePersistenceVersion[]) => ContinuousRecord) {
+  async function control(command: (owner: InMemorySourceAdmissionRegister, versions: readonly SourcePersistenceVersion[],
+    fencingVerifier: ContinuousFencingVerifier) => ContinuousRecord) {
     const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), "source-control-"));
     const checkoutPath = path.join(temporaryRoot, "checkout");
     try {
@@ -277,7 +278,7 @@ export function bootstrapZeroCostProductionCompositionRoot(
         source_admission_register: owner, continuous_records: repository.listContinuousRecords(), fencing_verifier: options.continuous_fencing_verifier });
       const parent = repository.readCommittedHead();
       repository.assertAuthoritativeHead(branch, parent);
-      const record = command(owner, await repository.listVersions());
+      const record = command(owner, await repository.listVersions(), repository.continuousFencingVerifier);
       const grant = record.payload.grant ?? owner.resolveContinuousAuthorization(record.payload.authorization_id
         ?? pendingContinuousAttempt(owner.listContinuousRecords())?.payload.authorization_id ?? "").grant;
       if (grant.canonical_payload.scope !== continuousScope) throw new Error("AUTHORIZATION_SCOPE_MISMATCH");
@@ -326,10 +327,10 @@ export function bootstrapZeroCostProductionCompositionRoot(
     },
 
     async recoverContinuousAttempt(input: { readonly attempt_id: string; readonly fencing_evidence: Readonly<Record<string, unknown>> }) {
-      return control(owner => {
+      return control((owner, _versions, fencingVerifier) => {
         const pending = pendingContinuousAttempt(owner.listContinuousRecords());
         if (!pending || pending.payload.attempt_id !== input.attempt_id) throw new Error("PENDING_ATTEMPT_MISSING");
-        return owner.closeContinuousAttempt(input.attempt_id, pending.payload.holder!, now(), "FENCED_UNKNOWN", input.fencing_evidence, options.continuous_fencing_verifier);
+        return owner.closeContinuousAttempt(input.attempt_id, pending.payload.holder!, now(), "FENCED_UNKNOWN", input.fencing_evidence, fencingVerifier);
       });
     },
 
@@ -1436,6 +1437,22 @@ function assertCommittedIntentCoverage(intents: readonly SourceExecutionRequestI
   outcomes: readonly SourceExecutionOutcome[]) {
   const byExecution = new Map(intents.map(intent => [intent.source_execution_id, intent]));
   for (const outcome of outcomes) {
+    if (outcome.outcome_kind === "FENCED_UNKNOWN_TERMINATION") {
+      const intent = byExecution.get(outcome.source_execution_id);
+      if (!intent || intent.integrity_hash !== outcome.fenced_recovery?.intent_hash
+        || intent.source_definition_id !== outcome.source_definition_id
+        || intent.recruitment_endpoint_id !== outcome.recruitment_endpoint_id
+        || intent.source_admission_artifact_id !== outcome.source_admission_artifact_id
+        || intent.targets.length !== 1
+        || canonicalSerialize(outcome.source_version_ids) !== canonicalSerialize([
+          intent.source_artifact_id, intent.endpoint_artifact_id,
+          intent.source_admission_artifact_id, intent.targets[0]!.allowlist_artifact_id])
+        || canonicalSerialize(outcome.continuous_authorization_ids)
+          !== canonicalSerialize([intent.targets[0]!.authorization_id])) {
+        throw new Error("FENCED_RECOVERY_INTENT_COVERAGE_MISMATCH");
+      }
+      continue;
+    }
     if (outcome.outcome_kind === "RECOVERY_TERMINATION") {
       const intent = byExecution.get(outcome.source_execution_id);
       if (!intent || intent.integrity_hash !== outcome.recovery?.intent_hash) throw new Error("RECOVERY_INTENT_COVERAGE_MISMATCH");

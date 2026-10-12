@@ -3,7 +3,9 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { canonicalDeserialize, canonicalHash, canonicalSerialize } from "../ingestion/normalization/canonical-artifact-registry";
-import { pendingContinuousAttempt, type ContinuousRecord } from "../application/source-admission/continuous-acquisition";
+import { assertContinuousRecord, pendingContinuousAttempt, type ContinuousRecord } from "../application/source-admission/continuous-acquisition";
+import { validateIncidentContinuousFencingEvidence, type IncidentContinuousFencingContext } from "./continuous-fencing-evidence";
+import { createGitIncidentContinuousFencingVerifier, readGitIncidentContinuousFencingContext } from "./git-incident-fencing-context";
 import { readSourceExecutionRequestIntents, type SourceExecutionRequestIntent } from "./source-execution-request-intent";
 import type { AcquisitionPersistenceBundle, RawBlobManifest, SourcePersistenceVersion } from "./contracts";
 import { isClosedOfficialJsonEmpty, type TrustedAcquisitionClassification } from "./trusted-acquisition-evidence";
@@ -50,7 +52,8 @@ export type SourceExecutionStatus =
 
 export interface SourceExecutionOutcome {
   readonly schema_version: typeof SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION | typeof MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION
-    | typeof DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION | typeof RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION;
+    | typeof DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION | typeof RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION
+    | "production-source-execution-outcome/5.0.0";
   readonly source_execution_id: string;
   readonly status: SourceExecutionStatus;
   readonly trusted_chain_status: "COMMITTED" | "NOT_RUN" | "FAILED";
@@ -72,9 +75,79 @@ export interface SourceExecutionOutcome {
   readonly extracted_record_ids: readonly string[];
   readonly request_plan?: SourceExecutionRequestPlan;
   readonly trusted_chain_failure?: TrustedChainFailureDiagnostic;
-  readonly outcome_kind?: "RECOVERY_TERMINATION";
+  readonly outcome_kind?: "RECOVERY_TERMINATION" | "FENCED_UNKNOWN_TERMINATION";
   readonly recovery?: EvidenceLossRecoveryProof;
+  readonly fenced_recovery?: FencedUnknownSourceExecutionOutcome["fenced_recovery"];
   readonly integrity_hash: string;
+}
+
+export interface FencedUnknownSourceOutcomeContext {
+  readonly intent: SourceExecutionRequestIntent;
+  readonly reserve: ContinuousRecord;
+  readonly recovered: ContinuousRecord;
+  readonly fencing_context: IncidentContinuousFencingContext;
+  readonly expected_parent: string;
+}
+
+export interface FencedUnknownSourceExecutionOutcome extends Omit<SourceExecutionOutcome,
+  "schema_version" | "outcome_kind" | "recovery"> {
+  readonly schema_version: "production-source-execution-outcome/5.0.0";
+  readonly outcome_kind: "FENCED_UNKNOWN_TERMINATION";
+  readonly fenced_recovery: {
+    readonly actual_send: "UNKNOWN";
+    readonly intent_hash: string;
+    readonly reserve: { readonly record_id: string; readonly integrity_hash: string };
+    readonly recovered: { readonly record_id: string; readonly integrity_hash: string };
+    readonly fencing_evidence_hash: string;
+    readonly approval_reference: string;
+  };
+}
+
+export function createFencedUnknownSourceExecutionOutcome(context: FencedUnknownSourceOutcomeContext): FencedUnknownSourceExecutionOutcome {
+  if (!context || Object.keys(context).sort().join(",") !== "expected_parent,fencing_context,intent,recovered,reserve"
+    || !context.intent || !context.reserve || !context.recovered || !context.fencing_context) {
+    throw new Error("FENCED_SOURCE_OUTCOME_CONTEXT_REQUIRED");
+  }
+  const { intent, reserve, recovered, fencing_context: fencingContext, expected_parent: parent } = context;
+  assertContinuousRecord(reserve);
+  assertContinuousRecord(recovered);
+  const proof = validateIncidentContinuousFencingEvidence(recovered.payload.fencing_evidence, fencingContext);
+  const { integrity_hash: intentHash, ...intentContent } = intent;
+  if (!/^[a-f0-9]{40}$/u.test(parent) || intentHash !== canonicalHash(intentContent)
+    || reserve.kind !== "RESERVE" || recovered.kind !== "RECOVER" || recovered.payload.outcome !== "FENCED_UNKNOWN"
+    || recovered.sequence <= reserve.sequence || recovered.payload.attempt_id !== reserve.payload.attempt_id
+    || recovered.payload.holder !== reserve.payload.holder || recovered.payload.target_key !== reserve.payload.target_key
+    || recovered.payload.min_interval_seconds !== reserve.payload.min_interval_seconds
+    || proof.reserve_integrity_hash !== reserve.integrity_hash || proof.intent_integrity_hash !== intentHash
+    || proof.source_execution_id !== intent.source_execution_id || proof.holder !== reserve.payload.holder
+    || canonicalSerialize(fencingContext.reserve) !== canonicalSerialize(reserve)
+    || intent.targets.length !== 1 || intent.targets[0]!.authorization_id !== reserve.payload.authorization_id
+    || !Number.isFinite(Date.parse(recovered.payload.at!))
+    || Date.parse(recovered.payload.at!) < Date.parse(proof.approval.approved_at)
+    || Date.parse(recovered.payload.at!) < Date.parse(reserve.payload.at!)) {
+    throw new Error("FENCED_SOURCE_OUTCOME_UPSTREAM_MISMATCH");
+  }
+  const content = {
+    schema_version: "production-source-execution-outcome/5.0.0" as const,
+    outcome_kind: "FENCED_UNKNOWN_TERMINATION" as const,
+    source_execution_id: intent.source_execution_id, status: "FAILED" as const,
+    trusted_chain_status: "NOT_RUN" as const, source_definition_id: intent.source_definition_id,
+    recruitment_endpoint_id: intent.recruitment_endpoint_id,
+    source_version_ids: [intent.source_artifact_id, intent.endpoint_artifact_id,
+      intent.source_admission_artifact_id, intent.targets[0]!.allowlist_artifact_id],
+    source_admission_artifact_id: intent.source_admission_artifact_id,
+    continuous_authorization_ids: [reserve.payload.authorization_id!], request_attempt_ids: [reserve.payload.attempt_id!],
+    expected_parent: parent, started_at: reserve.payload.at!, completed_at: recovered.payload.at!,
+    reason_codes: ["SOURCE_REQUEST_FENCED_UNKNOWN"],
+    acquisition_evidence: { status: "FAILED" as const, assessment: null, empty_validation: null,
+      prior_source_execution_id: null, raw_content_hashes: [] },
+    acquisition_run_ids: [], acquisition_bundle_hashes: [], raw_blob_ids: [], snapshot_ids: [], extracted_record_ids: [],
+    fenced_recovery: { actual_send: "UNKNOWN" as const, intent_hash: intentHash,
+      reserve: { record_id: reserve.record_id, integrity_hash: reserve.integrity_hash },
+      recovered: { record_id: recovered.record_id, integrity_hash: recovered.integrity_hash },
+      fencing_evidence_hash: proof.integrity_hash, approval_reference: proof.approval.reference }
+  };
+  return { ...content, integrity_hash: canonicalHash(content) };
 }
 
 export function sealSourceExecutionOutcome(
@@ -86,11 +159,16 @@ export function sealSourceExecutionOutcome(
   return { ...content, integrity_hash: canonicalHash(content) };
 }
 
-export function writeSourceExecutionOutcome(repositoryPath: string, outcome: SourceExecutionOutcome) {
-  assertSourceExecutionShape(outcome);
+export function writeSourceExecutionOutcome(repositoryPath: string, outcome: SourceExecutionOutcome | FencedUnknownSourceExecutionOutcome) {
+  if (outcome.schema_version === "production-source-execution-outcome/5.0.0") {
+    assertFencedUnknownSourceOutcomeShape(outcome as FencedUnknownSourceExecutionOutcome);
+  } else {
+    assertSourceExecutionShape(outcome as SourceExecutionOutcome);
+  }
   const { integrity_hash: integrityHash, ...content } = outcome;
   if (![SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION,
-    DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION].includes(outcome.schema_version)
+    DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION,
+    "production-source-execution-outcome/5.0.0"].includes(outcome.schema_version)
     || integrityHash !== canonicalHash(content)) throw new Error("Source execution outcome seal mismatch");
   const directory = path.join(repositoryPath, "production-runs", "source-executions");
   mkdirSync(directory, { recursive: true });
@@ -130,13 +208,25 @@ export async function readSourceExecutionOutcomes(
     const { integrity_hash: integrityHash, ...content } = outcome;
     if (canonicalSerialize(outcome) !== bytes
       || ![SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, MULTI_TARGET_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION,
-        DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION].includes(outcome.schema_version)
+        DIAGNOSTIC_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION, RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION,
+        "production-source-execution-outcome/5.0.0"].includes(outcome.schema_version)
       || integrityHash !== canonicalHash(content)
       || name !== `${canonicalHash({ source_execution_id: outcome.source_execution_id })}.json`
       || seen.has(outcome.source_execution_id)) {
       throw new Error(`Source execution outcome integrity mismatch: ${name}`);
     }
     seen.add(outcome.source_execution_id);
+    if (outcome.outcome_kind === "FENCED_UNKNOWN_TERMINATION") {
+      assertFencedUnknownSourceOutcomeBinding(repositoryPath, outcome as FencedUnknownSourceExecutionOutcome, versions, continuousRecords);
+      const introducingCommit = git(repositoryPath, "log", "-1", "--format=%H", "--", relativePath).trim();
+      if (!introducingCommit || git(repositoryPath, "rev-parse", `${introducingCommit}^`).trim() !== outcome.expected_parent) {
+        throw new Error("FENCED_SOURCE_OUTCOME_PARENT_MISMATCH");
+      }
+      if (acquisitions.some(bundle => bundle.acquisition_run.acquisition_run_id.startsWith(`${outcome.source_execution_id}:acquisition:`))) {
+        throw new Error("FENCED_SOURCE_OUTCOME_ACQUISITION_ALREADY_PRESENT");
+      }
+      return { outcome, introducingCommit };
+    }
     if (outcome.outcome_kind === "RECOVERY_TERMINATION") {
       assertEvidenceLossRecoveryBinding(repositoryPath, outcome, versions, continuousRecords);
       const introducingCommit = git(repositoryPath, "log", "-1", "--format=%H", "--", relativePath).trim();
@@ -281,7 +371,8 @@ export async function readSourceExecutionOutcomes(
     (commitOrder.get(left.introducingCommit) ?? -1) - (commitOrder.get(right.introducingCommit) ?? -1))
     .map(entry => entry.outcome);
   const byExecutionId = new Map(outcomes.map(outcome => [outcome.source_execution_id, outcome]));
-  for (const recovery of outcomes.filter(outcome => outcome.outcome_kind === "RECOVERY_TERMINATION")) {
+  for (const recovery of outcomes.filter(outcome => outcome.outcome_kind === "RECOVERY_TERMINATION"
+    || outcome.outcome_kind === "FENCED_UNKNOWN_TERMINATION")) {
     if (outcomes.some(outcome => outcome !== recovery && outcome.request_attempt_ids.some(id => recovery.request_attempt_ids.includes(id)))) {
       throw new Error("RECOVERY_ATTEMPT_DOUBLE_BOUND");
     }
@@ -311,7 +402,88 @@ export async function readSourceExecutionOutcomes(
   return outcomes;
 }
 
+export function assertFencedUnknownSourceOutcomeBinding(repositoryPath: string,
+  outcome: FencedUnknownSourceExecutionOutcome, versions: readonly SourcePersistenceVersion[],
+  records: readonly ContinuousRecord[]) {
+  assertFencedUnknownSourceOutcomeShape(outcome);
+  let context: IncidentContinuousFencingContext | null;
+  try {
+    context = readGitIncidentContinuousFencingContext({ repository_path: repositoryPath,
+      fixed_sha: outcome.expected_parent });
+  } catch {
+    throw new Error("FENCED_SOURCE_OUTCOME_COMMITTED_CONTEXT_REQUIRED");
+  }
+  if (!context) throw new Error("FENCED_SOURCE_OUTCOME_COMMITTED_CONTEXT_REQUIRED");
+  const parentState = canonicalDeserialize(git(repositoryPath, "show",
+    `${outcome.expected_parent}:production-source-state/state/current.json`)) as {
+      integrity_hash: string; continuous_records: readonly { record_id: string; integrity_hash: string }[];
+    };
+  const { integrity_hash: stateHash, ...stateContent } = parentState;
+  if (stateHash !== canonicalHash(stateContent) || !Array.isArray(parentState.continuous_records)
+    || parentState.continuous_records.some((reference, index) => reference.record_id !== records[index]?.record_id
+      || reference.integrity_hash !== records[index]?.integrity_hash)) {
+    throw new Error("FENCED_SOURCE_OUTCOME_RECORD_SCOPE_INVALID");
+  }
+  const prefix = records.slice(0, parentState.continuous_records.length);
+  const reserve = prefix.find(record => record.record_id === outcome.fenced_recovery.reserve.record_id);
+  const recovered = prefix.find(record => record.record_id === outcome.fenced_recovery.recovered.record_id);
+  const intent = readSourceExecutionRequestIntents(repositoryPath, versions, prefix, outcome.source_execution_id)
+    .find(entry => entry.source_execution_id === outcome.source_execution_id);
+  if (!reserve || !recovered || !intent || pendingContinuousAttempt(prefix)
+    || prefix.some(record => record.kind === "COMPLETE" && record.payload.attempt_id === reserve.payload.attempt_id)) {
+    throw new Error("FENCED_SOURCE_OUTCOME_UPSTREAM_MISMATCH");
+  }
+  if (!createGitIncidentContinuousFencingVerifier({ repository_path: repositoryPath, fixed_sha: outcome.expected_parent })(
+    reserve, recovered.payload.fencing_evidence, recovered.payload.at)) {
+    throw new Error("FENCED_SOURCE_OUTCOME_UPSTREAM_MISMATCH");
+  }
+  const verified = createFencedUnknownSourceExecutionOutcome({ intent, reserve, recovered,
+    fencing_context: context, expected_parent: outcome.expected_parent });
+  if (canonicalSerialize(verified) !== canonicalSerialize(outcome)) {
+    throw new Error("FENCED_SOURCE_OUTCOME_UPSTREAM_MISMATCH");
+  }
+}
+
+function assertFencedUnknownSourceOutcomeShape(outcome: FencedUnknownSourceExecutionOutcome) {
+  const keys = ["schema_version", "outcome_kind", "source_execution_id", "status", "trusted_chain_status",
+    "source_definition_id", "recruitment_endpoint_id", "source_version_ids", "source_admission_artifact_id",
+    "continuous_authorization_ids", "request_attempt_ids", "expected_parent", "started_at", "completed_at",
+    "reason_codes", "acquisition_evidence", "acquisition_run_ids", "acquisition_bundle_hashes", "raw_blob_ids",
+    "snapshot_ids", "extracted_record_ids", "fenced_recovery", "integrity_hash"];
+  const proof = outcome.fenced_recovery;
+  const { integrity_hash: hash, ...content } = outcome;
+  if (Object.keys(outcome).sort().join(",") !== keys.sort().join(",")
+    || outcome.outcome_kind !== "FENCED_UNKNOWN_TERMINATION" || outcome.status !== "FAILED"
+    || outcome.trusted_chain_status !== "NOT_RUN" || hash !== canonicalHash(content)
+    || !/^[a-f0-9]{40}$/u.test(outcome.expected_parent)
+    || !proof || Object.keys(proof).sort().join(",") !== "actual_send,approval_reference,fencing_evidence_hash,intent_hash,recovered,reserve"
+    || proof.actual_send !== "UNKNOWN" || !proof.approval_reference?.trim()
+    || [hash, proof.intent_hash, proof.fencing_evidence_hash, proof.reserve?.integrity_hash,
+      proof.recovered?.integrity_hash].some(value => typeof value !== "string" || !/^[a-f0-9]{64}$/u.test(value))
+    || [proof.reserve, proof.recovered].some(reference => !reference
+      || Object.keys(reference).sort().join(",") !== "integrity_hash,record_id" || !reference.record_id?.trim())
+    || [outcome.source_execution_id, outcome.source_definition_id, outcome.recruitment_endpoint_id,
+      outcome.source_admission_artifact_id].some(value => typeof value !== "string" || !value.trim())
+    || [outcome.started_at, outcome.completed_at].some(value => !Number.isFinite(Date.parse(value))
+      || new Date(value).toISOString() !== value)
+    || Date.parse(outcome.completed_at) < Date.parse(outcome.started_at)
+    || [outcome.source_version_ids, outcome.continuous_authorization_ids, outcome.request_attempt_ids]
+      .some(values => !Array.isArray(values) || values.some(value => typeof value !== "string" || !value.trim()))
+    || outcome.continuous_authorization_ids.length !== 1 || outcome.request_attempt_ids.length !== 1
+    || canonicalSerialize(outcome.reason_codes) !== canonicalSerialize(["SOURCE_REQUEST_FENCED_UNKNOWN"])
+    || [outcome.acquisition_run_ids, outcome.acquisition_bundle_hashes, outcome.raw_blob_ids,
+      outcome.snapshot_ids, outcome.extracted_record_ids].some(values => !Array.isArray(values) || values.length !== 0)
+    || canonicalSerialize(outcome.acquisition_evidence) !== canonicalSerialize({ status: "FAILED", assessment: null,
+      empty_validation: null, prior_source_execution_id: null, raw_content_hashes: [] })) {
+    throw new Error("FENCED_SOURCE_OUTCOME_SCHEMA_INVALID");
+  }
+}
+
 function assertSourceExecutionShape(outcome: SourceExecutionOutcome) {
+  if (outcome?.schema_version === "production-source-execution-outcome/5.0.0") {
+    assertFencedUnknownSourceOutcomeShape(outcome as FencedUnknownSourceExecutionOutcome);
+    return;
+  }
   if (outcome?.schema_version === RECOVERY_SOURCE_EXECUTION_OUTCOME_SCHEMA_VERSION) {
     assertEvidenceLossRecoveryShape(outcome);
     return;

@@ -10,7 +10,9 @@ import {
 } from "./contracts";
 
 export async function rehydrateProductionSourceOwners(input: {
-  readonly repository: ProductionSourceRegistryRepository;
+  readonly repository: ProductionSourceRegistryRepository & {
+    readonly continuousFencingVerifier?: ContinuousFencingVerifier;
+  };
   readonly source_registry: InMemorySourceRegistry;
   readonly source_admission_register: InMemorySourceAdmissionRegister;
   readonly continuous_records?: readonly ContinuousRecord[];
@@ -39,7 +41,8 @@ export async function rehydrateProductionSourceOwners(input: {
   const inspection = supportingInspectionReplay(versions);
   input.source_admission_register.restoreSupportingInspections(inspection.records, inspection.resolve);
   input.source_admission_register.restoreContinuousRecords(input.continuous_records ?? [],
-    bindings => resolveContinuousSourceContext(versions, bindings), input.fencing_verifier);
+    bindings => resolveContinuousSourceContext(versions, bindings),
+    input.fencing_verifier ?? input.repository.continuousFencingVerifier);
   return { restored_version_count: restored, restored_continuous_record_count: input.continuous_records?.length ?? 0 } as const;
 }
 

@@ -6,6 +6,7 @@ import {
 } from "../application/source-admission/continuous-acquisition";
 import { resolveContinuousSourceContext } from "./continuous-source-context";
 import { supportingInspectionReplay } from "./source-inspection-replay";
+import { createGitIncidentContinuousFencingVerifier } from "./git-incident-fencing-context";
 
 import {
   canonicalDeserialize,
@@ -47,20 +48,26 @@ ProductionSourceRegistryRepository {
   #versions: SourcePersistenceVersion[];
   #state: State | null;
   #continuousRecords: ContinuousRecord[] = [];
-  readonly #fencingVerifier?: ContinuousFencingVerifier;
+  readonly #fencingVerifier: ContinuousFencingVerifier;
   #loadedHead: string;
 
   constructor(options: { readonly repository_path: string; readonly root_path?: string; readonly fencing_verifier?: ContinuousFencingVerifier }) {
     this.#repositoryPath = path.resolve(options.repository_path);
     this.#rootPath = normalizeRootPath(options.root_path ?? "production-source-state");
-    this.#fencingVerifier = options.fencing_verifier;
     this.#git(["rev-parse", "--git-dir"]);
     this.#loadedHead = this.readCommittedHead();
+    this.#fencingVerifier = options.fencing_verifier ?? createGitIncidentContinuousFencingVerifier({
+      repository_path: this.#repositoryPath, fixed_sha: this.#loadedHead
+    });
     const loaded = this.#loadCommitted();
     if (this.readCommittedHead() !== this.#loadedHead) throw new Error("CONTINUOUS_LOCAL_HEAD_CHANGED");
     this.#versions = [...loaded.versions];
     this.#state = loaded.state;
     this.#continuousRecords = loaded.records;
+  }
+
+  get continuousFencingVerifier(): ContinuousFencingVerifier {
+    return this.#fencingVerifier;
   }
 
   async appendVersion(version: SourcePersistenceVersion) {

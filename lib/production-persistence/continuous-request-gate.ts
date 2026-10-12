@@ -120,7 +120,8 @@ export async function executeContinuousRequest(options: ContinuousRequestGateOpt
   if (!response || (response.status !== "SUCCESS" && response.status !== "FAILED")) throw new Error("SEND_STATE_UNKNOWN");
   const current = new GitSourceRegistryPersistence({ repository_path: options.repository_path, fencing_verifier: options.fencing_verifier });
   current.assertAuthoritativeHead(options.branch, reservationHead);
-  owner.restoreContinuousRecords(current.listContinuousRecords(), bindings => resolveContinuousSourceContext(versions, bindings), options.fencing_verifier);
+  owner.restoreContinuousRecords(current.listContinuousRecords(), bindings => resolveContinuousSourceContext(versions, bindings),
+    options.fencing_verifier ?? current.continuousFencingVerifier);
   const complete = owner.closeContinuousAttempt(attemptId, holder, options.now(), response.status);
   const head = await current.publishContinuousRecord(complete, { expected_parent: reservationHead,
     branch: options.branch, commit_identity: options.commit_identity });
