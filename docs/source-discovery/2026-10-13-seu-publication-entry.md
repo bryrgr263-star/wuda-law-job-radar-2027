@@ -33,5 +33,7 @@ Verification: source parsing/admission/full controlled Trusted Chain and genuine
 fresh-child restoration 4/4 PASS, 125.208 seconds. Registration/operator/display
 checks 4/4 PASS; focused public/Network Guard/architecture 12/12 PASS. TypeScript
 and diff checks PASS. The interrupted previous session had no retained final
-result and is not claimed PASS. No production university request has run yet;
-website growth remains unverified until authoritative acquisition and publication.
+result and is not claimed PASS. Subsequent actual authorized acquisition and
+publication succeeded: see `2026-10-13-seu-live-publication.md`. The verified
+live snapshot now contains five positions; the new position remains blocked
+pending qualification review, not claimed personally eligible.
