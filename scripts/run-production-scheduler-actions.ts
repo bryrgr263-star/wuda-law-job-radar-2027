@@ -8,15 +8,12 @@ import {
   resolveProductionAdapter
 } from "../lib/production-automation";
 import { bootstrapZeroCostProductionCompositionRoot } from "../lib/production-persistence/zero-cost-production-composition-root";
-
-interface SafeFailureReport {
-  readonly status: "FAILED";
-  readonly error_code: string;
-}
+import { createActionsFailureReport, type ActionsFailureStage } from "../lib/production-automation/actions-failure-report";
 
 async function main() {
   const reportPath = path.resolve(process.env.PRODUCTION_AUTOMATION_REPORT_PATH
     ?? "production-automation-report.json");
+  let stage: ActionsFailureStage = "CONFIGURATION";
   try {
     const remoteUrl = required("AUTHORITATIVE_REMOTE_URL");
     assertSafeRemoteUrl(remoteUrl);
@@ -30,6 +27,7 @@ async function main() {
       resolve_adapter: resolveProductionAdapter
     };
 
+    stage = "PREFLIGHT_RESTORE";
     const preflight = await bootstrapZeroCostProductionCompositionRoot(options).restore();
     const checkoutHead = execFileSync("git", ["rev-parse", "HEAD"], {
       encoding: "utf8", stdio: ["ignore", "pipe", "pipe"]
@@ -42,6 +40,7 @@ async function main() {
       throw new Error("PRODUCTION_ADAPTER_REGISTRY_EMPTY");
     }
 
+    stage = "SCHEDULER_EXECUTION";
     const result = await executeProductionSchedulerAutomation(options, {
       batch_id: required("PRODUCTION_BATCH_ID"),
       actor: required("PRODUCTION_ACTOR"),
@@ -74,11 +73,12 @@ async function main() {
       cas_result: "COMMITTED",
       publication_handoff: result.publication_handoff
     };
+    stage = "REPORT_WRITE";
     writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.log(JSON.stringify(report));
     if (result.effective_batch_status !== "SUCCESS" && result.effective_batch_status !== "DEFERRED") process.exitCode = 1;
   } catch (error) {
-    const report: SafeFailureReport = { status: "FAILED", error_code: safeErrorCode(error) };
+    const report = createActionsFailureReport(error, stage);
     writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.error(JSON.stringify(report));
     process.exitCode = 1;
@@ -96,20 +96,6 @@ function assertSafeRemoteUrl(remoteUrl: string) {
   if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) {
     throw new Error("AUTHORITATIVE_REMOTE_URL_UNSAFE");
   }
-}
-
-function safeErrorCode(error: unknown) {
-  if (!(error instanceof Error)) return "AUTOMATION_EXECUTION_FAILED";
-  const allowed = [
-    /^ACTIONS_ENV_MISSING_[A-Z_]+$/u,
-    /^ACTIONS_[A-Z_]+$/u,
-    /^PRODUCTION_[A-Z_]+$/u,
-    /^AUTHORITATIVE_REMOTE_URL_UNSAFE$/u,
-    /^SCHEDULER_[A-Z_:]+$/u
-  ];
-  return allowed.some(pattern => pattern.test(error.message))
-    ? error.message
-    : "AUTOMATION_EXECUTION_FAILED";
 }
 
 void main();
