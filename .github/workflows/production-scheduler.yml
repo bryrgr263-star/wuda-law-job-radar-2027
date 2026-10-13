@@ -106,9 +106,9 @@ jobs:
             || !validHandoff) {
             throw new Error("PUBLICATION_HANDOFF_REPORT_INVALID");
           }
+          const publicationModels = report.publication_read_model_ids ?? report.presentation_read_model_ids;
           if (report.publication_handoff === "READY"
-            && (!Array.isArray(report.presentation_read_model_ids)
-              || report.presentation_read_model_ids.length === 0)) {
+            && (!Array.isArray(publicationModels) || publicationModels.length === 0)) {
             throw new Error("PUBLICATION_HANDOFF_NO_COMMITTED_MODEL");
           }
           fs.appendFileSync(process.env.GITHUB_OUTPUT,

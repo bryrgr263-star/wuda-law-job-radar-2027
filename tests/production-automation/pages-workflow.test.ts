@@ -5,6 +5,14 @@ import path from "node:path";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
 
+test("publication retry uses restored current models rather than batch-new readiness", () => {
+  const automation = readFileSync(path.join(process.cwd(), "lib/production-automation/github-actions-automation.ts"), "utf8");
+  const retry = automation.split("export async function retryCommittedPresentationPublication")[1]!.split("async function handoffPublication")[0]!;
+  assert.doesNotMatch(retry, /manifest\.presentation_publish_readiness/u);
+  assert.match(retry, /state\.read_models\.length === 0/u);
+  assert.match(retry, /await publisher\(structuredClone\(state\.read_models\)\)/u);
+});
+
 test("handoff validator accepts committed partial results but rejects unverified failure reports", () => {
   const workflow = readFileSync(path.join(process.cwd(), ".github/workflows/production-scheduler.yml"), "utf8");
   const script = workflow.split("node <<'NODE'")[1]!.split("          NODE")[0]!;
@@ -21,6 +29,10 @@ test("handoff validator accepts committed partial results but rejects unverified
     return outputs;
   };
   assert.match(evaluate(valid)[0]!, /publication_handoff=READY/u);
+  assert.match(evaluate({ ...valid, presentation_read_model_ids: [], publication_read_model_ids: ["verified-current-model"] })[0]!,
+    /publication_handoff=READY/u);
+  assert.throws(() => evaluate({ ...valid, presentation_read_model_ids: ["historical-model"], publication_read_model_ids: [] }),
+    /PUBLICATION_HANDOFF_NO_COMMITTED_MODEL/u);
   for (const patch of [{ cas_result: "FAILED" }, { post_push_process_b: "FAIL" },
     { ending_sha: "invalid" }, { presentation_read_model_ids: [] }, { effective_batch_status: "UNKNOWN" }]) {
     assert.throws(() => evaluate({ ...valid, ...patch }), /PUBLICATION_HANDOFF_/u);

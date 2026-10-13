@@ -68,6 +68,7 @@ async function main() {
       position_ids: result.position_ids,
       presentation_decision_ids: result.presentation_decision_ids,
       presentation_read_model_ids: result.presentation_read_model_ids,
+      publication_read_model_ids: result.publication_read_model_ids,
       pre_run_process_b: result.pre_run_process_b,
       post_push_process_b: result.post_push_process_b,
       cas_result: "COMMITTED",

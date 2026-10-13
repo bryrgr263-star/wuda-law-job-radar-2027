@@ -37,6 +37,7 @@ export interface ProductionSchedulerAutomationResult {
   readonly position_ids: readonly string[];
   readonly presentation_decision_ids: readonly string[];
   readonly presentation_read_model_ids: readonly string[];
+  readonly publication_read_model_ids: readonly string[];
   readonly pre_run_process_b: "PASS";
   readonly post_push_process_b: "PASS";
   readonly publication_handoff: PublicationHandoffStatus;
@@ -68,7 +69,7 @@ export async function executeProductionSchedulerAutomation(
     if (!model) throw new Error("ACTIONS_POST_PUSH_READ_MODEL_MISMATCH");
     return model;
   });
-  const publicationHandoff = await handoffPublication(restored, after.read_models, publisher);
+  const publicationHandoff = await handoffPublication(after.read_models, publisher);
   const byOutcome = new Map(after.source_execution_outcomes.map(outcome => [outcome.source_execution_id, outcome]));
   const effectiveStatuses = restored.source_executions.map(item => {
     const outcome = byOutcome.get(item.source_execution_id);
@@ -97,6 +98,7 @@ export async function executeProductionSchedulerAutomation(
     position_ids: [...new Set(selectedModels.flatMap(model => model.position_id ? [model.position_id] : []))],
     presentation_decision_ids: [...new Set(selectedModels.map(model => model.presentation_decision_id))],
     presentation_read_model_ids: readModelIds,
+    publication_read_model_ids: after.read_models.map(model => model.presentation_read_model_id),
     pre_run_process_b: "PASS" as const,
     post_push_process_b: "PASS" as const,
     publication_handoff: publicationHandoff
@@ -111,7 +113,7 @@ export async function retryCommittedPresentationPublication(
   const state = await bootstrapZeroCostProductionCompositionRoot(options).restore();
   const manifest = state.scheduler_batches.find(batch => batch.batch_id === batchId);
   if (!manifest) throw new Error("ACTIONS_PUBLICATION_BATCH_NOT_COMMITTED");
-  if (manifest.presentation_publish_readiness !== "READY") {
+  if (state.read_models.length === 0) {
     return Object.freeze({ batch_id: batchId, status: "NOT_REQUIRED" as const });
   }
   await publisher(structuredClone(state.read_models));
@@ -119,11 +121,10 @@ export async function retryCommittedPresentationPublication(
 }
 
 async function handoffPublication(
-  manifest: SchedulerBatchManifest,
   models: readonly PresentationReadModel[],
   publisher?: (models: readonly PresentationReadModel[]) => Promise<void>
 ): Promise<PublicationHandoffStatus> {
-  if (manifest.presentation_publish_readiness !== "READY") return "NOT_REQUIRED";
+  if (models.length === 0) return "NOT_REQUIRED";
   if (!publisher) return "READY";
   try {
     await publisher(structuredClone(models));

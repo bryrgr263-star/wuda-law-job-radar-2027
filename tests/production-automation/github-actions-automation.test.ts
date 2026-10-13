@@ -59,6 +59,8 @@ test("Actions-equivalent Run 1 and Run 2 restore Process B and reuse business id
     assert.deepEqual(second.position_ids, []);
     assert.deepEqual(second.presentation_decision_ids, []);
     assert.deepEqual(second.presentation_read_model_ids, []);
+    assert.equal(second.publication_handoff, "READY");
+    assert.deepEqual(second.publication_read_model_ids, firstReadModelIds);
     assert.equal(sent, 2);
 
     const afterSecond = await root.restore();
@@ -126,8 +128,15 @@ test("cadence denial remains authoritative and the Actions boundary sends no una
     });
     assert.equal(denied.batch_status, "DEFERRED");
     assert.equal(denied.effective_batch_status, "DEFERRED");
-    assert.equal(denied.publication_handoff, "NOT_REQUIRED");
+    assert.equal(denied.publication_handoff, "READY");
+    assert.ok(denied.publication_read_model_ids.length > 0);
     assert.deepEqual(denied.manifest.deferred_sources.map(item => item.reason), ["CADENCE_DENIED"]);
+    assert.equal(sent, 1);
+    let published = 0;
+    const retry = await retryCommittedPresentationPublication(options, "actions-cadence-denied",
+      async models => { published = models.length; });
+    assert.equal(retry.status, "PUBLISHED");
+    assert.ok(published > 0);
     assert.equal(sent, 1);
   } finally {
     repository.remove();
