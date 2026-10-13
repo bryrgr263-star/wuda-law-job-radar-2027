@@ -4,7 +4,8 @@ import {
   replayContinuousRecords,
   reserveContinuousRecord,
   type ContinuousRecord,
-  type ContinuousScope
+  type ContinuousScope,
+  type ContinuousFencingVerifier
 } from "../application/source-admission/continuous-acquisition";
 import type { SourcePersistenceVersion } from "./contracts";
 import { resolveContinuousSourceContext } from "./continuous-source-context";
@@ -23,10 +24,11 @@ export function enumerateScheduledSources(
   versions: readonly SourcePersistenceVersion[],
   records: readonly ContinuousRecord[],
   at: string,
-  scope: ContinuousScope
+  scope: ContinuousScope,
+  fencingVerifier?: ContinuousFencingVerifier
 ): { readonly eligible: readonly ScheduledSource[]; readonly deferred: readonly SchedulerDeferredSource[] } {
   continuousTime(at);
-  replayContinuousRecords(records, bindings => resolveContinuousSourceContext(versions, bindings));
+  replayContinuousRecords(records, bindings => resolveContinuousSourceContext(versions, bindings), fencingVerifier);
   const latestGrants = new Map(records.filter(record => record.kind === "GRANT")
     .map(record => [record.payload.grant!.authorization_id, record.payload.grant!] as const));
   const revoked = new Set(records.filter(record => record.kind === "REVOKE")

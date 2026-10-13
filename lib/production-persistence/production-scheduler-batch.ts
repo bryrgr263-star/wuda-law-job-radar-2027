@@ -197,7 +197,8 @@ async function committedSelection(options: ProductionSchedulerBatchOptions, at: 
       "--no-tags", options.remote_url, checkout]);
     const repository = new GitSourceRegistryPersistence({ repository_path: checkout,
       fencing_verifier: options.continuous_fencing_verifier });
-    return { ...enumerateScheduledSources(await repository.listVersions(), repository.listContinuousRecords(), at, scope),
+    return { ...enumerateScheduledSources(await repository.listVersions(), repository.listContinuousRecords(), at, scope,
+      repository.continuousFencingVerifier),
       committed_head: gitText(checkout, "rev-parse", "HEAD") };
   } finally {
     const resolved = path.resolve(directory);
