@@ -6,7 +6,9 @@ import { ArrowUpRight, Building2, CalendarClock, ChevronDown, Download, Filter, 
 import { BOARD_STATUS_LABELS, exportBoardCsv, selectBoardJobs, type BoardStatus, type PresentationDisplayJob } from "@/lib/presentation-web/model";
 
 function OfficialLinks({ job }: { job: PresentationDisplayJob }) {
+  const universityPublication = job.announcementLink === "https://em.seu.edu.cn/2026/0922/c57206a584203/page.htm";
   return <>
+    {universityPublication && <p className="warning-tag">东南大学官方发布/转载；雇主原站及完整条件尚待复核。</p>}
     {job.applicationLink ? <a className="apply-button" href={job.applicationLink} target="_blank" rel="noreferrer">前往官方投递 <ArrowUpRight size={16} /></a>
       : <span className="warning-tag">投递链接尚未取得</span>}
     {job.announcementLink ? <a className="detail-link" href={job.announcementLink} target="_blank" rel="noreferrer">查看招聘公告</a>
